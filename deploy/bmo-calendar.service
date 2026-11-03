@@ -1,0 +1,22 @@
+# The calendar service's user unit. A deployment runs it from its deploy tree, whose settings.local.toml links to
+# the data root's env/calendar.toml (docs/api.md, 「Settings」).
+[Unit]
+Description=bmo-calendar: dated events kept in the brain, their alarms told to the supervisor
+After=network-online.target
+# Without its settings the service has no token, so the unit does not start where the deployment wrote none.
+ConditionPathExists=%h/.local/share/bmo/data/env/calendar.toml
+
+[Service]
+Type=simple
+WorkingDirectory=%h/.local/share/bmo-calendar/deploy
+ExecStart=%h/.local/share/bmo-calendar/deploy/bin/bmo-calendar serve
+Restart=always
+RestartSec=2
+# A stop ends the event streams and waits for the service to end on its SIGTERM, however long its requests still in
+# hand take; it is never escalated to a kill.
+TimeoutStopSec=infinity
+
+[Install]
+WantedBy=default.target
+# The repository's one service: stopped, restarted and watched by every deployment, which waits on its health.
+X-BMO-Deploy=bot

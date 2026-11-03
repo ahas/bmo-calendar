@@ -9,3 +9,4 @@ mod console;
 mod events;
 mod openapi;
 mod repeats;
+mod repository;
