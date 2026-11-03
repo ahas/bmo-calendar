@@ -1,0 +1,73 @@
+# The calendar tool: the events of a realm read, added, changed and cancelled in a turn (docs/api.md, 「The
+# tool」), each entry one call of a calendar route. The tool finds the service through the data root's
+# env/calendar.env, and names the session's holder, which acts for the owner, for the mine realm. The crate's own
+# test holds every entry here to the executable answering it. Every call waits for the service's answer however
+# long it takes.
+
+[tool]
+name = "calendar"
+protocol = 1
+language = "rust"
+build = 'cargo build --release -p calendar-tool && cp "$BMO_CARGO_TARGET/release/calendar-tool" "$BMO_TOOL_OUT/"'
+check = 'cargo test -p calendar-tool'
+run = ["calendar-tool"]
+
+[[entry]]
+namespace = "bmo"
+name = "calendar_list"
+title = "List calendars"
+description = "The calendars of a realm: mine, the owner's own, or organization, the organization's."
+manual = "manual.md"
+input = "calendar_list.json"
+hints = { read_only = true }
+capabilities = ["room.tools"]
+
+[[entry]]
+namespace = "bmo"
+name = "calendar_events"
+title = "List events"
+description = "The events of a realm in a span of local datetimes, or the next n from now; a repeating event one line per occurrence."
+manual = "manual.md"
+input = "calendar_events.json"
+hints = { read_only = true }
+capabilities = ["room.tools"]
+
+[[entry]]
+namespace = "bmo"
+name = "calendar_show"
+title = "Show an event"
+description = "One event of a realm, whole."
+manual = "manual.md"
+input = "calendar_show.json"
+hints = { read_only = true }
+capabilities = ["room.tools"]
+
+[[entry]]
+namespace = "bmo"
+name = "calendar_add"
+title = "Add an event"
+description = "Add an event to a realm's calendar, with an alarm where the owner asks to be reminded of it."
+manual = "manual.md"
+input = "calendar_add.json"
+hints = { idempotent = false }
+capabilities = ["room.tools"]
+
+[[entry]]
+namespace = "bmo"
+name = "calendar_change"
+title = "Change an event"
+description = "Change the fields named of an event, or of one occurrence of a repeating event."
+manual = "manual.md"
+input = "calendar_change.json"
+hints = { idempotent = true }
+capabilities = ["room.tools"]
+
+[[entry]]
+namespace = "bmo"
+name = "calendar_cancel"
+title = "Cancel an event"
+description = "Cancel an event, or one occurrence of a repeating event."
+manual = "manual.md"
+input = "calendar_cancel.json"
+hints = { idempotent = true, destructive = true }
+capabilities = ["room.tools"]

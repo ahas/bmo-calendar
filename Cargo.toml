@@ -2,7 +2,7 @@
 # repository in `tests/`, and the tool it places on the tool host under `tools/calendar`. The console bundle
 # under `client/` is a project of its own.
 [workspace]
-members = []
+members = ["tools/calendar"]
 resolver = "3"
 
 [workspace.package]
