@@ -6,7 +6,7 @@ import "./screens.css";
 import type { ConsoleBundleModule } from "bmo-ui/shared/console-manifest";
 import type { RouteLocationNormalizedLoaded } from "vue-router";
 
-// The console bundle's module (bmo-ui's `docs/console-bundles.md`): the 일정 screen under the screen path,
+// The console bundle's module (bmo-ui's `docs/console-bundles.md`): the calendar screen under the screen path,
 // its view and its day in the address, under the console's title bar.
 const bundle: ConsoleBundleModule = {
   routes: [

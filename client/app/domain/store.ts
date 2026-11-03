@@ -249,17 +249,23 @@ export function createCalendarStore(options: StoreOptions) {
 
   const events = computed(() => allEvents.value.filter((row) => !calendarOf(row.realm, row.calendarId)?.hidden));
 
-  // The answered row takes the place of what was drawn for it in every span it falls in.
-  function landRow(oldKey: string, row: CalendarEvent | null): void {
+  // The answered row takes the place of what was drawn for it in every span it falls in. Answers whether
+  // any span read so far holds it.
+  function landRow(oldKey: string, row: CalendarEvent | null): boolean {
     const next: Record<string, Chunk> = {};
+    let landed = false;
 
     for (const [key, chunk] of Object.entries(chunks.value)) {
       const rows = chunk.rows.filter((one) => one.key !== oldKey && (row === null || one.key !== row.key));
+      const holds = row !== null && overlaps(row, chunk.span);
 
-      next[key] = { ...chunk, rows: row !== null && overlaps(row, chunk.span) ? [...rows, row] : rows };
+      landed ||= holds;
+      next[key] = { ...chunk, rows: holds ? [...rows, row] : rows };
     }
 
     chunks.value = next;
+
+    return landed;
   }
 
   function dropPut(key: string): void {
@@ -329,11 +335,13 @@ export function createCalendarStore(options: StoreOptions) {
     // A repeating event's rows, or an occurrence that became an event of its own, are read again whole.
     if (row === null || repeating(row) || ("occurrence" in request.write && request.write.occurrence)) {
       await reloadRead();
-    } else {
-      landRow(request.key, held(row));
+      dropPut(request.key);
+      return;
     }
 
-    dropPut(request.key);
+    // A row no span read so far holds stays drawn as the service answered it, until a span that holds it is read.
+    if (landRow(request.key, held(row))) dropPut(request.key);
+    else put.value = { ...put.value, [request.key]: held(row) };
   }
 
   /** Every span already read, read again over what is kept of it. */

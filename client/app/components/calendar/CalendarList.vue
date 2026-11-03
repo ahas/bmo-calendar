@@ -1,5 +1,5 @@
 <template>
-  <!-- The calendars, 내 일정 and 조직 일정 apart: each with its colour, shown or hidden on the grid for
+  <!-- The calendars, the account's own and the organization's apart: each with its colour, shown or hidden on the grid for
        this account, and its settings a press away. -->
   <div class="flex flex-col gap-4">
     <section v-for="group in groups" :key="group.realm" class="flex flex-col gap-1">

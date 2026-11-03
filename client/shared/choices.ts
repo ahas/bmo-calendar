@@ -2,7 +2,7 @@ import type { Alarm, CalendarColor, Repeat, Tell, Writers } from "./types";
 
 // The choices the event form and the calendar settings offer, each a real value of the service's with the
 // key its words are read by. The value the service takes where a write names none is the default, and is
-// the one marked `(기본값)` where it is shown.
+// the one marked as the default where it is shown (`calendar.label.default_mark`).
 
 export interface Choice<T> {
   value: T;

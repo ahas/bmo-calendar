@@ -1,5 +1,5 @@
 <template>
-  <!-- A new event: drawn on the day the screen stands on, or read out of a phrase — 「내일 오후 3시 치과」 —
+  <!-- A new event: drawn on the day the screen stands on, or read out of a phrase that names a day and a time,
        and drawn where it says, its form open to put right what was read. -->
   <UPopover v-model:open="open" :content="content" :ui="{ content: 'w-80 max-w-[calc(100vw-2rem)] p-2' }">
     <UTooltip :text="$t('calendar.action.new_event')" :kbds="['n']">

@@ -1,0 +1,22 @@
+{
+  "quick": {
+    "relativeDays": { "오늘": 0, "내일": 1, "모레": 2, "글피": 3 },
+    "weekdays": ["일", "월", "화", "수", "목", "금", "토"],
+    "weekdaySuffix": "요일",
+    "week": "주",
+    "thisWeek": ["이번"],
+    "nextWeek": ["다음", "담"],
+    "afternoon": ["오후", "저녁", "밤"],
+    "morning": ["오전", "아침", "새벽"],
+    "midday": ["점심", "낮"],
+    "hour": "시",
+    "minute": "분",
+    "half": "반",
+    "hours": "시간",
+    "during": "동안",
+    "month": "월",
+    "day": "일",
+    "allDay": ["하루 종일", "종일"],
+    "trailing": ["에", "부터", "까지", "은", "날"]
+  }
+}

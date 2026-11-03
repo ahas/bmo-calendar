@@ -1,5 +1,5 @@
 <template>
-  <!-- The 일정 screen (docs/design.md, 「The console」): the calendars of both realms beside one grid. Where
+  <!-- The calendar screen (docs/design.md, 「The console」): the calendars of both realms beside one grid. Where
        there is room the calendars stand beside the grid behind a splitter; on a phone the grid is the body,
        the calendars rise from the bottom edge, and the day's steps stand in a bar at its foot. The view and
        the day are the address. -->
