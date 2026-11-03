@@ -1,0 +1,45 @@
+# bmo-calendar
+
+The platform's dated events as one service: calendars and events kept as memories in the brain service (the
+brain the master, this unit the subordinate), in two realms kept apart, each account's own and the
+organization's; a repeating event answered one row per occurrence; an alarm told once to the supervisor
+through the receiver when it comes due; and the console bundle that shows them under its sidebar entry.
+`docs/design.md` states what it is and `docs/api.md` its boundary: every route, the events it publishes, the
+tool it places, the calls it makes and its settings. Every other unit is reached through its API.
+
+## Tests
+
+`cargo test` (through the testbed) runs the crate's one harness, `tests/main.rs`, over stand-ins of the brain,
+the receiver and the account service on a loopback port: the calendars made on first read and kept per realm
+(`calendars.rs`), events written, changed and cancelled with their labels, idempotent by id, refused as
+documented and refreshed by the brain's stream (`events.rs`), repeating events expanded in a span and one
+occurrence changed or cancelled on its own (`repeats.rs`), the beat telling a due alarm once, a late one with
+its lateness and none twice across a restart, each in the room its account reaches (`alarms.rs`), the console's
+guard, manifest and events (`console.rs`), the OpenAPI document (`openapi.rs`) and the repository's own checks
+(`repository.rs`). The tool's crate carries its own harness, `tools/calendar/tests/main.rs`, against a stand-in
+calendar service. The console bundle's check is `bun run check` inside `client/`.
+
+## Layout
+
+| Folder | Holds |
+|---|---|
+| `src/` | The service and its command: the routes, the cache of each realm's brain, the alarms and the beat, the told marks' store, the console bundle's serving and the OpenAPI document |
+| `tools/` | The calendar tool the deployment places on the tool host: its crate, its manifest, its input schemas and its manual |
+| `client/` | The console plugin bundle, a project of its own |
+| `deploy/` | The service's user unit |
+| `docs/` | The canonical statements of what the service is and its boundary, and the OpenAPI document |
+| `tests/` | The crate's one test harness and the stand-ins it runs over |
+
+At the root stand the Cargo manifest, `Cargo.lock`, `testbed.toml`, `rustfmt.toml`, `settings.toml` (the
+defaults built into the binary), `CLAUDE.md`, `PERSONAL-DATA.md` and `LICENSE`.
+
+## Commands
+
+- `bmo-calendar serve` reads the brain, beats once a minute and answers the routes until it is told to stop.
+- `bmo-calendar health` ends 0 where the service its settings name answers ready.
+- `bmo-calendar openapi` prints the OpenAPI document, which `docs/openapi.json` holds.
+- `bmo-calendar tool-env` writes the data root's `env/calendar.env`, where the tool finds the service.
+
+The settings are read from the binary's built-in `settings.toml`, then the deployment's `settings.toml` and
+`settings.local.toml` beside the release (the data root's `env/calendar.toml`), then `BMO_CALENDAR_<TABLE>__<KEY>`
+in the environment (`docs/api.md`, 「Settings」).

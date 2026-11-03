@@ -46,7 +46,8 @@ and whose `hidden` mark a read answers.
 A calendar is `id`, `realm`, `name`, `color`, `writers`, `tell`, `hidden`, `creator`, `createdAt`;
 `writers` and `tell` are null in the `mine` realm. A realm whose brain holds no live calendar answers one
 made on the read: `mine` → 「내 일정」 `primary`, id `mine`; `organization` → 「조직 일정」 `info`, id
-`organization` (the names are settings, 「Settings」). `hidden` is the caller's own: a PATCH of it hides or
+`organization` (the names are settings, 「Settings」, which the deployment sets to these words; the
+repository's defaults are English). `hidden` is the caller's own: a PATCH of it hides or
 shows the calendar for the caller's account alone and is open to every account that reads the realm. In
 the `organization` realm, making a calendar is the administrator's, and changing its `name`, `color`,
 `writers` or `tell` or retiring it the administrator's and its creator's; anyone else is 403
