@@ -76,3 +76,20 @@ The console screen follows the Nuxt UI calendar template (day, week, month and y
 and resize, a popover to edit, a quick natural-language entry, colour-coded calendars with visibility, a
 mini calendar), stood as a console bundle under the sidebar entry 일정. The sidebar lists 내 일정 and 조직
 일정 calendars apart; one grid shows both.
+
+The screen is used by finger and by ear as well as by mouse:
+
+- **Touch.** A finger scrolls the grid and never drags an event. A held finger (the console's one long
+  press) on an empty part of the grid draws a new event there, and on an event opens its menu. An event
+  is moved by its start in its form, which carries the end along so the event keeps its length; the end
+  alone changes its length. On a phone an event's form and a calendar's settings open as a centred
+  dialog rather than beside what opened them.
+- **Screen readers and keys.** The month view is a grid of days: the weekdays head its columns, each day
+  is named by its full date, whether it is today and how many events it holds, and the arrow keys, Home,
+  End, Page Up and Page Down walk it; Enter opens the day and `n` draws a new event on it. The day and
+  week views name each day the same way. Every event is named by its title, its time, its calendar and
+  its repeat, and the span a step lands on is said once it has landed.
+- **Reading.** The grid's heights follow the reader's text size, so a larger font grows the rows rather
+  than cutting their words; the event's calendar colour is a fill and a stripe under words in the page's
+  own text colour, so the words read on every colour in both themes. A reader who asked for less movement
+  is never scrolled smoothly.
