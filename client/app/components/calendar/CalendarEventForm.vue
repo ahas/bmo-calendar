@@ -1,7 +1,17 @@
 <template>
   <!-- An event's form, or a draft's: every field the service keeps of an event, with one save at its
-       foot. A draft's ghost follows the form as it is filled; an event changes only when it is saved. -->
-  <UForm ref="form" :state="state" :validate="validate" class="flex flex-col gap-3" @submit="save" @keydown.enter.capture="onEnter">
+       foot. A draft's ghost follows the form as it is filled; an event changes only when it is saved.
+       The date and time segments take every key but Tab, Escape among them, so Escape is caught on its
+       way down and handed to whatever closes the form. -->
+  <UForm
+    ref="form"
+    :state="state"
+    :validate="validate"
+    class="flex flex-col gap-3"
+    @submit="save"
+    @keydown.enter.capture="onEnter"
+    @keydown.escape.capture.stop="emit('escape')"
+  >
     <div class="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-2">
       <label :for="titleId" class="whitespace-nowrap text-sm text-muted">{{ $t("calendar.label.event_title") }}</label>
       <UFormField name="title">
@@ -74,6 +84,7 @@ const emit = defineEmits<{
   update: [patch: Partial<EventDraft>];
   commit: [values: EventDraft];
   done: [];
+  escape: [];
 }>();
 
 /** Whether the form holds a change from what is saved, for the popover's guard on closing. */

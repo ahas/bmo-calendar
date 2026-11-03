@@ -1,10 +1,11 @@
 import { differenceInMinutes, addMinutes } from "date-fns";
 import { useOverlay } from "@nuxt/ui/composables/useOverlay";
 import { useI18n } from "vue-i18n";
+import { useIsland } from "bmo-ui/app/domain/island";
 
 import CalendarScopeDialog from "../components/calendar/CalendarScopeDialog.vue";
 import { fromLocalISO, toLocalISO } from "../domain/dates";
-import { repeating } from "../domain/store";
+import { refusalWord, repeating } from "../domain/store";
 import { useCalendarEvents } from "./useCalendarEvents";
 
 import type { CalendarEvent, EventWrite, RepeatScope } from "../../shared/types";
@@ -18,6 +19,7 @@ const FIELDS = ["calendarId", "title", "description", "allDay", "alarm", "repeat
 export function useEventChange() {
   const { t } = useI18n();
   const overlay = useOverlay();
+  const island = useIsland(t);
   const { updateEvent, removeEvent, readEvent } = useCalendarEvents();
 
   async function askScope(cancelling: boolean): Promise<RepeatScope | null> {
@@ -56,8 +58,22 @@ export function useEventChange() {
 
     if (scope === null) return false;
 
-    if (scope === "one") await updateEvent(before, after, "one");
-    else await updateEvent(before, after, "all", await seriesWrite(before, after));
+    if (scope === "one") {
+      await updateEvent(before, after, "one");
+      return true;
+    }
+
+    // The series is read before it is moved; a series that cannot be read is not changed.
+    let write: Partial<EventWrite>;
+
+    try {
+      write = await seriesWrite(before, after);
+    } catch (error) {
+      island.say({ tone: "error", title: t(refusalWord(error)) });
+      return false;
+    }
+
+    await updateEvent(before, after, "all", write);
 
     return true;
   }

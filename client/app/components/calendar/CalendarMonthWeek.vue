@@ -23,7 +23,9 @@
       :class="isToday(day) ? 'bg-primary text-inverted hover:bg-primary/75 active:bg-primary/75' : [inFocus(day) ? 'text-highlighted' : 'text-muted', 'hover:bg-elevated active:bg-accented']"
       :style="{ gridColumn: index + 1 }"
     >
-      {{ label(day) }}
+      <!-- The first of a month names its month where the cell has room for it. -->
+      <span v-if="day.getDate() === 1" class="whitespace-nowrap max-sm:hidden">{{ formatMonthDay(day) }}</span>
+      <span :class="day.getDate() === 1 && 'sm:hidden'">{{ day.getDate() }}</span>
     </ULink>
 
     <USkeleton
@@ -214,9 +216,5 @@ function inFocus(day: Date): boolean {
 // The line between two months is drawn stronger, stepping around the first of the month.
 function endsMonth(day: Date): boolean {
   return addDays(day, 7).getMonth() !== day.getMonth();
-}
-
-function label(day: Date): string {
-  return day.getDate() === 1 ? formatMonthDay(day) : String(day.getDate());
 }
 </script>

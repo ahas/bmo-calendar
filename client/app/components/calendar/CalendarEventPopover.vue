@@ -10,7 +10,7 @@
         <UPopover
           :open="open"
           :dismissible="!dirty"
-          :ui="{ content: 'w-[22rem] max-w-[calc(100vw-2rem)] p-4' }"
+          :ui="{ content: 'w-[26rem] max-w-[calc(100vw-2rem)] p-4' }"
           :content="{ side: formSide, collisionPadding: 16 }"
           @update:open="onUpdateOpen"
           @close:prevent="leave"
@@ -18,7 +18,7 @@
           <slot :open="open" />
 
           <template #content>
-            <CalendarEventForm v-model:dirty="dirty" :event="event" @done="closeEvent(event.key)" />
+            <CalendarEventForm v-model:dirty="dirty" :event="event" @done="closeEvent(event.key)" @escape="leave" />
           </template>
         </UPopover>
       </div>

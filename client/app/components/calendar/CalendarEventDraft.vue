@@ -1,7 +1,7 @@
 <template>
   <!-- The ghost of an event being made, dressed as the event it would be, its form open beside it. Only
        the segment holding its start carries the form. -->
-  <UPopover :open="!!anchored && open" :dismissible="!dirty" :content="content" :ui="{ content: 'w-[22rem] max-w-[calc(100vw-2rem)] p-4' }" @update:open="onUpdateOpen" @close:prevent="leave">
+  <UPopover :open="!!anchored && open" :dismissible="!dirty" :content="content" :ui="{ content: 'w-[26rem] max-w-[calc(100vw-2rem)] p-4' }" @update:open="onUpdateOpen" @close:prevent="leave">
     <template #anchor>
       <div
         ref="el"
@@ -28,7 +28,7 @@
     </template>
 
     <template #content>
-      <CalendarEventForm v-if="draft" v-model:dirty="dirty" :draft="draft" @update="updateDraft" @commit="commitDraft" />
+      <CalendarEventForm v-if="draft" v-model:dirty="dirty" :draft="draft" @update="updateDraft" @commit="commitDraft" @escape="leave" />
     </template>
   </UPopover>
 </template>

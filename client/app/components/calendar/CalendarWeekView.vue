@@ -46,7 +46,7 @@
       </div>
     </div>
 
-    <UScrollArea ref="container" class="min-h-0 flex-1 snap-y snap-proximity [scrollbar-gutter:stable]">
+    <UScrollArea ref="container" class="min-h-0 flex-1 snap-y snap-proximity scroll-pt-3 [scrollbar-gutter:stable]">
       <div data-week-grid class="grid" :style="gridStyle">
         <div class="relative" :style="{ height: `${24 * HOUR_HEIGHT}px` }">
           <span v-for="hour in hours" :key="hour" class="absolute end-2 -translate-y-1/2 text-sm tabular-nums text-muted" :style="{ top: `${hour * HOUR_HEIGHT}px` }">
@@ -149,9 +149,9 @@ const { lengthX, lengthY } = useSwipe(() => container.value?.$el, {
   }
 });
 
-// The day opens at seven in the morning.
+// The day opens at seven in the morning, its hour line clear of the top edge.
 onMounted(async () => {
   await nextTick();
-  container.value?.$el.scrollTo({ top: 7 * HOUR_HEIGHT });
+  container.value?.$el.scrollTo({ top: 7 * HOUR_HEIGHT - 12 });
 });
 </script>
