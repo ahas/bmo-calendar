@@ -1,0 +1,160 @@
+//! Alarms: a due one told once through the receiver, none twice across a restart, a late one with its
+//! lateness, a cancelled one never, and each told in the room its account reaches.
+
+use bmo_calendar::model::{epoch_of, now_ms, parse_local};
+use serde_json::{Value, json};
+
+use crate::support::{MEMBER_ROOM, OWNER_ROOM, Service, local_in, scratch, stand};
+
+async fn due_event(service: &Service, account: &str, title: &str) -> Value {
+  service.get(&format!("/mine/calendars?account={account}")).await;
+  let body = json!({
+    "calendarId": "mine",
+    "title": title,
+    "start": local_in(2),
+    "end": local_in(32),
+    "alarm": "5",
+  });
+  let (status, event) = service.post(&format!("/mine/events?account={account}"), body).await;
+  assert_eq!(status, 201, "{event}");
+  event
+}
+
+#[tokio::test]
+async fn a_due_alarm_is_told_once_and_none_twice_across_a_restart() {
+  let service = Service::fresh().await;
+  let event = due_event(&service, "1", "Dentist").await;
+  let id = event["id"].as_str().unwrap();
+
+  let (status, beat) = service.post("/beats", json!({})).await;
+  assert_eq!(status, 200, "{beat}");
+  let told = beat["told"].as_array().unwrap();
+  assert_eq!(told.len(), 1, "{beat}");
+  assert_eq!(told[0]["eventId"], id);
+  assert_eq!(told[0]["occurrence"], event["start"]);
+  assert_eq!(told[0]["lateMs"], 0);
+  assert_eq!(told[0]["rooms"], json!([OWNER_ROOM]));
+
+  let instructions = service.stand.instructions();
+  assert_eq!(instructions.len(), 1);
+  let instruction = &instructions[0];
+  assert_eq!(instruction["room"], OWNER_ROOM);
+  assert_eq!(instruction["sort"], "calendar");
+  assert_eq!(instruction["cause"], "reply");
+  assert_eq!(instruction["summary"], "Dentist");
+  assert_eq!(instruction["kind"], format!("calendar:{id}:{}", event["start"].as_str().unwrap()));
+  let order = instruction["said"]["order"].as_str().unwrap();
+  assert!(
+    order.contains("\"Dentist\"") && order.contains("the owner") && !order.contains("late"),
+    "{order}"
+  );
+
+  let (_, again) = service.post("/beats", json!({})).await;
+  assert_eq!(again["told"], json!([]));
+  let (_, read) = service.get(&format!("/mine/events/{id}?account=1")).await;
+  assert_eq!(read["told"], event["start"]);
+
+  let (stand, folder) = service.stop().await;
+  let service = Service::start(&stand, folder).await;
+  let (_, after) = service.post("/beats", json!({})).await;
+  assert_eq!(after["told"], json!([]));
+  assert_eq!(service.stand.instructions().len(), 1, "a restart tells nothing twice");
+}
+
+#[tokio::test]
+async fn an_alarm_that_came_due_while_the_service_was_down_is_told_late() {
+  let stand = stand().await;
+  let folder = scratch();
+  let now = now_ms();
+  let start = local_in(-20);
+  let brain = stand.brain("account:1");
+  stand.peers.lock().unwrap().written_at = Some(now - 3 * 3_600_000);
+  stand.write(
+    brain,
+    json!({
+      "key": "event:missed",
+      "type": "event",
+      "text": "Standup",
+      "validFrom": epoch_of(parse_local(&start).unwrap()),
+      "actorName": "tester",
+      "labels": { "calendar": "mine", "start": start, "end": local_in(10), "allDay": "false", "alarm": "0",
+        "repeat": "none", "creator": "1", "realm": "mine", "createdAt": "1", "skip": "" },
+    }),
+  );
+  let settings = crate::support::settings(&stand, &folder);
+  bmo_calendar::store::Store::open(&settings.store.path)
+    .unwrap()
+    .set_last_beat(now - 2 * 3_600_000)
+    .unwrap();
+
+  let service = Service::start(&stand, folder).await;
+  service.until(async |service| !service.stand.instructions().is_empty()).await;
+  let order = service.stand.instructions()[0]["said"]["order"].as_str().unwrap().to_owned();
+  assert!(order.contains("minutes late"), "{order}");
+
+  let from = now - 3_600_000;
+  let (_, alarms) =
+    service.get(&format!("/mine/alarms?account=1&from={from}&to={}", now + 3_600_000)).await;
+  assert_eq!(alarms["items"][0]["eventId"], "missed");
+  assert_eq!(alarms["items"][0]["told"], true);
+  let (_, beat) = service.post("/beats", json!({})).await;
+  assert_eq!(beat["told"], json!([]));
+}
+
+#[tokio::test]
+async fn a_cancelled_event_is_told_nothing() {
+  let service = Service::fresh().await;
+  let event = due_event(&service, "1", "Called off").await;
+  service
+    .delete(&format!("/mine/events/{}?account=1", event["id"].as_str().unwrap()))
+    .await;
+
+  let (_, beat) = service.post("/beats", json!({})).await;
+  assert_eq!(beat["told"], json!([]));
+  assert!(service.stand.instructions().is_empty());
+}
+
+#[tokio::test]
+async fn each_account_is_told_in_the_room_it_reaches() {
+  let service = Service::fresh().await;
+  due_event(&service, "2", "Member with a room").await;
+  due_event(&service, "3", "Member without one").await;
+
+  let (_, beat) = service.post("/beats", json!({})).await;
+  assert_eq!(beat["told"].as_array().unwrap().len(), 2, "{beat}");
+  let instructions = service.stand.instructions();
+  let in_room = |room: i64| instructions.iter().find(|one| one["room"] == room).cloned().unwrap();
+
+  let member = in_room(MEMBER_ROOM);
+  assert_eq!(member["summary"], "Member with a room");
+  assert!(member["said"]["order"].as_str().unwrap().contains("member-a (account 2)"));
+  let relayed = in_room(OWNER_ROOM);
+  assert_eq!(relayed["summary"], "Member without one");
+  let order = relayed["said"]["order"].as_str().unwrap();
+  assert!(
+    order.contains("member-b (account 3)") && order.contains("no room of their own"),
+    "{order}"
+  );
+}
+
+#[tokio::test]
+async fn the_organizations_tell_reaches_everyone_it_names() {
+  let service = Service::fresh().await;
+  for account in ["2", "3"] {
+    service.get(&format!("/mine/calendars?account={account}")).await;
+  }
+  service.get("/organization/calendars").await;
+  service
+    .patch("/organization/calendars/organization", json!({ "tell": "everyone" }))
+    .await;
+  let body = json!({ "calendarId": "organization", "title": "All hands", "start": local_in(2), "end": local_in(30), "alarm": "5" });
+  let (status, _) = service.post("/organization/events?account=1", body).await;
+  assert_eq!(status, 201);
+
+  let (_, beat) = service.post("/beats", json!({})).await;
+  let rooms: Vec<i64> =
+    beat["told"][0]["rooms"].as_array().unwrap().iter().filter_map(Value::as_i64).collect();
+  assert_eq!(rooms, [MEMBER_ROOM, OWNER_ROOM]);
+  let instructions = service.stand.instructions();
+  assert_eq!(instructions.len(), 2, "one room is told once");
+}

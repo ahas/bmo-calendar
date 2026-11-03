@@ -1,0 +1,30 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "realm",
+    "id"
+  ],
+  "properties": {
+    "realm": {
+      "type": "string",
+      "enum": [
+        "mine",
+        "organization"
+      ],
+      "description": "The realm: mine, the owner's own calendars, or organization, the organization's."
+    },
+    "id": {
+      "type": "string",
+      "description": "The event's id, as a listing names it."
+    },
+    "occurrence": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}$",
+      "description": "One occurrence of a repeating event, by its local start as a listing names it; the change or cancellation reaches that occurrence alone."
+    }
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "realm"
+  ],
+  "properties": {
+    "realm": {
+      "type": "string",
+      "enum": [
+        "mine",
+        "organization"
+      ],
+      "description": "The realm: mine, the owner's own calendars, or organization, the organization's."
+    },
+    "start": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}$",
+      "description": "The span's local start, YYYY-MM-DDTHH:mm:ss; with end."
+    },
+    "end": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}$",
+      "description": "The span's local end, at most 92 days after the start; with start."
+    },
+    "n": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 1,
+      "description": "With no span: the next n events from now, within 92 days."
+    }
+  }
+}

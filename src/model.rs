@@ -1,0 +1,335 @@
+//! Calendars and events as the brain keeps them (`docs/design.md`, 「What a calendar and an event are in the
+//! brain」): the memory read back into the API's members, the labels written, local datetimes, and the
+//! occurrences of a repeating event.
+
+use std::collections::BTreeMap;
+
+use chrono::{Datelike, Duration, Local, LocalResult, Months, NaiveDate, NaiveDateTime, TimeZone};
+use serde::{Deserialize, Serialize};
+
+use crate::wire::{Alarm, Calendar, Color, Event, Realm, Repeat, Tell, Writers};
+
+/// The labels of a memory: the caller's own metadata.
+pub type Labels = BTreeMap<String, String>;
+
+/// The memory type a calendar is kept as.
+pub const CALENDAR_TYPE: &str = "calendar";
+/// The memory type an event is kept as.
+pub const EVENT_TYPE: &str = "event";
+
+/// The shape of a local datetime.
+const LOCAL_SHAPE: &str = "%Y-%m-%dT%H:%M:%S";
+
+/// One memory as the brain answers it, as much of it as the calendar reads.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Memory {
+  pub id: i64,
+  #[serde(default)]
+  pub key: Option<String>,
+  #[serde(rename = "type")]
+  pub kind: String,
+  pub text: String,
+  pub status: String,
+  #[serde(default)]
+  pub valid_from: i64,
+  #[serde(default)]
+  pub labels: Labels,
+  #[serde(default)]
+  pub created_at: i64,
+}
+
+impl Memory {
+  /// Whether the memory holds: `active` or `pending`.
+  pub fn live(&self) -> bool {
+    matches!(self.status.as_str(), "active" | "pending")
+  }
+
+  /// The calendar's or event's own id, the key less its type's prefix.
+  pub fn own_id(&self) -> Option<&str> {
+    let key = self.key.as_deref()?;
+    match self.kind.as_str() {
+      CALENDAR_TYPE => key.strip_prefix("calendar:"),
+      EVENT_TYPE => key.strip_prefix("event:"),
+      _ => None,
+    }
+  }
+
+  pub fn label(&self, name: &str) -> &str {
+    self.labels.get(name).map(String::as_str).unwrap_or("")
+  }
+}
+
+/// The key a calendar is kept under.
+pub fn calendar_key(id: &str) -> String {
+  format!("calendar:{id}")
+}
+
+/// The key an event is kept under.
+pub fn event_key(id: &str) -> String {
+  format!("event:{id}")
+}
+
+/// Whether an id the caller names can stand in a key: 1 to 64 letters, digits, `-` and `_`.
+pub fn valid_id(id: &str) -> bool {
+  (1..=64).contains(&id.len()) && id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+}
+
+/// A fresh id: 32 hex digits from the process's random state and the moment.
+pub fn fresh_id() -> String {
+  use std::collections::hash_map::RandomState;
+  use std::hash::{BuildHasher, Hasher};
+  use std::sync::atomic::{AtomicU64, Ordering};
+
+  static COUNT: AtomicU64 = AtomicU64::new(0);
+  let count = COUNT.fetch_add(1, Ordering::Relaxed);
+  let half = |salt: u64| {
+    let mut hasher = RandomState::new().build_hasher();
+    hasher.write_u64(salt);
+    hasher.write_i64(now_ms());
+    hasher.write_u64(count);
+    hasher.finish()
+  };
+  format!("{:016x}{:016x}", half(1), half(2))
+}
+
+/// This moment, epoch ms.
+pub fn now_ms() -> i64 {
+  std::time::SystemTime::now()
+    .duration_since(std::time::UNIX_EPOCH)
+    .map(|since| since.as_millis() as i64)
+    .unwrap_or(0)
+}
+
+/// A local datetime read from its ISO shape, `YYYY-MM-DDTHH:mm:ss`.
+pub fn parse_local(text: &str) -> Option<NaiveDateTime> {
+  if text.len() != 19 {
+    return None;
+  }
+  NaiveDateTime::parse_from_str(text, LOCAL_SHAPE).ok()
+}
+
+/// A local datetime in its ISO shape.
+pub fn local_text(at: NaiveDateTime) -> String {
+  at.format(LOCAL_SHAPE).to_string()
+}
+
+/// The moment a local datetime names in the host's time zone, epoch ms; a wall-clock time a change of offset
+/// skips is read an hour on.
+pub fn epoch_of(at: NaiveDateTime) -> i64 {
+  match Local.from_local_datetime(&at) {
+    LocalResult::Single(moment) | LocalResult::Ambiguous(moment, _) => moment.timestamp_millis(),
+    LocalResult::None => Local
+      .from_local_datetime(&(at + Duration::hours(1)))
+      .earliest()
+      .map(|moment| moment.timestamp_millis())
+      .unwrap_or_else(|| at.and_utc().timestamp_millis()),
+  }
+}
+
+/// The local datetime of a moment in the host's time zone.
+pub fn local_of(ms: i64) -> NaiveDateTime {
+  Local
+    .timestamp_millis_opt(ms)
+    .single()
+    .map(|moment| moment.naive_local())
+    .unwrap_or_else(|| chrono::DateTime::from_timestamp_millis(ms).unwrap_or_default().naive_utc())
+}
+
+/// A label's word read as one of an enum's words.
+fn word<T: for<'a> Deserialize<'a>>(word: &str) -> Option<T> {
+  serde_json::from_value(serde_json::Value::String(word.to_owned())).ok()
+}
+
+/// An enum's word as a label writes it.
+pub fn label_word<T: Serialize>(value: &T) -> String {
+  serde_json::to_value(value)
+    .ok()
+    .and_then(|value| value.as_str().map(str::to_owned))
+    .unwrap_or_default()
+}
+
+/// The accounts a `hidden` label names.
+pub fn hidden_accounts(memory: &Memory) -> Vec<String> {
+  memory
+    .label("hidden")
+    .split(',')
+    .filter(|key| !key.is_empty())
+    .map(str::to_owned)
+    .collect()
+}
+
+/// The occurrences a `skip` label names.
+pub fn skipped(memory: &Memory) -> Vec<String> {
+  memory
+    .label("skip")
+    .split(',')
+    .filter(|one| !one.is_empty())
+    .map(str::to_owned)
+    .collect()
+}
+
+/// A label's number, 0 where it holds none.
+fn number(memory: &Memory, name: &str) -> i64 {
+  memory.label(name).parse().unwrap_or(0)
+}
+
+/// A calendar read from its memory, `hidden` for the account named.
+pub fn calendar_of(memory: &Memory, realm: Realm, account: Option<&str>) -> Option<Calendar> {
+  let id = memory.own_id()?.to_owned();
+  let organization = realm == Realm::Organization;
+  Some(Calendar {
+    id,
+    realm,
+    name: memory.text.clone(),
+    color: word(memory.label("color")).unwrap_or(Color::Primary),
+    writers: organization.then(|| word(memory.label("writers")).unwrap_or(Writers::Creator)),
+    tell: organization.then(|| word(memory.label("tell")).unwrap_or(Tell::Creator)),
+    hidden: account.is_some_and(|account| hidden_accounts(memory).iter().any(|key| key == account)),
+    creator: memory.label("creator").to_owned(),
+    created_at: number(memory, "createdAt"),
+  })
+}
+
+/// The labels of a calendar.
+pub fn calendar_labels(calendar: &Calendar, hidden: &[String]) -> Labels {
+  let mut labels = Labels::new();
+  labels.insert("color".into(), label_word(&calendar.color));
+  labels.insert("realm".into(), calendar.realm.word().into());
+  if let Some(writers) = calendar.writers {
+    labels.insert("writers".into(), label_word(&writers));
+  }
+  if let Some(tell) = calendar.tell {
+    labels.insert("tell".into(), label_word(&tell));
+  }
+  labels.insert("hidden".into(), hidden.join(","));
+  labels.insert("creator".into(), calendar.creator.clone());
+  labels.insert("createdAt".into(), calendar.created_at.to_string());
+  labels
+}
+
+/// An event read from its memory, whole: no occurrence.
+pub fn event_of(memory: &Memory, realm: Realm, told: Option<String>) -> Option<Event> {
+  let id = memory.own_id()?.to_owned();
+  let (title, description) = match memory.text.split_once("\n\n") {
+    Some((title, description)) => (title.to_owned(), description.to_owned()),
+    None => (memory.text.clone(), String::new()),
+  };
+  Some(Event {
+    id,
+    realm,
+    calendar_id: memory.label("calendar").to_owned(),
+    title,
+    description,
+    start: memory.label("start").to_owned(),
+    end: memory.label("end").to_owned(),
+    all_day: memory.label("allDay") == "true",
+    alarm: word(memory.label("alarm")).unwrap_or(Alarm::None),
+    repeat: word(memory.label("repeat")).unwrap_or(Repeat::None),
+    occurrence: None,
+    creator: memory.label("creator").to_owned(),
+    created_at: number(memory, "createdAt"),
+    changed_at: memory.created_at,
+    told,
+  })
+}
+
+/// The memory text of an event: its title, then its description after a blank line where it has one.
+pub fn event_text(event: &Event) -> String {
+  if event.description.trim().is_empty() {
+    event.title.clone()
+  } else {
+    format!("{}\n\n{}", event.title, event.description)
+  }
+}
+
+/// The labels of an event.
+pub fn event_labels(event: &Event, skip: &[String]) -> Labels {
+  let mut labels = Labels::new();
+  labels.insert("calendar".into(), event.calendar_id.clone());
+  labels.insert("start".into(), event.start.clone());
+  labels.insert("end".into(), event.end.clone());
+  labels.insert("allDay".into(), event.all_day.to_string());
+  labels.insert("alarm".into(), label_word(&event.alarm));
+  labels.insert("repeat".into(), label_word(&event.repeat));
+  labels.insert("creator".into(), event.creator.clone());
+  labels.insert("realm".into(), event.realm.word().into());
+  labels.insert("createdAt".into(), event.created_at.to_string());
+  labels.insert("skip".into(), skip.join(","));
+  labels
+}
+
+/// The `n`th repetition of a start, or none where the month has no such day.
+fn nth(start: NaiveDateTime, repeat: Repeat, n: i64) -> Option<NaiveDateTime> {
+  match repeat {
+    Repeat::None => (n == 0).then_some(start),
+    Repeat::Daily => start.checked_add_signed(Duration::days(n)),
+    Repeat::Weekly => start.checked_add_signed(Duration::weeks(n)),
+    Repeat::Monthly | Repeat::Yearly => {
+      let months = if repeat == Repeat::Monthly { n } else { n * 12 };
+      let date = start.date();
+      let month = NaiveDate::from_ymd_opt(date.year(), date.month(), 1)?
+        .checked_add_months(Months::new(u32::try_from(months).ok()?))?;
+      let day = NaiveDate::from_ymd_opt(month.year(), month.month(), date.day())?;
+      Some(day.and_time(start.time()))
+    }
+  }
+}
+
+/// How many repetitions lie wholly before `low`, less one, as a place to start counting from.
+fn first_index(start: NaiveDateTime, repeat: Repeat, low: NaiveDateTime) -> i64 {
+  if low <= start {
+    return 0;
+  }
+  let days = (low - start).num_days();
+  let index = match repeat {
+    Repeat::None => 0,
+    Repeat::Daily => days,
+    Repeat::Weekly => days / 7,
+    Repeat::Monthly => {
+      i64::from(low.year() - start.year()) * 12 + i64::from(low.month()) - i64::from(start.month())
+    }
+    Repeat::Yearly => i64::from(low.year() - start.year()),
+  };
+  (index - 1).max(0)
+}
+
+/// The occurrence starts of a series that fall in `[low, high)`, the skipped ones left out.
+pub fn starts_between(
+  start: NaiveDateTime,
+  repeat: Repeat,
+  skip: &[String],
+  low: NaiveDateTime,
+  high: NaiveDateTime,
+) -> Vec<NaiveDateTime> {
+  let mut starts = Vec::new();
+  let mut index = first_index(start, repeat, low);
+  loop {
+    let next = nth(start, repeat, index);
+    index += 1;
+    match next {
+      Some(at) if at >= high => break,
+      Some(at) => {
+        if at >= low && !skip.contains(&local_text(at)) {
+          starts.push(at);
+        }
+      }
+      None if repeat == Repeat::None || index > 100_000 => break,
+      None => {}
+    }
+    if repeat == Repeat::None {
+      break;
+    }
+  }
+  starts
+}
+
+/// Whether a local start is one of a series' occurrences.
+pub fn is_occurrence(
+  start: NaiveDateTime,
+  repeat: Repeat,
+  skip: &[String],
+  occurrence: NaiveDateTime,
+) -> bool {
+  starts_between(start, repeat, skip, occurrence, occurrence + Duration::seconds(1)).contains(&occurrence)
+}

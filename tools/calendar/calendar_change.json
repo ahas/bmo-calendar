@@ -1,0 +1,106 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "realm",
+    "id"
+  ],
+  "properties": {
+    "realm": {
+      "type": "string",
+      "enum": [
+        "mine",
+        "organization"
+      ],
+      "description": "The realm: mine, the owner's own calendars, or organization, the organization's."
+    },
+    "id": {
+      "type": "string",
+      "description": "The event's id, as a listing names it."
+    },
+    "occurrence": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}$",
+      "description": "One occurrence of a repeating event, by its local start as a listing names it; the change or cancellation reaches that occurrence alone."
+    },
+    "calendarId": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Another calendar of the realm to move it to."
+    },
+    "title": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "A new title, one line."
+    },
+    "description": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "New words beside the title."
+    },
+    "start": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}$",
+      "description": "A new local start."
+    },
+    "end": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}$",
+      "description": "A new local end."
+    },
+    "allDay": {
+      "type": [
+        "boolean",
+        "null"
+      ],
+      "description": "Whether it takes the whole day."
+    },
+    "alarm": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "none",
+        "0",
+        "5",
+        "15",
+        "30",
+        "60",
+        "1440",
+        null
+      ],
+      "description": "The alarm: none, or the minutes before the start it is told: 0, 5, 15, 30, 60 or 1440 (a day). Set one when the owner asks to be reminded."
+    },
+    "repeat": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "none",
+        "daily",
+        "weekly",
+        "monthly",
+        "yearly",
+        null
+      ],
+      "description": "How it repeats: none, daily, weekly, monthly or yearly."
+    }
+  }
+}

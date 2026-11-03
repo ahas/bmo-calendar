@@ -1,0 +1,17 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "realm"
+  ],
+  "properties": {
+    "realm": {
+      "type": "string",
+      "enum": [
+        "mine",
+        "organization"
+      ],
+      "description": "The realm: mine, the owner's own calendars, or organization, the organization's."
+    }
+  }
+}

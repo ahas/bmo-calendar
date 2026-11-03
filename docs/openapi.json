@@ -1,0 +1,3336 @@
+{
+  "components": {
+    "schemas": {
+      "Alarm": {
+        "description": "An event's alarm: none, or the minutes before its start.",
+        "enum": [
+          "none",
+          "0",
+          "5",
+          "15",
+          "30",
+          "60",
+          "1440"
+        ],
+        "type": "string"
+      },
+      "AlarmMoment": {
+        "description": "One alarm moment.",
+        "properties": {
+          "at": {
+            "description": "Epoch ms.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "eventId": {
+            "type": "string"
+          },
+          "occurrence": {
+            "description": "The occurrence's local start.",
+            "type": "string"
+          },
+          "realm": {
+            "$ref": "#/components/schemas/Realm"
+          },
+          "told": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "realm",
+          "eventId",
+          "occurrence",
+          "at",
+          "told"
+        ],
+        "type": "object"
+      },
+      "AlarmTold": {
+        "description": "`alarm.told`.",
+        "properties": {
+          "at": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "eventId": {
+            "type": "string"
+          },
+          "occurrence": {
+            "type": "string"
+          },
+          "realm": {
+            "$ref": "#/components/schemas/Realm"
+          }
+        },
+        "required": [
+          "realm",
+          "eventId",
+          "occurrence",
+          "at"
+        ],
+        "type": "object"
+      },
+      "Beat": {
+        "description": "What a beat told.",
+        "properties": {
+          "told": {
+            "items": {
+              "$ref": "#/components/schemas/ToldAlarm"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "told"
+        ],
+        "type": "object"
+      },
+      "Calendar": {
+        "description": "A calendar.",
+        "properties": {
+          "color": {
+            "$ref": "#/components/schemas/Color"
+          },
+          "createdAt": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "creator": {
+            "description": "The account that made it.",
+            "type": "string"
+          },
+          "hidden": {
+            "description": "Whether the caller's account hid it from its grid.",
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "realm": {
+            "$ref": "#/components/schemas/Realm"
+          },
+          "tell": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Tell"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Who is told its alarms; null in the `mine` realm."
+          },
+          "writers": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Writers"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Who writes its events; null in the `mine` realm."
+          }
+        },
+        "required": [
+          "id",
+          "realm",
+          "name",
+          "color",
+          "writers",
+          "tell",
+          "hidden",
+          "creator",
+          "createdAt"
+        ],
+        "type": "object"
+      },
+      "CalendarChange": {
+        "description": "A change of a calendar: the fields named.",
+        "properties": {
+          "color": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Color"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "hidden": {
+            "default": null,
+            "description": "Hides or shows it for the caller's account alone.",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "name": {
+            "default": null,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tell": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Tell"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "writers": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Writers"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "name",
+          "color",
+          "writers",
+          "tell",
+          "hidden"
+        ],
+        "type": "object"
+      },
+      "CalendarChanged": {
+        "description": "`calendar.changed`.",
+        "properties": {
+          "calendarId": {
+            "type": "string"
+          },
+          "realm": {
+            "$ref": "#/components/schemas/Realm"
+          }
+        },
+        "required": [
+          "realm",
+          "calendarId"
+        ],
+        "type": "object"
+      },
+      "Color": {
+        "description": "A calendar's colour: one of the console's six.",
+        "enum": [
+          "primary",
+          "secondary",
+          "info",
+          "success",
+          "warning",
+          "error"
+        ],
+        "type": "string"
+      },
+      "ConsoleManifest": {
+        "description": "The console bundle's manifest (bmo-ui's `docs/console-bundles.md`, 「The manifest」).",
+        "properties": {
+          "apiPrefix": {
+            "type": "string"
+          },
+          "bundle": {
+            "type": "string"
+          },
+          "calls": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "events": {
+            "type": "boolean"
+          },
+          "icon": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "ownerKey": {
+            "type": "boolean"
+          },
+          "pushKinds": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "relays": {
+            "items": true,
+            "type": "array"
+          },
+          "role": {
+            "$ref": "#/components/schemas/Role"
+          },
+          "screenPath": {
+            "type": "string"
+          },
+          "serviceName": {
+            "type": "string"
+          },
+          "shareReads": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "stylesheet": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "websocket": {
+            "type": "boolean"
+          },
+          "words": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "title",
+          "icon",
+          "screenPath",
+          "serviceName",
+          "bundle",
+          "stylesheet",
+          "words",
+          "apiPrefix",
+          "role",
+          "ownerKey",
+          "events",
+          "websocket",
+          "pushKinds",
+          "calls",
+          "relays",
+          "shareReads"
+        ],
+        "type": "object"
+      },
+      "Event": {
+        "description": "An event, or one occurrence of a repeating event in a span's rows.",
+        "properties": {
+          "alarm": {
+            "$ref": "#/components/schemas/Alarm"
+          },
+          "allDay": {
+            "type": "boolean"
+          },
+          "calendarId": {
+            "type": "string"
+          },
+          "changedAt": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "createdAt": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "creator": {
+            "description": "The account that made it.",
+            "type": "string"
+          },
+          "description": {
+            "description": "May be empty.",
+            "type": "string"
+          },
+          "end": {
+            "description": "Local ISO datetime, after the start.",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "occurrence": {
+            "description": "In a span's rows, the start of the occurrence a repeating event's row stands for; null otherwise.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "realm": {
+            "$ref": "#/components/schemas/Realm"
+          },
+          "repeat": {
+            "$ref": "#/components/schemas/Repeat"
+          },
+          "start": {
+            "description": "Local ISO datetime, `YYYY-MM-DDTHH:mm:ss`.",
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "told": {
+            "description": "The occurrence last told, or null.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "realm",
+          "calendarId",
+          "title",
+          "description",
+          "start",
+          "end",
+          "allDay",
+          "alarm",
+          "repeat",
+          "occurrence",
+          "creator",
+          "createdAt",
+          "changedAt",
+          "told"
+        ],
+        "type": "object"
+      },
+      "EventChange": {
+        "description": "A change of an event: the fields named.",
+        "properties": {
+          "alarm": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Alarm"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "allDay": {
+            "default": null,
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "calendarId": {
+            "default": null,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "description": {
+            "default": null,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "end": {
+            "default": null,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "occurrence": {
+            "default": null,
+            "description": "Limits the change to this occurrence of a repeating event, which becomes an event of its own.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "repeat": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Repeat"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "start": {
+            "default": null,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "title": {
+            "default": null,
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "calendarId",
+          "title",
+          "description",
+          "start",
+          "end",
+          "allDay",
+          "alarm",
+          "repeat",
+          "occurrence"
+        ],
+        "type": "object"
+      },
+      "EventChanged": {
+        "description": "`event.changed`.",
+        "properties": {
+          "eventId": {
+            "type": "string"
+          },
+          "occurrence": {
+            "description": "Null where the change is the whole event's.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "realm": {
+            "$ref": "#/components/schemas/Realm"
+          }
+        },
+        "required": [
+          "realm",
+          "eventId",
+          "occurrence"
+        ],
+        "type": "object"
+      },
+      "Health": {
+        "description": "`GET /health`.",
+        "properties": {
+          "ready": {
+            "type": "boolean"
+          },
+          "reason": {
+            "description": "Null when ready.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "ready",
+          "reason",
+          "version"
+        ],
+        "type": "object"
+      },
+      "NewCalendar": {
+        "description": "A calendar to make.",
+        "properties": {
+          "color": {
+            "$ref": "#/components/schemas/Color"
+          },
+          "name": {
+            "type": "string"
+          },
+          "tell": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Tell"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Organization only; `creator` where none is given."
+          },
+          "writers": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Writers"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "Organization only; `creator` where none is given."
+          }
+        },
+        "required": [
+          "name",
+          "color",
+          "writers",
+          "tell"
+        ],
+        "type": "object"
+      },
+      "NewEvent": {
+        "description": "An event to write.",
+        "properties": {
+          "alarm": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Alarm"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "allDay": {
+            "default": null,
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "calendarId": {
+            "type": "string"
+          },
+          "description": {
+            "default": null,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "end": {
+            "type": "string"
+          },
+          "id": {
+            "default": null,
+            "description": "1 to 64 letters, digits, `-` and `_`; one is made where none is given. A POST naming an id the realm\nalready holds writes over that event and answers 200.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "repeat": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Repeat"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "start": {
+            "type": "string"
+          },
+          "title": {
+            "description": "One line.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "calendarId",
+          "title",
+          "description",
+          "start",
+          "end",
+          "allDay",
+          "alarm",
+          "repeat"
+        ],
+        "type": "object"
+      },
+      "Page": {
+        "description": "A page of members.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Calendar"
+            },
+            "type": "array"
+          },
+          "more": {
+            "description": "Whether anything stands past the last item.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "more"
+        ],
+        "type": "object"
+      },
+      "Page2": {
+        "description": "A page of members.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Event"
+            },
+            "type": "array"
+          },
+          "more": {
+            "description": "Whether anything stands past the last item.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "more"
+        ],
+        "type": "object"
+      },
+      "Page3": {
+        "description": "A page of members.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AlarmMoment"
+            },
+            "type": "array"
+          },
+          "more": {
+            "description": "Whether anything stands past the last item.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "more"
+        ],
+        "type": "object"
+      },
+      "Page4": {
+        "description": "A page of members.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/StreamEvent"
+            },
+            "type": "array"
+          },
+          "more": {
+            "description": "Whether anything stands past the last item.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "more"
+        ],
+        "type": "object"
+      },
+      "Realm": {
+        "description": "One of the two realms, never one for both (`docs/design.md`, 「Two realms, kept apart」).",
+        "oneOf": [
+          {
+            "const": "mine",
+            "description": "The account's own calendars.",
+            "type": "string"
+          },
+          {
+            "const": "organization",
+            "description": "The organization's calendars.",
+            "type": "string"
+          }
+        ]
+      },
+      "Repeat": {
+        "description": "How an event repeats.",
+        "enum": [
+          "none",
+          "daily",
+          "weekly",
+          "monthly",
+          "yearly"
+        ],
+        "type": "string"
+      },
+      "Role": {
+        "description": "A role a reader holds.",
+        "enum": [
+          "administrator",
+          "member"
+        ],
+        "type": "string"
+      },
+      "StreamEvent": {
+        "description": "One event the service publishes.",
+        "properties": {
+          "at": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "data": true,
+          "id": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "kind": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "at",
+          "data"
+        ],
+        "type": "object"
+      },
+      "Tell": {
+        "description": "Who is told an organization calendar's alarms.",
+        "oneOf": [
+          {
+            "const": "creator",
+            "description": "The event's creator.",
+            "type": "string"
+          },
+          {
+            "const": "everyone",
+            "description": "The owner and every account holding a `mine` realm.",
+            "type": "string"
+          },
+          {
+            "const": "nobody",
+            "description": "Nobody.",
+            "type": "string"
+          }
+        ]
+      },
+      "ToldAlarm": {
+        "description": "One alarm a beat told.",
+        "properties": {
+          "at": {
+            "description": "The alarm's moment, epoch ms.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "eventId": {
+            "type": "string"
+          },
+          "lateMs": {
+            "description": "How late it was told; 0 where it is on time.",
+            "format": "int64",
+            "type": "integer"
+          },
+          "occurrence": {
+            "type": "string"
+          },
+          "realm": {
+            "$ref": "#/components/schemas/Realm"
+          },
+          "rooms": {
+            "description": "The rooms it was told in.",
+            "items": {
+              "format": "int64",
+              "type": "integer"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "realm",
+          "eventId",
+          "occurrence",
+          "at",
+          "lateMs",
+          "rooms"
+        ],
+        "type": "object"
+      },
+      "WireError": {
+        "description": "A failure.",
+        "properties": {
+          "code": {
+            "description": "kebab-case.",
+            "type": "string"
+          },
+          "error": {
+            "description": "An English sentence.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "error"
+        ],
+        "type": "object"
+      },
+      "Writers": {
+        "description": "Who writes an organization calendar's events.",
+        "oneOf": [
+          {
+            "const": "administrator",
+            "description": "The administrator alone.",
+            "type": "string"
+          },
+          {
+            "const": "creator",
+            "description": "Every account adds; the administrator and the event's creator change and cancel.",
+            "type": "string"
+          },
+          {
+            "const": "everyone",
+            "description": "Every account.",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    "securitySchemes": {
+      "bearer": {
+        "description": "The service token, or the console's credential with Owner-Key and Owner-Role.",
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  },
+  "info": {
+    "description": "The platform's dated events, kept as memories in the brain service (the brain the master, this unit the subordinate), in two realms kept apart: each account's own (mine) and the organization's. Calendars and events are read and written by realm; a repeating event answers one row per occurrence in a span; an alarm is told once to the supervisor through the receiver when it comes due. Bodies are JSON with camelCase keys, times are epoch milliseconds unless a field says it is a local ISO datetime, lists are pages of items and more, and every failure is the error shape with its status. The tool's entries, placed on the tool host, are stated under x-tools.",
+    "title": "bmo-calendar",
+    "version": "0.1.0-rev.1"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/beats": {
+      "post": {
+        "operationId": "runBeat",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Beat"
+                }
+              }
+            },
+            "description": "Answered."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`unauthorized`: the token is missing or wrong"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`forbidden`: the token is right but the caller may not do this"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`failed`: the service failed"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-ready`: the service has not read the brain yet"
+          }
+        },
+        "summary": "Run one beat now: tell every alarm due, once each. The service token alone.",
+        "tags": [
+          "alarms"
+        ],
+        "x-codes": [
+          "unauthorized",
+          "forbidden",
+          "failed",
+          "not-ready"
+        ]
+      }
+    },
+    "/console-manifest": {
+      "get": {
+        "operationId": "readConsoleManifest",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConsoleManifest"
+                }
+              }
+            },
+            "description": "Answered."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`unauthorized`: the token is missing or wrong"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`forbidden`: the token is right but the caller may not do this"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-found`: nothing stands at the key the path names"
+          }
+        },
+        "summary": "The console bundle's manifest.",
+        "tags": [
+          "console"
+        ],
+        "x-codes": [
+          "unauthorized",
+          "forbidden",
+          "not-found"
+        ]
+      }
+    },
+    "/console/words": {
+      "get": {
+        "operationId": "readConsoleWords",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Answered."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`unauthorized`: the token is missing or wrong"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`forbidden`: the token is right but the caller may not do this"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-found`: nothing stands at the key the path names"
+          }
+        },
+        "summary": "The console bundle's words, each locale's tree under the locale's code.",
+        "tags": [
+          "console"
+        ],
+        "x-codes": [
+          "unauthorized",
+          "forbidden",
+          "not-found"
+        ]
+      }
+    },
+    "/console/{file}": {
+      "get": {
+        "operationId": "readConsoleFile",
+        "parameters": [
+          {
+            "description": "The file's name, as the manifest gives it.",
+            "in": "path",
+            "name": "file",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/css": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "text/javascript": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Answered."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`unauthorized`: the token is missing or wrong"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`forbidden`: the token is right but the caller may not do this"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-found`: nothing stands at the key the path names"
+          }
+        },
+        "summary": "The console bundle's module or stylesheet, at the name the manifest gives it.",
+        "tags": [
+          "console"
+        ],
+        "x-codes": [
+          "unauthorized",
+          "forbidden",
+          "not-found"
+        ]
+      }
+    },
+    "/events": {
+      "get": {
+        "operationId": "readEvents",
+        "parameters": [
+          {
+            "description": "The last event number seen.",
+            "in": "query",
+            "name": "after",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The last event number seen.",
+              "format": "int64",
+              "type": [
+                "integer",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "Comma-separated kinds.",
+            "in": "query",
+            "name": "kinds",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "Comma-separated kinds.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "The most events a page holds, 50 where none is given, at most 500.",
+            "in": "query",
+            "name": "limit",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The most events a page holds, 50 where none is given, at most 500.",
+              "format": "int64",
+              "type": [
+                "integer",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "The last event number seen, as a reconnecting stream sends it.",
+            "in": "header",
+            "name": "Last-Event-ID",
+            "required": false,
+            "schema": {
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page4"
+                }
+              },
+              "text/event-stream": {
+                "schema": {
+                  "description": "Each event's data is a StreamEvent.",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Answered."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`bad-request`: the body or the query is not the shape the route takes"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`unauthorized`: the token is missing or wrong"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`forbidden`: the token is right but the caller may not do this"
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`gone`: a resume from before the events the service keeps"
+          }
+        },
+        "summary": "The events the calendar publishes, as a server-sent stream, or a page to Accept: application/json.",
+        "tags": [
+          "events-stream"
+        ],
+        "x-codes": [
+          "bad-request",
+          "unauthorized",
+          "forbidden",
+          "gone"
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "readHealth",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            },
+            "description": "Answered."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`unauthorized`: the token is missing or wrong"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`forbidden`: the token is right but the caller may not do this"
+          }
+        },
+        "summary": "Whether the service has read the brain, and its version.",
+        "tags": [
+          "health"
+        ],
+        "x-codes": [
+          "unauthorized",
+          "forbidden"
+        ]
+      }
+    },
+    "/{realm}/alarms": {
+      "get": {
+        "operationId": "listAlarms",
+        "parameters": [
+          {
+            "description": "The realm: mine or organization.",
+            "in": "path",
+            "name": "realm",
+            "required": true,
+            "schema": {
+              "enum": [
+                "mine",
+                "organization"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "account",
+            "required": true,
+            "schema": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "Epoch ms.",
+            "in": "query",
+            "name": "from",
+            "required": true,
+            "schema": {
+              "description": "Epoch ms.",
+              "format": "int64",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "holderName",
+            "required": true,
+            "schema": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "Epoch ms, at most 92 days after `from`.",
+            "in": "query",
+            "name": "to",
+            "required": true,
+            "schema": {
+              "description": "Epoch ms, at most 92 days after `from`.",
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page3"
+                }
+              }
+            },
+            "description": "Answered."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`bad-request`: the body or the query is not the shape the route takes"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`unauthorized`: the token is missing or wrong"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`forbidden`: the token is right but the caller may not do this"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-found`: nothing stands at the key the path names"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`no-account`: a mine call names no account, or its holder's account cannot be found\n`span-too-long`: a span over 92 days, or one ending before it starts"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`upstream-failed`: the brain, the receiver or the account service answered a failure"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-ready`: the service has not read the brain yet"
+          }
+        },
+        "summary": "The alarm moments in a span of at most 92 days, each with whether it was told.",
+        "tags": [
+          "alarms"
+        ],
+        "x-codes": [
+          "bad-request",
+          "unauthorized",
+          "forbidden",
+          "not-found",
+          "no-account",
+          "span-too-long",
+          "upstream-failed",
+          "not-ready"
+        ]
+      }
+    },
+    "/{realm}/calendars": {
+      "get": {
+        "operationId": "listCalendars",
+        "parameters": [
+          {
+            "description": "The realm: mine or organization.",
+            "in": "path",
+            "name": "realm",
+            "required": true,
+            "schema": {
+              "enum": [
+                "mine",
+                "organization"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "The account, by its key.",
+            "in": "query",
+            "name": "account",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The account, by its key.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "The holder of a tool session, which acts for the owner.",
+            "in": "query",
+            "name": "holderName",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The holder of a tool session, which acts for the owner.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page"
+                }
+              }
+            },
+            "description": "Answered."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`bad-request`: the body or the query is not the shape the route takes"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`unauthorized`: the token is missing or wrong"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`forbidden`: the token is right but the caller may not do this"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-found`: nothing stands at the key the path names"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`no-account`: a mine call names no account, or its holder's account cannot be found"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`upstream-failed`: the brain, the receiver or the account service answered a failure"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-ready`: the service has not read the brain yet"
+          }
+        },
+        "summary": "The realm's calendars, the caller's hidden mark on each; one is made where the realm holds none.",
+        "tags": [
+          "calendars"
+        ],
+        "x-codes": [
+          "bad-request",
+          "unauthorized",
+          "forbidden",
+          "not-found",
+          "no-account",
+          "upstream-failed",
+          "not-ready"
+        ]
+      },
+      "post": {
+        "operationId": "createCalendar",
+        "parameters": [
+          {
+            "description": "The realm: mine or organization.",
+            "in": "path",
+            "name": "realm",
+            "required": true,
+            "schema": {
+              "enum": [
+                "mine",
+                "organization"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "The account, by its key.",
+            "in": "query",
+            "name": "account",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The account, by its key.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "The holder of a tool session, which acts for the owner.",
+            "in": "query",
+            "name": "holderName",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The holder of a tool session, which acts for the owner.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewCalendar"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Calendar"
+                }
+              }
+            },
+            "description": "Created."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`bad-request`: the body or the query is not the shape the route takes"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`unauthorized`: the token is missing or wrong"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`forbidden`: the token is right but the caller may not do this\n`not-a-writer`: a write the caller may not make"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-found`: nothing stands at the key the path names"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`no-account`: a mine call names no account, or its holder's account cannot be found"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`upstream-failed`: the brain, the receiver or the account service answered a failure"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-ready`: the service has not read the brain yet"
+          }
+        },
+        "summary": "Make a calendar.",
+        "tags": [
+          "calendars"
+        ],
+        "x-codes": [
+          "bad-request",
+          "unauthorized",
+          "forbidden",
+          "not-a-writer",
+          "not-found",
+          "no-account",
+          "upstream-failed",
+          "not-ready"
+        ]
+      }
+    },
+    "/{realm}/calendars/{calendarId}": {
+      "delete": {
+        "operationId": "retireCalendar",
+        "parameters": [
+          {
+            "description": "The realm: mine or organization.",
+            "in": "path",
+            "name": "realm",
+            "required": true,
+            "schema": {
+              "enum": [
+                "mine",
+                "organization"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "The calendar's id.",
+            "in": "path",
+            "name": "calendarId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The account, by its key.",
+            "in": "query",
+            "name": "account",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The account, by its key.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "The holder of a tool session, which acts for the owner.",
+            "in": "query",
+            "name": "holderName",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The holder of a tool session, which acts for the owner.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Done; no content."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`bad-request`: the body or the query is not the shape the route takes"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`unauthorized`: the token is missing or wrong"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`forbidden`: the token is right but the caller may not do this\n`not-a-writer`: a write the caller may not make"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-found`: nothing stands at the key the path names"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`no-account`: a mine call names no account, or its holder's account cannot be found"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`upstream-failed`: the brain, the receiver or the account service answered a failure"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-ready`: the service has not read the brain yet"
+          }
+        },
+        "summary": "Retire a calendar and its events.",
+        "tags": [
+          "calendars"
+        ],
+        "x-codes": [
+          "bad-request",
+          "unauthorized",
+          "forbidden",
+          "not-a-writer",
+          "not-found",
+          "no-account",
+          "upstream-failed",
+          "not-ready"
+        ]
+      },
+      "patch": {
+        "operationId": "changeCalendar",
+        "parameters": [
+          {
+            "description": "The realm: mine or organization.",
+            "in": "path",
+            "name": "realm",
+            "required": true,
+            "schema": {
+              "enum": [
+                "mine",
+                "organization"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "The calendar's id.",
+            "in": "path",
+            "name": "calendarId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The account, by its key.",
+            "in": "query",
+            "name": "account",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The account, by its key.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "The holder of a tool session, which acts for the owner.",
+            "in": "query",
+            "name": "holderName",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The holder of a tool session, which acts for the owner.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalendarChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Calendar"
+                }
+              }
+            },
+            "description": "Answered."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`bad-request`: the body or the query is not the shape the route takes"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`unauthorized`: the token is missing or wrong"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`forbidden`: the token is right but the caller may not do this\n`not-a-writer`: a write the caller may not make"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-found`: nothing stands at the key the path names"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`no-account`: a mine call names no account, or its holder's account cannot be found"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`upstream-failed`: the brain, the receiver or the account service answered a failure"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-ready`: the service has not read the brain yet"
+          }
+        },
+        "summary": "Change a calendar's name, colour, writers or tell, or hide or show it for the caller.",
+        "tags": [
+          "calendars"
+        ],
+        "x-codes": [
+          "bad-request",
+          "unauthorized",
+          "forbidden",
+          "not-a-writer",
+          "not-found",
+          "no-account",
+          "upstream-failed",
+          "not-ready"
+        ]
+      }
+    },
+    "/{realm}/events": {
+      "get": {
+        "operationId": "listEvents",
+        "parameters": [
+          {
+            "description": "The realm: mine or organization.",
+            "in": "path",
+            "name": "realm",
+            "required": true,
+            "schema": {
+              "enum": [
+                "mine",
+                "organization"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "account",
+            "required": true,
+            "schema": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "Local ISO datetime, at most 92 days after the start.",
+            "in": "query",
+            "name": "end",
+            "required": true,
+            "schema": {
+              "description": "Local ISO datetime, at most 92 days after the start.",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "holderName",
+            "required": true,
+            "schema": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "Local ISO datetime.",
+            "in": "query",
+            "name": "start",
+            "required": true,
+            "schema": {
+              "description": "Local ISO datetime.",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page2"
+                }
+              }
+            },
+            "description": "Answered."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`bad-request`: the body or the query is not the shape the route takes"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`unauthorized`: the token is missing or wrong"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`forbidden`: the token is right but the caller may not do this"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-found`: nothing stands at the key the path names"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`no-account`: a mine call names no account, or its holder's account cannot be found\n`span-too-long`: a span over 92 days, or one ending before it starts"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`upstream-failed`: the brain, the receiver or the account service answered a failure"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-ready`: the service has not read the brain yet"
+          }
+        },
+        "summary": "The events overlapping a span of at most 92 days, a repeating event one row per occurrence.",
+        "tags": [
+          "events"
+        ],
+        "x-codes": [
+          "bad-request",
+          "unauthorized",
+          "forbidden",
+          "not-found",
+          "no-account",
+          "span-too-long",
+          "upstream-failed",
+          "not-ready"
+        ]
+      },
+      "post": {
+        "operationId": "createEvent",
+        "parameters": [
+          {
+            "description": "The realm: mine or organization.",
+            "in": "path",
+            "name": "realm",
+            "required": true,
+            "schema": {
+              "enum": [
+                "mine",
+                "organization"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "The account, by its key.",
+            "in": "query",
+            "name": "account",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The account, by its key.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "The holder of a tool session, which acts for the owner.",
+            "in": "query",
+            "name": "holderName",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The holder of a tool session, which acts for the owner.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewEvent"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Event"
+                }
+              }
+            },
+            "description": "Answered."
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Event"
+                }
+              }
+            },
+            "description": "Created."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`bad-request`: the body or the query is not the shape the route takes"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`unauthorized`: the token is missing or wrong"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`forbidden`: the token is right but the caller may not do this\n`not-a-writer`: a write the caller may not make"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-found`: nothing stands at the key the path names"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`no-account`: a mine call names no account, or its holder's account cannot be found\n`end-before-start`: an end not after its start\n`unknown-calendar`: an event written under a calendar the realm does not hold live"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`upstream-failed`: the brain, the receiver or the account service answered a failure"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-ready`: the service has not read the brain yet"
+          }
+        },
+        "summary": "Write an event; a POST naming an id the realm holds writes over it and answers 200.",
+        "tags": [
+          "events"
+        ],
+        "x-codes": [
+          "bad-request",
+          "unauthorized",
+          "forbidden",
+          "not-a-writer",
+          "not-found",
+          "no-account",
+          "end-before-start",
+          "unknown-calendar",
+          "upstream-failed",
+          "not-ready"
+        ]
+      }
+    },
+    "/{realm}/events/{eventId}": {
+      "delete": {
+        "operationId": "cancelEvent",
+        "parameters": [
+          {
+            "description": "The realm: mine or organization.",
+            "in": "path",
+            "name": "realm",
+            "required": true,
+            "schema": {
+              "enum": [
+                "mine",
+                "organization"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "The event's id.",
+            "in": "path",
+            "name": "eventId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "account",
+            "required": true,
+            "schema": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "holderName",
+            "required": true,
+            "schema": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "The one occurrence cancelled, by its local start.",
+            "in": "query",
+            "name": "occurrence",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The one occurrence cancelled, by its local start.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Done; no content."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`bad-request`: the body or the query is not the shape the route takes"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`unauthorized`: the token is missing or wrong"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`forbidden`: the token is right but the caller may not do this\n`not-a-writer`: a write the caller may not make"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-found`: nothing stands at the key the path names"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`no-account`: a mine call names no account, or its holder's account cannot be found\n`not-an-occurrence`: an occurrence that is not one of the event's"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`upstream-failed`: the brain, the receiver or the account service answered a failure"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-ready`: the service has not read the brain yet"
+          }
+        },
+        "summary": "Cancel an event, or one occurrence of a repeating event.",
+        "tags": [
+          "events"
+        ],
+        "x-codes": [
+          "bad-request",
+          "unauthorized",
+          "forbidden",
+          "not-a-writer",
+          "not-found",
+          "no-account",
+          "not-an-occurrence",
+          "upstream-failed",
+          "not-ready"
+        ]
+      },
+      "get": {
+        "operationId": "readEvent",
+        "parameters": [
+          {
+            "description": "The realm: mine or organization.",
+            "in": "path",
+            "name": "realm",
+            "required": true,
+            "schema": {
+              "enum": [
+                "mine",
+                "organization"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "The event's id.",
+            "in": "path",
+            "name": "eventId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The account, by its key.",
+            "in": "query",
+            "name": "account",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The account, by its key.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "The holder of a tool session, which acts for the owner.",
+            "in": "query",
+            "name": "holderName",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The holder of a tool session, which acts for the owner.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Event"
+                }
+              }
+            },
+            "description": "Answered."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`bad-request`: the body or the query is not the shape the route takes"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`unauthorized`: the token is missing or wrong"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`forbidden`: the token is right but the caller may not do this"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-found`: nothing stands at the key the path names"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`no-account`: a mine call names no account, or its holder's account cannot be found"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`upstream-failed`: the brain, the receiver or the account service answered a failure"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-ready`: the service has not read the brain yet"
+          }
+        },
+        "summary": "One event.",
+        "tags": [
+          "events"
+        ],
+        "x-codes": [
+          "bad-request",
+          "unauthorized",
+          "forbidden",
+          "not-found",
+          "no-account",
+          "upstream-failed",
+          "not-ready"
+        ]
+      },
+      "patch": {
+        "operationId": "changeEvent",
+        "parameters": [
+          {
+            "description": "The realm: mine or organization.",
+            "in": "path",
+            "name": "realm",
+            "required": true,
+            "schema": {
+              "enum": [
+                "mine",
+                "organization"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "The event's id.",
+            "in": "path",
+            "name": "eventId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The account, by its key.",
+            "in": "query",
+            "name": "account",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The account, by its key.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "The holder of a tool session, which acts for the owner.",
+            "in": "query",
+            "name": "holderName",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The holder of a tool session, which acts for the owner.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EventChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Event"
+                }
+              }
+            },
+            "description": "Answered."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`bad-request`: the body or the query is not the shape the route takes"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`unauthorized`: the token is missing or wrong"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`forbidden`: the token is right but the caller may not do this\n`not-a-writer`: a write the caller may not make"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-found`: nothing stands at the key the path names"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`no-account`: a mine call names no account, or its holder's account cannot be found\n`end-before-start`: an end not after its start\n`unknown-calendar`: an event written under a calendar the realm does not hold live\n`not-an-occurrence`: an occurrence that is not one of the event's"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`upstream-failed`: the brain, the receiver or the account service answered a failure"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-ready`: the service has not read the brain yet"
+          }
+        },
+        "summary": "Change the fields named; with an occurrence, that occurrence alone, which becomes an event of its own.",
+        "tags": [
+          "events"
+        ],
+        "x-codes": [
+          "bad-request",
+          "unauthorized",
+          "forbidden",
+          "not-a-writer",
+          "not-found",
+          "no-account",
+          "end-before-start",
+          "unknown-calendar",
+          "not-an-occurrence",
+          "upstream-failed",
+          "not-ready"
+        ]
+      }
+    }
+  },
+  "security": [
+    {
+      "bearer": []
+    }
+  ],
+  "servers": [
+    {
+      "description": "the calendar service",
+      "url": "/"
+    }
+  ],
+  "tags": [
+    {
+      "name": "health"
+    },
+    {
+      "name": "calendars"
+    },
+    {
+      "name": "events"
+    },
+    {
+      "name": "alarms"
+    },
+    {
+      "name": "events-stream"
+    },
+    {
+      "name": "console"
+    }
+  ],
+  "x-calls": [
+    "bmo-brain",
+    "bmo-receiver",
+    "the account service"
+  ],
+  "x-event-data": {
+    "alarm.told": {
+      "$ref": "#/components/schemas/AlarmTold"
+    },
+    "calendar.changed": {
+      "$ref": "#/components/schemas/CalendarChanged"
+    },
+    "event.changed": {
+      "$ref": "#/components/schemas/EventChanged"
+    }
+  },
+  "x-events": [
+    "calendar.changed",
+    "event.changed",
+    "alarm.told"
+  ],
+  "x-layer": "downstream",
+  "x-tools": [
+    {
+      "capabilities": [
+        "room.tools"
+      ],
+      "description": "The calendars of a realm.",
+      "input": {
+        "additionalProperties": false,
+        "properties": {
+          "realm": {
+            "description": "The realm: mine, the owner's own calendars, or organization, the organization's.",
+            "enum": [
+              "mine",
+              "organization"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "realm"
+        ],
+        "type": "object"
+      },
+      "name": "calendar_list",
+      "namespace": "bmo",
+      "output": {
+        "$ref": "#/components/schemas/Page"
+      },
+      "route": "GET /{realm}/calendars"
+    },
+    {
+      "capabilities": [
+        "room.tools"
+      ],
+      "description": "The events of a realm in a span, or the next n from now.",
+      "input": {
+        "additionalProperties": false,
+        "properties": {
+          "end": {
+            "description": "The span's local end, at most 92 days after the start; with start.",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}$",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "n": {
+            "description": "With no span: the next n events from now, within 92 days.",
+            "minimum": 1,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "realm": {
+            "description": "The realm: mine, the owner's own calendars, or organization, the organization's.",
+            "enum": [
+              "mine",
+              "organization"
+            ],
+            "type": "string"
+          },
+          "start": {
+            "description": "The span's local start, YYYY-MM-DDTHH:mm:ss; with end.",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}$",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "realm"
+        ],
+        "type": "object"
+      },
+      "name": "calendar_events",
+      "namespace": "bmo",
+      "output": {
+        "$ref": "#/components/schemas/Page2"
+      },
+      "route": "GET /{realm}/events"
+    },
+    {
+      "capabilities": [
+        "room.tools"
+      ],
+      "description": "One event.",
+      "input": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "description": "The event's id, as a listing names it.",
+            "type": "string"
+          },
+          "realm": {
+            "description": "The realm: mine, the owner's own calendars, or organization, the organization's.",
+            "enum": [
+              "mine",
+              "organization"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "realm",
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "calendar_show",
+      "namespace": "bmo",
+      "output": {
+        "$ref": "#/components/schemas/Event"
+      },
+      "route": "GET /{realm}/events/{eventId}"
+    },
+    {
+      "capabilities": [
+        "room.tools"
+      ],
+      "description": "Adds an event, with an alarm where the owner asks to be reminded.",
+      "input": {
+        "additionalProperties": false,
+        "properties": {
+          "alarm": {
+            "description": "The alarm: none, or the minutes before the start it is told: 0, 5, 15, 30, 60 or 1440 (a day). Set one when the owner asks to be reminded.",
+            "enum": [
+              "none",
+              "0",
+              "5",
+              "15",
+              "30",
+              "60",
+              "1440",
+              null
+            ],
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "allDay": {
+            "description": "Whether it takes the whole day.",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "calendarId": {
+            "description": "The calendar it goes in; the realm's first where none is given.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "description": {
+            "description": "Words beside the title.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "end": {
+            "description": "The local end; an hour after the start where none is given, the whole day where allDay.",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}$",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "realm": {
+            "description": "The realm: mine, the owner's own calendars, or organization, the organization's.",
+            "enum": [
+              "mine",
+              "organization"
+            ],
+            "type": "string"
+          },
+          "repeat": {
+            "description": "How it repeats: none, daily, weekly, monthly or yearly.",
+            "enum": [
+              "none",
+              "daily",
+              "weekly",
+              "monthly",
+              "yearly",
+              null
+            ],
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "start": {
+            "description": "The local start, YYYY-MM-DDTHH:mm:ss.",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}$",
+            "type": "string"
+          },
+          "title": {
+            "description": "The title, one line.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "realm",
+          "title",
+          "start"
+        ],
+        "type": "object"
+      },
+      "name": "calendar_add",
+      "namespace": "bmo",
+      "output": {
+        "$ref": "#/components/schemas/Event"
+      },
+      "route": "POST /{realm}/events"
+    },
+    {
+      "capabilities": [
+        "room.tools"
+      ],
+      "description": "Changes the fields named of an event or one occurrence.",
+      "input": {
+        "additionalProperties": false,
+        "properties": {
+          "alarm": {
+            "description": "The alarm: none, or the minutes before the start it is told: 0, 5, 15, 30, 60 or 1440 (a day). Set one when the owner asks to be reminded.",
+            "enum": [
+              "none",
+              "0",
+              "5",
+              "15",
+              "30",
+              "60",
+              "1440",
+              null
+            ],
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "allDay": {
+            "description": "Whether it takes the whole day.",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "calendarId": {
+            "description": "Another calendar of the realm to move it to.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "description": {
+            "description": "New words beside the title.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "end": {
+            "description": "A new local end.",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}$",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "description": "The event's id, as a listing names it.",
+            "type": "string"
+          },
+          "occurrence": {
+            "description": "One occurrence of a repeating event, by its local start as a listing names it; the change or cancellation reaches that occurrence alone.",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}$",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "realm": {
+            "description": "The realm: mine, the owner's own calendars, or organization, the organization's.",
+            "enum": [
+              "mine",
+              "organization"
+            ],
+            "type": "string"
+          },
+          "repeat": {
+            "description": "How it repeats: none, daily, weekly, monthly or yearly.",
+            "enum": [
+              "none",
+              "daily",
+              "weekly",
+              "monthly",
+              "yearly",
+              null
+            ],
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "start": {
+            "description": "A new local start.",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}$",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "title": {
+            "description": "A new title, one line.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "realm",
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "calendar_change",
+      "namespace": "bmo",
+      "output": {
+        "$ref": "#/components/schemas/Event"
+      },
+      "route": "PATCH /{realm}/events/{eventId}"
+    },
+    {
+      "capabilities": [
+        "room.tools"
+      ],
+      "description": "Cancels an event or one occurrence.",
+      "input": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "description": "The event's id, as a listing names it.",
+            "type": "string"
+          },
+          "occurrence": {
+            "description": "One occurrence of a repeating event, by its local start as a listing names it; the change or cancellation reaches that occurrence alone.",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}$",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "realm": {
+            "description": "The realm: mine, the owner's own calendars, or organization, the organization's.",
+            "enum": [
+              "mine",
+              "organization"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "realm",
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "calendar_cancel",
+      "namespace": "bmo",
+      "output": {
+        "properties": {
+          "cancelled": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "route": "DELETE /{realm}/events/{eventId}"
+    }
+  ]
+}

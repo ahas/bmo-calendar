@@ -1,0 +1,42 @@
+# The calendar service's settings (docs/api.md, 「Settings」). A deployment's settings.local.toml overrides any
+# key here, and BMO_CALENDAR_<TABLE>__<KEY> in the environment overrides both.
+
+[server]
+# Where the service answers, as host:port.
+listen = "127.0.0.1:13127"
+# The service token every caller but the console presents. A deployment names its own; empty lets no one in.
+token = ""
+# The data root whose env/ the peers' addresses and tokens are read from, and under which `tool-env` writes
+# env/calendar.env; the deployment's conventional one under the home where empty.
+data_root = ""
+
+# The console bundle the service serves (docs/api.md, 「Console」).
+[console]
+# The console's credential; empty, the console reaches nothing.
+token = ""
+# The bundle's built folder, which `bun run bundle` writes inside client/; a relative one is read from where the
+# process starts, a deployment's release.
+folder = "client/dist"
+
+[store]
+# The SQLite file of the told marks and the last beat's moment.
+path = "calendar.db"
+
+# The names of the calendar a realm is given when its brain holds none (docs/api.md, 「Calendars」); a deployment
+# names them in the words its readers read.
+[calendars]
+mine_name = "My calendar"
+organization_name = "Organization calendar"
+
+# Each peer's base address and token where the data root's files are not to be read; empty, they are read.
+[brain]
+address = ""
+token = ""
+
+[receiver]
+address = ""
+token = ""
+
+[accounts]
+address = ""
+token = ""
