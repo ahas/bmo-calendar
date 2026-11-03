@@ -7,13 +7,13 @@
         <ULink
           raw
           :to="pathFor(toCalendarDate(month.first), 'month')"
-          class="inline-block rounded-md px-1 text-lg font-semibold transition-colors hover:bg-elevated active:bg-accented"
-          :class="today.year === date.year && today.month === month.first.getMonth() + 1 ? 'text-primary' : 'text-highlighted'"
+          class="inline-block rounded-md px-1 text-lg font-semibold transition-colors hover:bg-elevated active:bg-accented pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:items-center"
+          :class="today.year === date.year && today.month === month.first.getMonth() + 1 ? 'badge-ink text-primary' : 'text-highlighted'"
         >
           {{ formatMonth(month.first) }}
         </ULink>
 
-        <div class="mt-2 grid grid-cols-7 text-center text-sm text-muted">
+        <div class="mt-2 grid grid-cols-7 text-center text-sm text-muted" aria-hidden="true">
           <span v-for="(weekday, index) in weekdays" :key="index">{{ weekday }}</span>
         </div>
 
@@ -24,8 +24,9 @@
               raw
               :to="pathFor(toCalendarDate(day), 'day')"
               :aria-label="formatFullDate(day)"
+              :aria-current="isToday(day) ? 'date' : undefined"
               class="inline-flex aspect-square w-full max-w-7 items-center justify-center rounded-full text-sm tabular-nums transition-colors"
-              :class="isToday(day) ? 'bg-primary font-semibold text-inverted hover:bg-primary/75 active:bg-primary/75' : [isWeekend(day) ? 'text-muted' : 'text-default', 'hover:bg-elevated active:bg-accented']"
+              :class="isToday(day) ? 'badge-ink bg-primary font-semibold text-inverted hover:bg-primary/75 active:bg-primary/75' : [isWeekend(day) ? 'text-muted' : 'text-default', 'hover:bg-elevated active:bg-accented']"
             >
               {{ day.getDate() }}
             </ULink>

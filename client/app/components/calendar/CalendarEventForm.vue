@@ -2,7 +2,8 @@
   <!-- An event's form, or a draft's: every field the service keeps of an event, with one save at its
        foot. A draft's ghost follows the form as it is filled; an event changes only when it is saved.
        The date and time segments take every key but Tab, Escape among them, so Escape is caught on its
-       way down and handed to whatever closes the form. -->
+       way down and handed to whatever closes the form. Moving the start moves the end with it, so the
+       event keeps its length; the end alone changes its length. -->
   <UForm
     ref="form"
     :state="state"
@@ -15,58 +16,61 @@
     <div class="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-2">
       <label :for="titleId" class="whitespace-nowrap text-sm text-muted">{{ $t("calendar.label.event_title") }}</label>
       <UFormField name="title">
-        <UInput :id="titleId" v-model="state.title" :placeholder="$t('calendar.label.untitled')" :maxlength="200" autofocus class="w-full" />
+        <UInput :id="titleId" v-model="state.title" :placeholder="$t('calendar.label.untitled')" :maxlength="200" :autofocus="!!draft || !narrow" :size="fieldSize" class="w-full" />
       </UFormField>
 
-      <span class="whitespace-nowrap text-sm text-muted">{{ $t("calendar.label.calendar") }}</span>
-      <USelect v-model="state.calendar" :items="calendarItems" :aria-label="$t('calendar.label.calendar')" class="w-full">
+      <label :for="calendarId" class="whitespace-nowrap text-sm text-muted">{{ $t("calendar.label.calendar") }}</label>
+      <USelect :id="calendarId" v-model="state.calendar" :items="calendarItems" :size="fieldSize" class="w-full">
         <template #leading>
           <span class="m-0.5 block size-2.5 rounded-full" :class="CALENDAR_DOT[color]" />
         </template>
       </USelect>
 
-      <span class="whitespace-nowrap text-sm text-muted">{{ $t("calendar.label.all_day") }}</span>
-      <UCheckbox v-model="state.allDay" :aria-label="$t('calendar.label.all_day')" class="justify-self-start" />
+      <label :for="allDayId" class="whitespace-nowrap text-sm text-muted">{{ $t("calendar.label.all_day") }}</label>
+      <UCheckbox :id="allDayId" v-model="state.allDay" :size="fieldSize" class="justify-self-start" />
 
       <span class="whitespace-nowrap text-sm text-muted">{{ $t("calendar.label.starts") }}</span>
       <div class="flex min-w-0 flex-wrap items-center gap-2">
-        <CalendarDateField v-model="state.startDate" :label="$t('calendar.label.starts')" />
-        <UInputTime v-if="!state.allDay" v-model="state.startTime" :hour-cycle="24" :aria-label="$t('calendar.aria.start_time')" />
+        <CalendarDateField v-model="state.startDate" :size="fieldSize" :label="$t('calendar.label.starts')" />
+        <UInputTime v-if="!state.allDay" v-model="state.startTime" :size="fieldSize" :hour-cycle="24" :aria-label="$t('calendar.aria.start_time')" />
       </div>
 
       <span class="self-start whitespace-nowrap pt-1.5 text-sm text-muted">{{ $t("calendar.label.ends") }}</span>
-      <UFormField name="end">
+      <UFormField name="end" :ui="{ error: 'badge-ink' }">
         <div class="flex min-w-0 flex-wrap items-center gap-2">
-          <CalendarDateField v-model="state.endDate" :label="$t('calendar.label.ends')" />
-          <UInputTime v-if="!state.allDay" v-model="state.endTime" :hour-cycle="24" :aria-label="$t('calendar.aria.end_time')" />
+          <CalendarDateField :id="endDateId" v-model="state.endDate" :size="fieldSize" :label="$t('calendar.label.ends')" />
+          <UInputTime v-if="!state.allDay" :id="endTimeId" v-model="state.endTime" :size="fieldSize" :hour-cycle="24" :aria-label="$t('calendar.aria.end_time')" />
         </div>
       </UFormField>
 
-      <span class="whitespace-nowrap text-sm text-muted">{{ $t("calendar.label.alarm") }}</span>
-      <USelect v-model="state.alarm" :items="alarmItems" :aria-label="$t('calendar.label.alarm')" class="w-full" />
+      <label :for="alarmId" class="whitespace-nowrap text-sm text-muted">{{ $t("calendar.label.alarm") }}</label>
+      <USelect :id="alarmId" v-model="state.alarm" :items="alarmItems" :size="fieldSize" class="w-full" />
 
-      <span class="whitespace-nowrap text-sm text-muted">{{ $t("calendar.label.repeat") }}</span>
-      <USelect v-model="state.repeat" :items="repeatItems" :aria-label="$t('calendar.label.repeat')" class="w-full" />
+      <label :for="repeatId" class="whitespace-nowrap text-sm text-muted">{{ $t("calendar.label.repeat") }}</label>
+      <USelect :id="repeatId" v-model="state.repeat" :items="repeatItems" :size="fieldSize" class="w-full" />
 
       <label :for="notesId" class="self-start whitespace-nowrap pt-1.5 text-sm text-muted">{{ $t("calendar.label.notes") }}</label>
       <GrowingTextarea :id="notesId" v-model="state.description" class="w-full" />
     </div>
 
     <div class="flex items-center justify-end gap-2">
-      <UButton v-if="event" :label="$t('calendar.action.delete')" color="error" variant="ghost" :loading="removing" @click="remove" />
-      <UButton type="submit" :label="$t('common.action.save')" :disabled="!!event && !dirty" :loading="saving" />
+      <UButton v-if="event" :label="$t('calendar.action.delete')" color="error" variant="ghost" class="badge-ink" :size="fieldSize" :loading="removing" @click="remove" />
+      <UButton type="submit" :label="$t('common.action.save')" :size="fieldSize" :disabled="!!event && !dirty" :loading="saving" />
     </div>
   </UForm>
 </template>
 
 <script setup lang="ts">
 import { CalendarDate, Time } from "@internationalized/date";
+import { useMediaQuery } from "@vueuse/core";
 import { addDays, subMilliseconds } from "date-fns";
 import { computed, onBeforeUnmount, ref, shallowReactive, useId, useTemplateRef, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import GrowingTextarea from "bmo-ui/app/components/GrowingTextarea.vue";
+import { useNarrow } from "bmo-ui/app/domain/screen";
 
 import CalendarDateField from "./CalendarDateField.vue";
+import { movedEnd } from "../../domain/a11y";
 import { CALENDAR_DOT } from "../../domain/colors";
 import { fromLocalISO, toCalendarDate, toDate, toDateTime, toLocalISO, toTime } from "../../domain/dates";
 import { ALARM_CHOICES, DEFAULT_ALARM, DEFAULT_REPEAT, REPEAT_CHOICES, choiceItems } from "../../../shared/choices";
@@ -94,7 +98,17 @@ const { t } = useI18n();
 const { groups, lastUsed, calendarByKey } = useCalendarEvents();
 const { changeEvent, cancelEvent } = useEventChange();
 
+const narrow = useNarrow();
+// A finger is given the fields' largest size to aim at.
+const coarse = useMediaQuery("(pointer: coarse)");
+
 const titleId = useId();
+const calendarId = useId();
+const allDayId = useId();
+const endDateId = useId();
+const endTimeId = useId();
+const alarmId = useId();
+const repeatId = useId();
 const notesId = useId();
 
 if (props.event) useEventEditor().registerAnchor();
@@ -154,6 +168,31 @@ function signature(data: FormState): string {
 
 const saved = signature(state);
 
+// The moments the fields name, their times read even while the event is all day, so turning the mark on
+// or off moves neither.
+function startOf(data: FormState): Date | null {
+  return data.startDate ? (data.startTime ? toDateTime(data.startDate, data.startTime) : toDate(data.startDate)) : null;
+}
+
+function endOf(data: FormState): Date | null {
+  return data.endDate ? (data.endTime ? toDateTime(data.endDate, data.endTime) : toDate(data.endDate)) : null;
+}
+
+// Moving the start moves the end by as much: this is how an event is moved without a drag.
+watch(
+  () => startOf(state)?.getTime(),
+  (now, before) => {
+    const end = endOf(state);
+
+    if (now === undefined || before === undefined || now === before || !end) return;
+
+    const moved = movedEnd({ start: new Date(before), end }, new Date(now));
+
+    state.endDate = toCalendarDate(moved);
+    state.endTime = toTime(moved);
+  }
+);
+
 watch(
   () => signature(state),
   (now) => (dirty.value = now !== saved),
@@ -184,6 +223,7 @@ const calendarItems = computed(() => {
 });
 
 const color = computed(() => calendarByKey(state.calendar)?.color ?? "primary");
+const fieldSize = computed(() => (coarse.value ? "xl" : "md"));
 
 const alarmItems = computed(() => choiceItems(t, ALARM_CHOICES, DEFAULT_ALARM));
 const repeatItems = computed(() => choiceItems(t, REPEAT_CHOICES, DEFAULT_REPEAT));

@@ -4,20 +4,22 @@
        is what a gesture reads a time off. -->
   <div
     data-day-column
+    role="group"
     :data-date="isoDate(day)"
-    class="relative snap-start border-s border-default"
+    :aria-label="props.label"
+    class="relative h-[calc(var(--calendar-hour)*24)] snap-start border-s border-default"
     :class="isWeekend(day) && 'bg-elevated/50'"
-    :style="{ height: `${24 * HOUR_HEIGHT}px` }"
     @pointerdown="onGridPointerdown($event, { kind: 'timed', day })"
     @dblclick="onGridDblclick($event, { kind: 'timed', day })"
+    @contextmenu="onGridContextmenu($event, { kind: 'timed', day })"
   >
-    <div v-for="hour in 23" :key="hour" class="pointer-events-none absolute inset-x-0 snap-start border-t border-default" :style="{ top: `${hour * HOUR_HEIGHT}px` }" />
+    <div v-for="hour in 23" :key="hour" class="pointer-events-none absolute inset-x-0 snap-start border-t border-default" :style="{ top: minutesLength(hour * 60) }" />
 
     <USkeleton
       v-for="[hour, hours] in loading ? SKELETONS : []"
       :key="hour"
       class="pointer-events-none absolute inset-x-1 rounded-sm"
-      :style="{ top: `${hour * HOUR_HEIGHT + 2}px`, height: `${hours * HOUR_HEIGHT - 3}px` }"
+      :style="{ top: `calc(${minutesLength(hour * 60)} + 2px)`, height: `calc(${minutesLength(hours * 60)} - 3px)` }"
     />
 
     <template v-for="positioned in events" :key="positioned.event.key">
@@ -36,7 +38,7 @@ import CalendarEventBlock from "./CalendarEventBlock.vue";
 import CalendarEventDraft from "./CalendarEventDraft.vue";
 import CalendarNowIndicator from "./CalendarNowIndicator.vue";
 import { fromLocalISO, isoDate } from "../../domain/dates";
-import { DRAFT_EVENT_KEY, HOUR_HEIGHT, eventBlockStyle } from "../../domain/layout";
+import { DRAFT_EVENT_KEY, eventBlockStyle, minutesLength } from "../../domain/layout";
 import { useEventDraft } from "../../composables/useEventDraft";
 
 import type { PositionedEvent } from "../../domain/layout";
@@ -55,9 +57,11 @@ const props = defineProps<{
   // The leftmost column on screen, where a block arriving from a day off screen takes its form.
   first?: boolean;
   loading?: boolean;
+  /** The day by its full date and its events, for a reader who does not see the column. */
+  label: string;
 }>();
 
-const { onGridPointerdown, onGridDblclick } = useEventDraft();
+const { onGridPointerdown, onGridDblclick, onGridContextmenu } = useEventDraft();
 
 // A block running past midnight is drawn in both days, and the form stands by the one holding its start.
 function anchored(event: CalendarEvent): boolean {

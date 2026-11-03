@@ -64,15 +64,19 @@
       "refresh": "새로고침",
       "scope_all": "모든 반복",
       "scope_one": "이 일정만",
-      "today": "오늘",
-      "view": "보기"
+      "today": "오늘"
     },
     "aria": {
       "end_time": "종료 시각",
+      "events_count": "일정 {n}개",
+      "events_none": "일정 없음",
       "foot_bar": "일정 하단 툴바",
+      "pick_day_named": "{title}, 날짜 선택",
       "settings_named": "{name} 설정",
       "start_time": "시작 시각",
-      "toolbar": "일정 툴바"
+      "today": "오늘",
+      "toolbar": "일정 툴바",
+      "view_named": "{view} 보기"
     },
     "placeholder": {
       "quick_entry": "내일 오후 3시 치과"

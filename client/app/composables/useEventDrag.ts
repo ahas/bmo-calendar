@@ -3,7 +3,7 @@ import { useEventListener } from "@vueuse/core";
 import { ref, toValue } from "vue";
 
 import { fromLocalISO } from "../domain/dates";
-import { DRAG_THRESHOLD, SNAP_MINUTES, minutesFromOffset, snapMinutes } from "../domain/layout";
+import { DRAG_THRESHOLD, SNAP_MINUTES, minutesFromOffset, pxPerMinute, snapMinutes } from "../domain/layout";
 
 import type { MaybeRefOrGetter } from "vue";
 import type { CalendarEvent } from "../../shared/types";
@@ -24,6 +24,7 @@ export function useEventDrag(event: MaybeRefOrGetter<CalendarEvent>, options: { 
   let startY = 0;
   let columnRects: DOMRect[] = [];
   let columnIndex = -1;
+  let perMinute = 0;
 
   function reset(): void {
     active = false;
@@ -33,8 +34,9 @@ export function useEventDrag(event: MaybeRefOrGetter<CalendarEvent>, options: { 
     deltaX.value = 0;
   }
 
+  // A finger on a block scrolls the grid; it moves the event through its form instead.
   function onPointerdown(pointerEvent: PointerEvent): void {
-    if (pointerEvent.button !== 0) return;
+    if (pointerEvent.button !== 0 || pointerEvent.pointerType === "touch") return;
 
     const target = pointerEvent.currentTarget as HTMLElement;
 
@@ -46,6 +48,7 @@ export function useEventDrag(event: MaybeRefOrGetter<CalendarEvent>, options: { 
 
     columnRects = grid ? [...grid.querySelectorAll("[data-day-column]")].map((column) => column.getBoundingClientRect()) : [];
     columnIndex = columnRects.findIndex((rect) => pointerEvent.clientX >= rect.left && pointerEvent.clientX < rect.right);
+    perMinute = columnRects[0] ? pxPerMinute(columnRects[0]) : 0;
 
     target.setPointerCapture(pointerEvent.pointerId);
     active = true;
@@ -64,7 +67,7 @@ export function useEventDrag(event: MaybeRefOrGetter<CalendarEvent>, options: { 
       suppressed.value = true;
     }
 
-    deltaMinutes.value = snapMinutes(minutesFromOffset(dy));
+    deltaMinutes.value = snapMinutes(minutesFromOffset(dy, perMinute));
 
     if (mode.value === "move" && columnIndex !== -1) {
       const targetIndex = columnRects.findIndex((rect) => pointerEvent.clientX >= rect.left && pointerEvent.clientX < rect.right);

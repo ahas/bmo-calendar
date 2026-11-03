@@ -1,74 +1,68 @@
 <template>
-  <!-- One week of the month grid: the days' numbers, then a fixed stack of slots each day fills. All-day
-       bars span the days they cover and hold their lane across them; timed events fill the slots the bars
-       leave, and the last free slot counts what does not fit. -->
-  <div class="grid min-w-0 grid-cols-7" :style="gridStyle">
+  <!-- One week of the month grid, a row of the grid's table: each day a cell holding its number, then a
+       fixed stack of slots it fills. All-day bars stand in the cell of their first day this week and run
+       across the days they cover, holding their lane; timed events fill the slots the bars leave, and the
+       last free slot counts what does not fit. A cell is named by its full date and its events, and the
+       keyboard walks the cells (the month view). -->
+  <div role="row" :aria-rowindex="props.rowIndex" class="grid min-w-0 grid-cols-7" :style="gridStyle">
     <div
-      v-for="({ day }, index) in cells"
-      :key="`day-${day.getTime()}`"
-      :data-date="isoDate(day)"
-      class="row-span-full border-b border-default"
-      :class="[index !== 0 && 'border-s', index !== 0 && day.getDate() === 1 && 'border-s-accented', endsMonth(day) && 'border-b-accented', isWeekend(day) && 'bg-elevated/50']"
-      :style="{ gridColumn: index + 1 }"
-      @pointerdown="onGridPointerdown($event, { kind: 'month', day })"
-      @dblclick="onGridDblclick($event, { kind: 'month', day })"
-    />
-
-    <ULink
-      v-for="({ day }, index) in cells"
-      :key="`number-${day.getTime()}`"
-      raw
-      :to="pathFor(toCalendarDate(day), 'day')"
-      class="row-start-1 m-0.5 inline-flex h-7 min-w-7 select-none items-center justify-center justify-self-end rounded-full px-1.5 text-sm font-semibold tabular-nums transition-colors"
-      :class="isToday(day) ? 'bg-primary text-inverted hover:bg-primary/75 active:bg-primary/75' : [inFocus(day) ? 'text-highlighted' : 'text-muted', 'hover:bg-elevated active:bg-accented']"
-      :style="{ gridColumn: index + 1 }"
+      v-for="(cell, index) in cells"
+      :key="cell.iso"
+      role="gridcell"
+      class="focus-inset row-span-full grid grid-cols-[minmax(0,1fr)] grid-rows-subgrid border-b border-default"
+      :class="[index !== 0 && (cell.day.getDate() === 1 ? 'shadow-[inset_1px_0_0_var(--ui-border-accented)]' : 'shadow-[inset_1px_0_0_var(--ui-border)]'), endsMonth(cell.day) && 'border-b-accented', isWeekend(cell.day) && 'bg-elevated/50']"
+      :data-date="cell.iso"
+      :tabindex="cell.iso === props.tabDay ? 0 : -1"
+      :aria-label="cell.name"
+      :aria-current="cell.today ? 'date' : undefined"
+      @pointerdown="onGridPointerdown($event, { kind: 'month', day: cell.day })"
+      @dblclick="onGridDblclick($event, { kind: 'month', day: cell.day })"
+      @contextmenu="onGridContextmenu($event, { kind: 'month', day: cell.day })"
     >
-      <!-- The first of a month names its month where the cell has room for it. -->
-      <span v-if="day.getDate() === 1" class="whitespace-nowrap max-sm:hidden">{{ formatMonthDay(day) }}</span>
-      <span :class="day.getDate() === 1 && 'sm:hidden'">{{ day.getDate() }}</span>
-    </ULink>
+      <!-- The number opens the day for a pointer; the cell says the date to a reader and opens the day on
+           Enter, so the number is left out of both. On a touch screen it reaches past its circle to a
+           finger's width. -->
+      <ULink
+        raw
+        :to="pathFor(toCalendarDate(cell.day), 'day')"
+        tabindex="-1"
+        aria-hidden="true"
+        class="relative row-start-1 m-0.5 inline-flex h-7 min-w-7 select-none items-center justify-center justify-self-end rounded-full px-1.5 text-sm font-semibold tabular-nums transition-colors pointer-coarse:after:absolute pointer-coarse:after:-inset-2"
+        :class="cell.today ? 'badge-ink bg-primary text-inverted hover:bg-primary/75 active:bg-primary/75' : [inFocus(cell.day) ? 'text-highlighted' : 'text-muted', 'hover:bg-elevated active:bg-accented']"
+      >
+        <!-- The first of a month names its month where the cell has room for it. -->
+        <span v-if="cell.day.getDate() === 1" class="whitespace-nowrap max-sm:hidden">{{ formatMonthDay(cell.day) }}</span>
+        <span :class="cell.day.getDate() === 1 && 'sm:hidden'">{{ cell.day.getDate() }}</span>
+      </ULink>
 
-    <USkeleton
-      v-for="[day, slot] in loading ? SKELETONS : []"
-      :key="`skeleton-${day}-${slot}`"
-      class="pointer-events-none mx-0.5 h-6 self-start rounded-sm"
-      :style="{ gridColumn: day + 1, gridRow: slot + 2 }"
-    />
+      <USkeleton v-for="slot in skeletons[index]" :key="`skeleton-${slot}`" class="pointer-events-none mx-0.5 h-6 self-start rounded-sm" :style="{ gridRow: slot + 2 }" />
 
-    <template v-for="{ event, colStart, colSpan, lane, continuesBefore, continuesAfter } in bars" :key="event.key">
-      <CalendarEventDraft
-        v-if="event.key === DRAFT_EVENT_KEY"
-        variant="chip"
-        :anchored="!continuesBefore"
-        :continues-before="continuesBefore"
-        :continues-after="continuesAfter"
-        class="mx-0.5 self-start"
-        :style="{ gridColumn: `${colStart + 1} / span ${colSpan}`, gridRow: lane + 2 }"
-      />
-      <CalendarEventChip
-        v-else
-        :event="event"
-        :anchored="!continuesBefore"
-        class="mx-0.5 self-start"
-        :class="[continuesBefore && 'rounded-s-none', continuesAfter && 'rounded-e-none']"
-        :style="{ gridColumn: `${colStart + 1} / span ${colSpan}`, gridRow: lane + 2 }"
-      />
-    </template>
-
-    <template v-for="({ day, events: dayEvents, more }, index) in cells" :key="`events-${day.getTime()}`">
-      <template v-for="{ event, slot, anchored } in dayEvents" :key="event.key">
-        <CalendarEventDraft v-if="event.key === DRAFT_EVENT_KEY" variant="chip" anchored class="mx-0.5 self-start" :style="{ gridColumn: index + 1, gridRow: slot + 2 }" />
+      <template v-for="{ event, colSpan, lane, continuesBefore, continuesAfter } in cell.bars" :key="event.key">
+        <CalendarEventDraft
+          v-if="event.key === DRAFT_EVENT_KEY"
+          variant="chip"
+          :anchored="!continuesBefore"
+          :continues-before="continuesBefore"
+          :continues-after="continuesAfter"
+          class="relative z-1 mx-0.5 self-start"
+          :style="barStyle(lane, colSpan)"
+        />
         <CalendarEventChip
           v-else
           :event="event"
-          :anchored="anchored"
-          show-time
-          class="mx-0.5 self-start max-lg:**:data-time:hidden"
-          :style="{ gridColumn: index + 1, gridRow: slot + 2 }"
+          :anchored="!continuesBefore"
+          class="relative z-1 mx-0.5 self-start"
+          :class="[continuesBefore && 'rounded-s-none', continuesAfter && 'rounded-e-none']"
+          :style="barStyle(lane, colSpan)"
         />
       </template>
 
-      <UPopover v-if="more" :content="{ side: 'right', align: 'start' }" :ui="{ content: 'flex w-64 flex-col gap-1 p-2' }">
+      <template v-for="{ event, slot, anchored } in cell.events" :key="event.key">
+        <CalendarEventDraft v-if="event.key === DRAFT_EVENT_KEY" variant="chip" anchored class="mx-0.5 self-start" :style="{ gridRow: slot + 2 }" />
+        <CalendarEventChip v-else :event="event" :anchored="anchored" show-time class="mx-0.5 self-start max-lg:**:data-time:hidden" :style="{ gridRow: slot + 2 }" />
+      </template>
+
+      <UPopover v-if="cell.more" :content="{ side: 'right', align: 'start' }" :ui="{ content: 'w-64 p-2' }">
         <template #default="{ open }">
           <UButton
             color="neutral"
@@ -76,26 +70,29 @@
             size="sm"
             class="mx-0.5 h-6 justify-start self-start px-1.5 font-normal text-muted"
             :class="open && 'bg-elevated'"
-            :label="$t('calendar.label.more', { n: countText(more.hidden) })"
-            :style="{ gridColumn: index + 1, gridRow: more.slot + 2 }"
+            :label="$t('calendar.label.more', { n: countText(cell.more.hidden) })"
+            :style="{ gridRow: cell.more.slot + 2 }"
           />
         </template>
 
         <template #content>
-          <CalendarEventChip v-for="{ event, anchored } in more.events" :key="event.key" :event="event" :anchored="anchored" show-time />
+          <CalendarMoreList :events="cell.more.events" />
         </template>
       </UPopover>
-    </template>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { addDays, isSameDay, isToday, isWeekend } from "date-fns";
+import { addDays, isSameDay, isWeekend } from "date-fns";
 import { computed } from "vue";
+import { useI18n } from "vue-i18n";
 import { countText } from "bmo-ui/app/domain/numbers";
 
 import CalendarEventChip from "./CalendarEventChip.vue";
 import CalendarEventDraft from "./CalendarEventDraft.vue";
+import CalendarMoreList from "./CalendarMoreList.vue";
+import { dayName } from "../../domain/a11y";
 import { formatMonthDay, fromLocalISO, isoDate, toCalendarDate } from "../../domain/dates";
 import { DRAFT_EVENT_KEY, layoutAllDay } from "../../domain/layout";
 import { useCalendar } from "../../composables/useCalendar";
@@ -106,23 +103,32 @@ import { useEventMove } from "../../composables/useEventMove";
 import type { AllDayPositionedEvent } from "../../domain/layout";
 import type { CalendarEvent } from "../../../shared/types";
 
-const SLOT_HEIGHT = 26;
+/** A slot's height, in the reader's own text size, so a larger font grows the slots rather than cutting their chips. */
+const SLOT_REM = 1.625;
 const MAX_SLOTS = 4;
 // Bars never take the last slot, so a day always has room for an event or the count of the rest.
 const MAX_LANES = MAX_SLOTS - 1;
 
-const props = defineProps<{ weekStart: Date; loading?: boolean }>();
+const props = defineProps<{
+  weekStart: Date;
+  loading?: boolean;
+  /** Its place among the grid's rows, the weekdays' row first. */
+  rowIndex: number;
+  /** The day the keyboard reaches the grid on, as `YYYY-MM-DD`. */
+  tabDay: string;
+}>();
 
+const { t } = useI18n();
 const { date, visibleMonth, pathFor } = useCalendar();
 const { eventsForDay, eventsForDays } = useCalendarEvents();
-const { draftEvent, onGridPointerdown, onGridDblclick } = useEventDraft();
+const { draftEvent, onGridPointerdown, onGridDblclick, onGridContextmenu } = useEventDraft();
 const { movingKey, preview } = useEventMove();
 
 const days = computed(() => Array.from({ length: 7 }, (_, index) => addDays(props.weekStart, index)));
 const weekEnd = computed(() => addDays(props.weekStart, 7));
 
 const gridStyle = {
-  gridTemplateRows: ["auto", ...Array.from({ length: MAX_LANES }, () => `${SLOT_HEIGHT}px`), `minmax(${SLOT_HEIGHT}px, 1fr)`].join(" ")
+  gridTemplateRows: ["auto", ...Array.from({ length: MAX_LANES }, () => `${SLOT_REM}rem`), `minmax(${SLOT_REM}rem, 1fr)`].join(" ")
 };
 
 function inWeek(event: CalendarEvent | null): CalendarEvent | null {
@@ -156,7 +162,13 @@ function covers(bar: AllDayPositionedEvent, index: number): boolean {
   return index >= bar.colStart && index < bar.colStart + bar.colSpan;
 }
 
+/** A bar stands in its first day's cell and runs across the cells of the days it covers. */
+function barStyle(lane: number, colSpan: number): Record<string, string | number> {
+  return { gridRow: lane + 2, width: `calc(${colSpan * 100}% - 0.25rem)` };
+}
+
 const cells = computed(() => {
+  const today = new Date();
   const drafted = weekDraft.value && !weekDraft.value.allDay ? weekDraft.value : null;
   const moved = weekMoved.value && !weekMoved.value.allDay ? weekMoved.value : null;
 
@@ -179,8 +191,14 @@ const cells = computed(() => {
     const slot = free[visible.length];
     const shown = new Set([...visible.map((event) => event.key), ...covering.filter((bar) => bar.lane < MAX_LANES).map((bar) => bar.event.key)]);
 
+    const count = eventsForDay(day).length;
+
     return {
       day,
+      iso: isoDate(day),
+      today: isSameDay(day, today),
+      name: dayName(t, day, count, today, countText),
+      bars: bars.value.filter((bar) => bar.colStart === index),
       events: visible.map((event, position) => ({ event, slot: free[position]!, anchored: isSameDay(fromLocalISO(event.start), day) })),
       more:
         overflows && slot !== undefined
@@ -206,6 +224,9 @@ const SKELETONS: [number, number][] = [
 ];
 
 const loading = computed(() => props.loading && !bars.value.length && cells.value.every((cell) => !cell.events.length && !cell.more));
+
+// The skeleton's slots in each day's cell.
+const skeletons = computed(() => Array.from({ length: 7 }, (_, index) => (loading.value ? SKELETONS.filter(([column]) => column === index).map(([, slot]) => slot) : [])));
 
 const focus = computed(() => visibleMonth.value ?? date.value);
 

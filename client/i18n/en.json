@@ -64,15 +64,19 @@
       "refresh": "Refresh",
       "scope_all": "All repeats",
       "scope_one": "This event only",
-      "today": "Today",
-      "view": "View"
+      "today": "Today"
     },
     "aria": {
       "end_time": "End time",
+      "events_count": "{n} events",
+      "events_none": "No events",
       "foot_bar": "Calendar bottom toolbar",
+      "pick_day_named": "{title}, pick a day",
       "settings_named": "{name} settings",
       "start_time": "Start time",
-      "toolbar": "Calendar toolbar"
+      "today": "Today",
+      "toolbar": "Calendar toolbar",
+      "view_named": "{view} view"
     },
     "placeholder": {
       "quick_entry": "Dentist tomorrow at 3pm"

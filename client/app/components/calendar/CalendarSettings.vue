@@ -4,7 +4,7 @@
   <UForm :state="state" :validate="validate" class="flex flex-col gap-3" @submit="save">
     <div class="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-2">
       <label :for="nameId" class="whitespace-nowrap text-sm text-muted">{{ $t("calendar.label.name") }}</label>
-      <UFormField name="name">
+      <UFormField name="name" :ui="{ error: 'badge-ink' }">
         <UInput :id="nameId" v-model="state.name" :maxlength="100" autofocus class="w-full" />
       </UFormField>
 
@@ -27,10 +27,10 @@
       </template>
     </div>
 
-    <p v-if="refused" role="alert" class="text-sm text-error">{{ refused }}</p>
+    <p v-if="refused" role="alert" class="badge-ink text-sm text-error">{{ refused }}</p>
 
     <div class="flex items-center justify-end gap-2">
-      <UButton v-if="calendar" :label="$t('calendar.action.delete')" color="error" variant="ghost" :loading="removing" @click="remove" />
+      <UButton v-if="calendar" :label="$t('calendar.action.delete')" color="error" variant="ghost" class="badge-ink" :loading="removing" @click="remove" />
       <UButton type="submit" :label="$t('common.action.save')" :disabled="!!calendar && !dirty" :loading="saving" />
     </div>
   </UForm>

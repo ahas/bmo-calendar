@@ -7,8 +7,14 @@ import type { CalendarEvent } from "../../shared/types";
 // Where each event stands on a day's column and in the all-day row: events that overlap, directly or
 // through another, form a cluster, and each cluster splits into the fewest columns that hold it.
 
-export const HOUR_HEIGHT = 64;
-export const PX_PER_MINUTE = HOUR_HEIGHT / 60;
+/**
+ * An hour's height on the time grid, in the reader's own text size, so a larger font grows the grid rather
+ * than cutting what stands in it. The grid declares it as `--calendar-hour` and a minute as
+ * `--calendar-minute`; a gesture reads the pixels a minute takes off the column it is made on.
+ */
+export const HOUR_REM = 4;
+/** Below this length a block has room for its title alone, as a line of the reader's own text size. */
+export const COMPACT_MINUTES = 42;
 /** Every move and resize lands on a quarter hour. */
 export const SNAP_MINUTES = 15;
 /** The height drawn at the least, not a duration: a quarter-hour event still reads. */
@@ -21,8 +27,10 @@ export const DRAFT_EVENT_KEY = "draft";
 
 export interface PositionedEvent {
   event: CalendarEvent;
-  top: number;
-  height: number;
+  /** The minute of the day it is drawn from. */
+  startMinute: number;
+  /** How many minutes it is drawn over, at least the least a block is drawn at. */
+  minutes: number;
   left: number;
   width: number;
 }
@@ -64,8 +72,8 @@ export function layoutDay(events: CalendarEvent[], day: Date): PositionedEvent[]
     for (const [index, item] of cluster.entries()) {
       positioned.push({
         event: item.event,
-        top: item.startMin * PX_PER_MINUTE,
-        height: (item.endMin - item.startMin) * PX_PER_MINUTE,
+        startMinute: item.startMin,
+        minutes: item.endMin - item.startMin,
         left: (assigned[index]! / columns.length) * 100,
         width: 100 / columns.length
       });
@@ -120,24 +128,41 @@ export function snapMinutes(minutes: number): number {
   return Math.round(minutes / SNAP_MINUTES) * SNAP_MINUTES;
 }
 
-export function minutesFromOffset(px: number): number {
-  return px / PX_PER_MINUTE;
+/** The pixels a minute takes on a day's column, which stands for the whole day. */
+export function pxPerMinute(column: { height: number }): number {
+  return column.height / DAY_MINUTES;
+}
+
+export function minutesFromOffset(px: number, perMinute: number): number {
+  return perMinute > 0 ? px / perMinute : 0;
 }
 
 /** The minute of the day a pointer stands at in a day's column, snapped and held to the day. */
 export function minutesInColumn(clientY: number, rect: DOMRect, mode: "floor" | "nearest" = "nearest"): number {
-  const raw = minutesFromOffset(clientY - rect.top);
+  const raw = minutesFromOffset(clientY - rect.top, pxPerMinute(rect));
   const snapped = mode === "floor" ? Math.floor(raw / SNAP_MINUTES) * SNAP_MINUTES : snapMinutes(raw);
 
   return Math.min(DAY_MINUTES, Math.max(0, snapped));
 }
 
+/** A length of so many minutes on the time grid, in its own scale. */
+export function minutesLength(minutes: number): string {
+  return `calc(var(--calendar-minute) * ${minutes})`;
+}
+
 /** The box a block and the draft share; a block adds its own drag on top. */
-export function eventBlockStyle(positioned: PositionedEvent, height = positioned.height): Record<string, string> {
+export function eventBlockStyle(positioned: PositionedEvent, minutes = positioned.minutes): Record<string, string> {
   return {
-    top: `${positioned.top + 2}px`,
-    height: `${height - 3}px`,
+    top: `calc(${minutesLength(positioned.startMinute)} + 2px)`,
+    height: `calc(${minutesLength(minutes)} - 3px)`,
     insetInlineStart: `calc(${positioned.left}% + 1px)`,
     width: `calc(${positioned.width}% - 2px)`
   };
+}
+
+/** The pixels a rem takes in the reader's own text size; 16 where no page stands to read it from. */
+export function rootFontPx(): number {
+  if (typeof document === "undefined") return 16;
+
+  return Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
 }

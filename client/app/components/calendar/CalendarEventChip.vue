@@ -1,15 +1,16 @@
 <template>
   <!-- An event in a month cell or the all-day row: a bar for an all-day event, a dot and a title for a
-       timed one. Dragged a day at a time; pressed to open its form. -->
+       timed one, its words in the page's own text colour. Dragged a day at a time by a mouse; pressed to
+       open its form. Named whole for a reader who does not see it, however much of it is cut. -->
   <CalendarEventPopover v-slot="{ open }" :event="event" :disabled="suppressed" :anchored="anchored">
     <button
       v-bind="$attrs"
       type="button"
       data-event
-      class="flex h-6 min-w-0 select-none items-center gap-1 rounded-sm px-1.5 text-start text-sm text-highlighted transition-colors"
+      class="focus-inset flex h-6 min-w-0 select-none items-center gap-1 rounded-sm px-1.5 text-start text-sm text-highlighted transition-colors"
       :class="event.allDay ? EVENT_FILL[color] : ['hover:bg-elevated active:bg-accented data-active:bg-elevated', CHIP_COMPACT_FILL[color]]"
       :data-active="open || moving || undefined"
-      :aria-label="event.allDay ? event.title : `${event.title}, ${formatTime(fromLocalISO(event.start))}`"
+      :aria-label="name"
       @click.stop
       @pointerdown="onPointerdown($event, event)"
     >
@@ -23,8 +24,10 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
+import { useI18n } from "vue-i18n";
 
 import CalendarEventPopover from "./CalendarEventPopover.vue";
+import { eventName } from "../../domain/a11y";
 import { CALENDAR_DOT, CHIP_COMPACT_FILL, EVENT_FILL, REALM_ICON } from "../../domain/colors";
 import { formatTime, fromLocalISO } from "../../domain/dates";
 import { useCalendarEvents } from "../../composables/useCalendarEvents";
@@ -36,9 +39,11 @@ defineOptions({ inheritAttrs: false });
 
 const props = withDefaults(defineProps<{ event: CalendarEvent; showTime?: boolean; anchored?: boolean }>(), { anchored: true });
 
+const { t } = useI18n();
 const { calendarFor } = useCalendarEvents();
 const { movingKey, suppressed, onPointerdown } = useEventMove();
 
 const color = computed(() => calendarFor(props.event)?.color ?? "primary");
 const moving = computed(() => movingKey.value === props.event.key);
+const name = computed(() => eventName(t, props.event, calendarFor(props.event)?.name));
 </script>

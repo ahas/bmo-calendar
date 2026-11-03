@@ -1,10 +1,10 @@
 <template>
   <!-- A day typed segment by segment, or chosen from the month beside it. -->
   <div class="flex min-w-0 items-center gap-1">
-    <UInputDate v-model="model" :aria-label="props.label" class="min-w-0" />
+    <UInputDate :id="props.id" v-model="model" :size="props.size" :aria-label="props.label" class="min-w-0" />
     <UPopover :content="{ align: 'end' }">
       <UTooltip :text="$t('calendar.action.pick_day')">
-        <UButton color="neutral" variant="ghost" icon="i-material-symbols-calendar-today-outline" :aria-label="$t('calendar.action.pick_day')" />
+        <UButton color="neutral" variant="ghost" :size="props.size" icon="i-material-symbols-calendar-today-outline" :aria-label="$t('calendar.action.pick_day')" />
       </UTooltip>
 
       <template #content>
@@ -19,6 +19,6 @@ import { WEEK_STARTS_ON } from "../../domain/dates";
 
 import type { CalendarDate } from "@internationalized/date";
 
-const props = defineProps<{ label: string }>();
+const props = defineProps<{ label: string; id?: string; size?: "md" | "xl" }>();
 const model = defineModel<CalendarDate | undefined>();
 </script>

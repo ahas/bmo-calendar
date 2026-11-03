@@ -14,8 +14,8 @@ import type { QuickEvent } from "../domain/quick";
 import type { Alarm, CalendarEvent, Realm, Repeat } from "../../shared/types";
 
 // The event being drawn before it is one: a ghost on the grid with its form open beside it. It stands
-// where a drag or a double press drew it, or where the new-event button or the quick entry put it, and
-// becomes an event only when its form is saved.
+// where a drag, a double press, a right press or a held finger drew it, or where the new-event button, the
+// `n` key or the quick entry put it, and becomes an event only when its form is saved.
 
 export interface EventDraft {
   start: Date;
@@ -165,12 +165,15 @@ const _useEventDraft = () => {
     discardDraft(true);
   }
 
-  /** The new-event button and the `n` key: a draft on the day the screen stands on, an hour from now. */
-  async function createAtAnchor(title = ""): Promise<void> {
+  /**
+   * The new-event button and the `n` key: a draft an hour from now on the day the screen stands on, or on
+   * the day of the grid the keyboard stands on.
+   */
+  async function createAtAnchor(title = "", day?: Date): Promise<void> {
     if (!hosts.value) await navigateTo(pathFor(date.value, gridView.value));
 
     const hour = Math.min(23, new Date().getHours() + 1);
-    const start = addMinutes(startOfDay(toDate(date.value)), hour * 60);
+    const start = addMinutes(startOfDay(day ?? toDate(date.value)), hour * 60);
 
     createDraft({ start, end: addMinutes(start, 60), title, scroll: true });
   }
@@ -271,7 +274,19 @@ const _useEventDraft = () => {
 
     event.preventDefault();
     getSelection()?.removeAllRanges();
+    drawAt(event, target);
+  }
 
+  // A right press, or the menu press a held finger makes (the grid's hold menu), on an empty part of the
+  // grid draws there as a double press does; on an event it is that event's menu.
+  function onGridContextmenu(event: MouseEvent, target: GridTarget): void {
+    if (!onEmptySpace(event)) return;
+
+    event.preventDefault();
+    drawAt(event, target);
+  }
+
+  function drawAt(event: MouseEvent, target: GridTarget): void {
     const day = startOfDay(target.day);
 
     if (target.kind === "allDay") {
@@ -333,6 +348,7 @@ const _useEventDraft = () => {
     createFromQuick,
     onGridPointerdown,
     onGridDblclick,
+    onGridContextmenu,
     registerHost,
     registerAnchor
   };

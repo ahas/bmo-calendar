@@ -40,18 +40,20 @@
 
         <div>
           <UTooltip :text="$t('calendar.action.previous')" :kbds="['arrowleft']">
-            <UButton color="neutral" variant="ghost" icon="i-material-symbols-chevron-left" :aria-label="$t('calendar.action.previous')" :to="pathFor(prevDate)" />
+            <UButton color="neutral" variant="ghost" icon="i-material-symbols-chevron-left" class="h-full min-w-9 justify-center p-0 pointer-coarse:min-w-10" :aria-label="$t('calendar.action.previous')" :to="pathFor(prevDate)" />
           </UTooltip>
           <UTooltip :text="$t('calendar.action.next')" :kbds="['arrowright']">
-            <UButton color="neutral" variant="ghost" icon="i-material-symbols-chevron-right" :aria-label="$t('calendar.action.next')" :to="pathFor(nextDate)" />
+            <UButton color="neutral" variant="ghost" icon="i-material-symbols-chevron-right" class="h-full min-w-9 justify-center p-0 pointer-coarse:min-w-10" :aria-label="$t('calendar.action.next')" :to="pathFor(nextDate)" />
           </UTooltip>
         </div>
 
-        <div class="min-w-0 flex-1">
+        <div class="flex-1">
           <UPopover v-model:open="pickerOpen" :content="{ align: 'start' }">
-            <UButton color="neutral" variant="ghost" class="min-w-0 text-lg font-semibold text-highlighted" :aria-label="$t('calendar.action.pick_day')">
-              <span class="truncate">{{ title.months }}</span>
-              <span v-if="title.year" class="font-normal text-muted">{{ title.year }}</span>
+            <UButton color="neutral" variant="ghost" class="text-lg font-semibold text-highlighted" :aria-label="$t('calendar.aria.pick_day_named', { title: `${title.months} ${title.year}`.trim() })">
+              <!-- Short of room the year gives way, and the months stand whole: they are what the title is read
+                   for, and the toolbar flows sideways before it cuts them. -->
+              <span class="shrink-0 whitespace-nowrap">{{ title.months }}</span>
+              <span v-if="title.year" class="shrink-[100] truncate font-normal text-muted">{{ title.year }}</span>
             </UButton>
 
             <template #content>
@@ -62,13 +64,13 @@
 
         <div v-if="!narrow">
           <UTooltip :text="$t('calendar.action.today')" :kbds="['t']">
-            <UButton color="neutral" variant="ghost" :label="$t('calendar.action.today')" :to="pathFor(todayDate())" />
+            <UButton color="neutral" variant="ghost" class="h-full" :label="$t('calendar.action.today')" :to="pathFor(todayDate())" />
           </UTooltip>
         </div>
 
         <div>
           <UDropdownMenu :items="viewItems" :content="{ align: 'end' }">
-            <UButton color="neutral" variant="ghost" :label="$t(VIEW_LABELS[view])" trailing-icon="i-material-symbols-arrow-drop-down" :aria-label="$t('calendar.action.view')" />
+            <UButton color="neutral" variant="ghost" class="h-full" :label="$t(VIEW_LABELS[view])" trailing-icon="i-material-symbols-arrow-drop-down" :aria-label="$t('calendar.aria.view_named', { view: $t(VIEW_LABELS[view]) })" />
           </UDropdownMenu>
         </div>
 
@@ -77,7 +79,10 @@
         </div>
       </ToolBar>
 
-      <p v-if="failed" role="alert" class="flex shrink-0 items-center gap-3 border-b border-default px-4 py-2 text-sm text-error">
+      <!-- The span a step lands on, said once it has landed. -->
+      <p class="sr-only" aria-live="polite" aria-atomic="true">{{ announced }}</p>
+
+      <p v-if="failed" role="alert" class="badge-ink flex shrink-0 items-center gap-3 border-b border-default px-4 py-2 text-sm text-error">
         {{ $t("calendar.error.events_failed") }}
       </p>
 
@@ -88,18 +93,18 @@
           <CalendarWeekView v-else :key="view" />
         </div>
 
-        <ToolBar :label="$t('calendar.aria.foot_bar')" data-screen-foot class="border-t border-default pb-[var(--bmo-safe-bottom)]">
+        <ToolBar :label="$t('calendar.aria.foot_bar')" data-screen-foot class="box-content border-t border-default pb-[var(--bmo-safe-bottom)]">
           <div>
-            <UButton color="neutral" variant="ghost" :label="$t('calendar.action.today')" :to="pathFor(todayDate())" />
+            <UButton color="neutral" variant="ghost" class="h-full" :label="$t('calendar.action.today')" :to="pathFor(todayDate())" />
           </div>
           <div class="ms-auto">
             <CalendarNewEvent floating />
           </div>
         </ToolBar>
 
-        <UDrawer v-model:open="isSidebarOpen" :title="$t('calendar.action.calendars')" :ui="FULL_SHEET">
+        <UDrawer v-model:open="isSidebarOpen" :title="$t('calendar.action.calendars')" :ui="SHEET">
           <template #body>
-            <UScrollArea class="min-h-0 flex-1">
+            <UScrollArea ref="sheetBody" class="min-h-0 flex-1">
               <div class="flex flex-col gap-4 p-4">
                 <CalendarList />
               </div>
@@ -133,7 +138,7 @@
 
 <script setup lang="ts">
 import { defineShortcuts } from "@nuxt/ui/composables/defineShortcuts";
-import { computed, inject, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from "vue";
 import { navigateTo } from "nuxt/app";
 import { useI18n } from "vue-i18n";
 import ToolBar from "bmo-ui/app/components/ToolBar.vue";
@@ -148,7 +153,8 @@ import CalendarMonthView from "../../../components/calendar/CalendarMonthView.vu
 import CalendarNewEvent from "../../../components/calendar/CalendarNewEvent.vue";
 import CalendarWeekView from "../../../components/calendar/CalendarWeekView.vue";
 import CalendarYearView from "../../../components/calendar/CalendarYearView.vue";
-import { WEEK_STARTS_ON, formatFullDate, fromLocalISO, rangeFor, todayDate } from "../../../domain/dates";
+import { rangeWords } from "../../../domain/a11y";
+import { WEEK_STARTS_ON, formatFullDate, fromLocalISO, rangeFor, toDate, todayDate } from "../../../domain/dates";
 import { useCalendarStream } from "../../../domain/stream";
 import { SERVICE, useCalendarEvents } from "../../../composables/useCalendarEvents";
 import { useCalendar } from "../../../composables/useCalendar";
@@ -177,13 +183,19 @@ const VIEW_LABELS: Record<CalendarView, string> = {
 
 const VIEW_KEYS: Record<CalendarView, string> = { day: "d", week: "w", month: "m", year: "y" };
 
-const { t } = useI18n();
+// The sheet takes the focus as it opens, so a reader is in it and kept in it; it is the dialog that takes
+// it rather than a control in it, so nothing rings and no keyboard rises.
+const SHEET = { ...FULL_SHEET, content: `${FULL_SHEET.content} focus-visible:outline-none` };
+
+const sheetBodyRef = useTemplateRef<{ $el: HTMLElement }>("sheetBody");
+
+const { t, locale } = useI18n();
 const island = useIsland(t);
 const narrow = useNarrow();
 // Whether a console offers its title bar, under the key bmo-ui's bundle contract names.
 const barOffer = inject<{ screenActions: string } | null>("bmo-console-title-bar", null);
 
-const { view, date, range, title, prevDate, nextDate, pathFor, go, isSidebarOpen } = useCalendar();
+const { view, date, range, title, visibleMonth, prevDate, nextDate, pathFor, go, isSidebarOpen } = useCalendar();
 const { online, queue, loadCalendars, loadSpan, showSpans, refreshVisible, failedSpans, readEvent } = useCalendarEvents();
 const { draft, createAtAnchor } = useEventDraft();
 const { editingKey } = useEventEditor();
@@ -200,6 +212,14 @@ const viewItems = computed<DropdownMenuItem[]>(() =>
     onSelect: () => void navigateTo(pathFor(date.value, one))
   }))
 );
+
+// Nothing is said as the screen opens; a step to another span is said once it has landed.
+const announced = ref("");
+const shownWords = computed(() => rangeWords(view.value, range.value, toDate(view.value === "month" ? (visibleMonth.value ?? date.value) : date.value), locale.value));
+
+watch(shownWords, (words) => {
+  announced.value = words;
+});
 
 const pickerOpen = ref(false);
 const pickedDay = computed({
@@ -303,6 +323,16 @@ defineShortcuts({
   n: unlessEditing(() => void createAtAnchor()),
   arrowleft: unlessEditing(() => go("left")),
   arrowright: unlessEditing(() => go("right"))
+});
+
+// The drawer's sheet holds no focus of its own as it opens (the drawer library sets that aside), so it is
+// handed the focus once it stands; closing hands it back to what opened it.
+watch(isSidebarOpen, async (opened) => {
+  if (!opened) return;
+
+  await nextTick();
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+  sheetBodyRef.value?.$el.closest<HTMLElement>('[role="dialog"]')?.focus();
 });
 
 // The calendars' drawer steps aside once what it chose is on its way.

@@ -126,6 +126,7 @@ export function eachDay({ start, end }: DateRange): Date[] {
 interface Formats {
   time: Intl.DateTimeFormat;
   weekday: Intl.DateTimeFormat;
+  longWeekday: Intl.DateTimeFormat;
   narrowWeekday: Intl.DateTimeFormat;
   fullDate: Intl.DateTimeFormat;
   month: Intl.DateTimeFormat;
@@ -149,6 +150,7 @@ function format(): Formats {
   return (formats ??= {
     time: new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }),
     weekday: new Intl.DateTimeFormat(locale, { weekday: "short" }),
+    longWeekday: new Intl.DateTimeFormat(locale, { weekday: "long" }),
     narrowWeekday: new Intl.DateTimeFormat(locale, { weekday: "narrow" }),
     fullDate: new Intl.DateTimeFormat(locale, { weekday: "long", month: "long", day: "numeric", year: "numeric" }),
     month: new Intl.DateTimeFormat(locale, { month: "long" }),
@@ -172,6 +174,10 @@ export function formatFullDate(date: Date): string {
 
 export function formatWeekday(date: Date): string {
   return format().weekday.format(date);
+}
+
+export function formatLongWeekday(date: Date): string {
+  return format().longWeekday.format(date);
 }
 
 export function formatNarrowWeekday(date: Date): string {

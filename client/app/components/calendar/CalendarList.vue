@@ -12,13 +12,13 @@
       </div>
 
       <template v-if="calendarsRead">
-        <div v-for="calendar in group.calendars" :key="calendar.id" class="flex items-center gap-2 rounded-md ps-2 transition-colors hover:bg-elevated">
+        <div v-for="calendar in group.calendars" :key="calendar.id" class="flex items-center gap-2 rounded-md ps-2 transition-colors hover:bg-elevated pointer-coarse:min-h-11">
           <UCheckbox
             :model-value="!calendar.hidden"
             :color="calendar.color"
             :label="calendar.name"
             class="min-w-0 flex-1 py-1.5"
-            :ui="{ label: 'truncate' }"
+            :ui="{ label: 'truncate pointer-coarse:py-3' }"
             @update:model-value="setHidden(calendar, !$event)"
           />
           <CalendarSettingsPopover :realm="group.realm" :calendar="calendar" />
@@ -29,7 +29,7 @@
       </div>
     </section>
 
-    <p v-if="calendarsFailed" role="alert" class="flex items-center gap-2 ps-2 text-sm text-error">
+    <p v-if="calendarsFailed" role="alert" class="badge-ink flex items-center gap-2 ps-2 text-sm text-error">
       {{ $t("calendar.error.calendars_failed") }}
     </p>
   </div>

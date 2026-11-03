@@ -1,36 +1,34 @@
 <template>
-  <!-- The ghost of an event being made, dressed as the event it would be, its form open beside it. Only
-       the segment holding its start carries the form. -->
-  <UPopover :open="!!anchored && open" :dismissible="!dirty" :content="content" :ui="{ content: 'w-[26rem] max-w-[calc(100vw-2rem)] p-4' }" @update:open="onUpdateOpen" @close:prevent="leave">
-    <template #anchor>
-      <div
-        ref="el"
-        v-bind="$attrs"
-        data-draft
-        data-active
-        aria-hidden="true"
-        class="select-none text-sm text-highlighted transition-colors"
-        :class="[
-          variant === 'block'
-            ? [EVENT_FILL[color], 'absolute z-20 flex flex-col items-start overflow-hidden rounded-sm py-1 ps-3 pe-2 text-start']
-            : ['flex h-6 min-w-0 items-center gap-1 rounded-sm px-1.5', draft?.allDay ? EVENT_FILL[color] : ['bg-elevated', CHIP_COMPACT_FILL[color]]],
-          continuesBefore && 'rounded-s-none',
-          continuesAfter && 'rounded-e-none'
-        ]"
-        @pointerdown.stop
-      >
-        <span v-if="variant === 'block'" class="absolute inset-y-1 start-1 w-1 rounded-full" :class="CALENDAR_DOT[color]" />
-        <span v-else-if="!draft?.allDay" class="size-2 shrink-0 rounded-full max-lg:hidden" :class="CALENDAR_DOT[color]" />
+  <!-- The ghost of an event being made, dressed as the event it would be, its form open beside it, or on
+       a phone as a centred dialog over it. Only the segment holding its start carries the form. -->
+  <CalendarFormFloat anchor :open="!!anchored && open" :dismissible="!dirty" :title="$t('calendar.action.new_event')" :content="content" @update:open="onUpdateOpen" @close:prevent="leave">
+    <div
+      ref="el"
+      v-bind="$attrs"
+      data-draft
+      data-active
+      aria-hidden="true"
+      class="select-none text-sm text-highlighted transition-colors"
+      :class="[
+        variant === 'block'
+          ? [EVENT_FILL[color], 'absolute z-20 flex flex-col items-start overflow-hidden rounded-sm py-1 ps-3 pe-2 text-start']
+          : ['flex h-6 min-w-0 items-center gap-1 rounded-sm px-1.5', draft?.allDay ? EVENT_FILL[color] : ['bg-elevated', CHIP_COMPACT_FILL[color]]],
+        continuesBefore && 'rounded-s-none',
+        continuesAfter && 'rounded-e-none'
+      ]"
+      @pointerdown.stop
+    >
+      <span v-if="variant === 'block'" class="absolute inset-y-1 start-1 w-1 rounded-full" :class="CALENDAR_DOT[color]" />
+      <span v-else-if="!draft?.allDay" class="size-2 shrink-0 rounded-full max-lg:hidden" :class="CALENDAR_DOT[color]" />
 
-        <span class="truncate font-medium" :class="variant === 'block' && 'w-full'">{{ title }}</span>
-        <span v-if="times" class="truncate tabular-nums" :class="variant === 'block' ? 'w-full text-toned' : 'ms-auto shrink-0 text-muted'">{{ times }}</span>
-      </div>
-    </template>
+      <span class="truncate font-medium" :class="variant === 'block' && 'w-full'">{{ title }}</span>
+      <span v-if="times" class="truncate tabular-nums" :class="variant === 'block' ? 'w-full text-toned' : 'ms-auto shrink-0 text-muted'">{{ times }}</span>
+    </div>
 
     <template #content>
       <CalendarEventForm v-if="draft" v-model:dirty="dirty" :draft="draft" @update="updateDraft" @commit="commitDraft" @escape="leave" />
     </template>
-  </UPopover>
+  </CalendarFormFloat>
 </template>
 
 <script setup lang="ts">
@@ -39,11 +37,13 @@ import { useI18n } from "vue-i18n";
 import { askDiscard } from "bmo-ui/app/domain/form-save";
 
 import CalendarEventForm from "./CalendarEventForm.vue";
+import CalendarFormFloat from "./CalendarFormFloat.vue";
 import { CALENDAR_DOT, CHIP_COMPACT_FILL, EVENT_FILL } from "../../domain/colors";
 import { formatTime } from "../../domain/dates";
 import { useCalendar } from "../../composables/useCalendar";
 import { useCalendarEvents } from "../../composables/useCalendarEvents";
 import { useEventDraft } from "../../composables/useEventDraft";
+import { useMotion } from "../../composables/useMotion";
 
 defineOptions({ inheritAttrs: false });
 
@@ -53,6 +53,7 @@ const { t } = useI18n();
 const { formSide } = useCalendar();
 const { draft, open, pendingScroll, updateDraft, discardDraft, commitDraft, registerAnchor } = useEventDraft();
 const { calendarByKey } = useCalendarEvents();
+const { scrollBehavior } = useMotion();
 
 registerAnchor();
 
@@ -87,7 +88,7 @@ function reveal(): void {
   if (!props.anchored || !pendingScroll.value) return;
 
   pendingScroll.value = false;
-  void nextTick(() => el.value?.scrollIntoView({ block: "nearest", behavior: "smooth" }));
+  void nextTick(() => el.value?.scrollIntoView({ block: "nearest", behavior: scrollBehavior.value }));
 }
 
 onMounted(reveal);
