@@ -1,0 +1,110 @@
+{
+  "calendar": {
+    "title": "Calendar",
+    "label": {
+      "alarm": "Alert",
+      "alarm_none": "None",
+      "alarm_at_start": "At start",
+      "alarm_5m": "5 minutes before",
+      "alarm_15m": "15 minutes before",
+      "alarm_30m": "30 minutes before",
+      "alarm_1h": "1 hour before",
+      "alarm_1d": "1 day before",
+      "all_day": "All day",
+      "calendar": "Calendar",
+      "color": "Colour",
+      "color_primary": "Accent",
+      "color_secondary": "Second accent",
+      "color_info": "Blue",
+      "color_success": "Green",
+      "color_warning": "Yellow",
+      "color_error": "Red",
+      "default_mark": "{value} (default)",
+      "ends": "Ends",
+      "event_title": "Title",
+      "mine": "My calendars",
+      "more": "{n} more",
+      "name": "Name",
+      "notes": "Notes",
+      "offline": "Offline",
+      "offline_hint": "Changes are sent once the connection is back.",
+      "offline_waiting": "Offline · {n} waiting",
+      "organization": "Organization",
+      "quick_entry": "Quick entry",
+      "repeat": "Repeat",
+      "repeat_none": "None",
+      "repeat_daily": "Daily",
+      "repeat_weekly": "Weekly",
+      "repeat_monthly": "Monthly",
+      "repeat_yearly": "Yearly",
+      "starts": "Starts",
+      "tell": "Alert whom",
+      "tell_creator": "Creator",
+      "tell_everyone": "Everyone",
+      "tell_nobody": "Nobody",
+      "untitled": "New event",
+      "view_day": "Day",
+      "view_week": "Week",
+      "view_month": "Month",
+      "view_year": "Year",
+      "writers": "Who writes",
+      "writers_administrator": "Administrator only",
+      "writers_creator": "Administrator and creator",
+      "writers_everyone": "Everyone"
+    },
+    "action": {
+      "add_calendar": "Add calendar",
+      "calendars": "Calendars",
+      "delete": "Delete",
+      "edit": "Edit",
+      "new_event": "New event",
+      "next": "Next",
+      "pick_day": "Pick a day",
+      "previous": "Previous",
+      "refresh": "Refresh",
+      "scope_all": "All repeats",
+      "scope_one": "This event only",
+      "today": "Today",
+      "view": "View"
+    },
+    "aria": {
+      "end_time": "End time",
+      "foot_bar": "Calendar bottom toolbar",
+      "settings_named": "{name} settings",
+      "start_time": "Start time",
+      "toolbar": "Calendar toolbar"
+    },
+    "placeholder": {
+      "quick_entry": "Dentist tomorrow at 3pm"
+    },
+    "status": {
+      "loading": "Loading…"
+    },
+    "message": {
+      "delete_calendar": "Delete the calendar?",
+      "delete_calendar_effect": "Its events are deleted with it.",
+      "scope_cancel": "Delete a repeating event?",
+      "scope_change": "Change a repeating event?",
+      "synced": "Offline changes were sent."
+    },
+    "error": {
+      "calendars_failed": "The calendars could not be read.",
+      "change_failed": "The change did not go through.",
+      "end_before_start": "The end must come after the start.",
+      "events_failed": "The events could not be read.",
+      "no_name": "Enter a name.",
+      "no_time": "Enter a start and an end.",
+      "not_a_writer": "You may not write this calendar.",
+      "sync_failed": "One offline change did not go through.",
+      "unknown_calendar": "That calendar does not exist."
+    },
+    "notice": {
+      "alarm": {
+        "told": {
+          "title": "Event alert",
+          "body": "{title}"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "name": "calendar",
+  "title": "calendar.title",
+  "icon": "i-material-symbols-calendar-month-outline",
+  "screenPath": "/calendar",
+  "serviceName": "calendar",
+  "languagePack": "i18n",
+  "events": true,
+  "websocket": false,
+  "pushKinds": ["alarm.told"]
+}
