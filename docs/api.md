@@ -10,16 +10,23 @@ more}` read with `after` and `limit`. `docs/openapi.json` is generated from the 
 ## The control port
 
 The service listens on the loopback at the address `env/calendar.toml` names (`[server] listen`, by
-convention `127.0.0.1:13109`), under `Authorization: Bearer <token>` with the service token
-(`[server] token`, written to `env/calendar.token`). The console reaches it with the console credential
-(`[console] token`) and the headers the console sets on every relayed call: `Owner-Key`, the signed-in
-account's id, and `Owner-Role`, `administrator` or `member`. A call with no credential is 401; a console
-call with no `Owner-Key` is 403.
+convention `127.0.0.1:13127`), under `Authorization: Bearer <token>` with the service token
+(`[server] token`). The console reaches it with the console credential (`[console] token`) and the headers
+the console sets on every relayed call: `Owner-Key`, the signed-in account's id, and `Owner-Role`,
+`administrator` or `member`. A call with no credential or a wrong one is 401 `unauthorized`; a console call
+with no `Owner-Key` (or one longer than 200 characters), or with an `Owner-Role` that is neither, is 403
+`forbidden`, the console's own reads of the manifest, the words, the module and the stylesheet aside
+(「Console」). A service-token call acts as the administrator.
 
 ## Realms
 
-A realm is `mine` or `organization`. A route that takes a realm reads it from the path. In the `mine`
-realm the account is the caller's `Owner-Key`; a service-token call names it with `account=<key>`.
+A realm is `mine` or `organization`; any other word in its place is 404 `not-found`. A route that takes a
+realm reads it from the path. In the `mine` realm the account is the caller's `Owner-Key`; a service-token
+call names it with `account=<key>`, or with `holderName=<name>`, the holder of a tool session, which acts for
+the owner: the account the account service links to the owner's sender (the receiver's `GET /owner`). A
+service-token call in the `mine` realm that names neither, or whose holder's account cannot be found, is 422
+`no-account`. In the `organization` realm the same query names the account a write records as its creator
+and whose `hidden` mark a read answers.
 
 ## Health
 
@@ -31,32 +38,46 @@ realm the account is the caller's `Owner-Key`; a service-token call names it wit
 
 | Method | Path | Does |
 |---|---|---|
-| GET | `/{realm}/calendars` | The realm's calendars, the caller's `hidden` mark on each |
+| GET | `/{realm}/calendars` | The realm's calendars, the caller's `hidden` mark on each, oldest first — `{items, more}` |
 | POST | `/{realm}/calendars` | `name`, `color`; organization: `writers`, `tell` (defaults `creator`) — 201 |
 | PATCH | `/{realm}/calendars/{calendarId}` | `name`, `color`, `writers`, `tell`, `hidden` — 200 |
 | DELETE | `/{realm}/calendars/{calendarId}` | Retires it (its memory `done`); its events are retired with it — 204 |
 
-A calendar is `id`, `realm`, `name`, `color`, `writers`, `tell`, `hidden`, `creator`, `createdAt`. A realm
-whose brain holds no calendar yet answers one made on first read: `mine` → 「내 일정」 `primary`;
-`organization` → 「조직 일정」 `info`. A member may not write an organization calendar whose `writers` is
-`administrator`; 403 `not-a-writer`.
+A calendar is `id`, `realm`, `name`, `color`, `writers`, `tell`, `hidden`, `creator`, `createdAt`;
+`writers` and `tell` are null in the `mine` realm. A realm whose brain holds no live calendar answers one
+made on the read: `mine` → 「내 일정」 `primary`, id `mine`; `organization` → 「조직 일정」 `info`, id
+`organization` (the names are settings, 「Settings」). `hidden` is the caller's own: a PATCH of it hides or
+shows the calendar for the caller's account alone and is open to every account that reads the realm. In
+the `organization` realm, making a calendar is the administrator's, and changing its `name`, `color`,
+`writers` or `tell` or retiring it the administrator's and its creator's; anyone else is 403
+`not-a-writer`. A `color`, `writers` or `tell` outside its words, or a blank name, is 400 `bad-request`; a
+calendar the realm does not hold live is 404 `not-found`.
 
 ## Events
 
 | Method | Path | Does |
 |---|---|---|
-| GET | `/{realm}/events?start=&end=` | The events overlapping the span (local ISO datetimes, at most 92 days); a repeating event answers one row per occurrence in the span, `occurrence` naming its start |
+| GET | `/{realm}/events?start=&end=` | The events overlapping the span (local ISO datetimes, at most 92 days), by start — `{items, more}`; a repeating event answers one row per occurrence in the span, `occurrence` naming its start |
 | GET | `/{realm}/events/{eventId}` | One event |
 | POST | `/{realm}/events` | 201 |
 | PATCH | `/{realm}/events/{eventId}` | Changes the fields named; `occurrence` limits a repeating event's change to that one (which becomes an event of its own) — 200 |
 | DELETE | `/{realm}/events/{eventId}` | Cancels it (`done`); `occurrence` cancels one occurrence — 204 |
 
 An event is `id`, `realm`, `calendarId`, `title`, `description` (may be empty), `start`, `end` (local
-ISO datetimes, `end` after `start`), `allDay`, `alarm` (`none` or minutes before start: 0, 5, 15, 30, 60,
-1440), `repeat` (`none`, `daily`, `weekly`, `monthly`, `yearly`), `creator`, `createdAt`, `changedAt`,
-`told` (the occurrence last told, or null). A write names `calendarId`, `title`, `start`, `end` and may
-name the rest; a write under a calendar the caller may not write is 403 `not-a-writer`; an end not after
-the start is 422 `end-before-start`; an unknown calendar is 422 `unknown-calendar`.
+ISO datetimes, `YYYY-MM-DDTHH:mm:ss`, `end` after `start`), `allDay`, `alarm` (`none` or minutes before
+start: `0`, `5`, `15`, `30`, `60`, `1440`, each a string), `repeat` (`none`, `daily`, `weekly`, `monthly`,
+`yearly`), `occurrence` (in a span's rows, the start of the occurrence a repeating event's row stands for,
+whose `start` and `end` the row carries; null otherwise), `creator`, `createdAt`, `changedAt`, `told` (the
+occurrence last told, or null). A write names `calendarId`, `title`, `start`, `end` and may name the rest
+and an `id` (1 to 64 letters, digits, `-` and `_`; one is made where none is given); a title is one line.
+A write under a calendar the caller may not write is 403 `not-a-writer`; an end not after the start is 422
+`end-before-start`; an unknown calendar is 422 `unknown-calendar`; a span over 92 days or ending before it
+starts is 422 `span-too-long`; an `occurrence` that is not one of the event's is 422 `not-an-occurrence`;
+an event the realm does not hold live is 404 `not-found`; a field outside its shape or its words is 400
+`bad-request`. In the `organization` realm a calendar whose `writers` is `administrator` is written by the
+administrator alone, one whose `writers` is `creator` takes new events from every account and a change or
+a cancellation from the administrator and the event's creator, and one whose `writers` is `everyone` from
+every account.
 
 Every write is idempotent on `id`: a POST that names an `id` the realm already holds answers 200 with the
 event as it stands after the write (the console's offline replay sends the same write twice).
@@ -65,34 +86,52 @@ event as it stands after the write (the console's offline replay sends the same 
 
 | Method | Path | Does |
 |---|---|---|
-| GET | `/{realm}/alarms?from=&to=` | The alarm moments in the span, each `eventId`, `occurrence`, `at`, `told` |
-| POST | `/beats` | Service token only: runs one beat now (the minute's work: tell what is due) — 200 with what it told |
+| GET | `/{realm}/alarms?from=&to=` | The alarm moments in the span (epoch ms, at most 92 days), by moment — `{items, more}`, each `realm`, `eventId`, `occurrence`, `at`, `told` |
+| POST | `/beats` | Service token only (403 `forbidden` to the console): runs one beat now (the minute's work: tell what is due) — 200, `told`, each alarm told: `realm`, `eventId`, `occurrence`, `at`, `lateMs`, `rooms` |
 
 The beat runs every minute on the service's own clock and once at start. It tells each due alarm once:
-the mark `told:<eventId>:<occurrence>` is kept in the unit's own store, and the event's `told` is read
-from it. A due alarm found at start after the service was down is told with how late it is.
+the mark `told:<eventId>:<occurrence>` is kept per realm in the unit's own store, and the event's `told` is
+read from it. An alarm is due when its moment has come and it came after the last beat the store
+remembers, or when its event was written after its moment and has not started yet. A due alarm found at
+start after the service was down is told with how late it is (`lateMs`, 0 where it is on time).
 
-How an alarm is told (「Calls the calendar makes」): one `POST /instructions` on the receiver, sort
-`calendar`, kind `calendar:<eventId>:<occurrence>`, `cause` `reply`, `said.order` naming the event's
-title, its start, its calendar and realm, and that the owner asked to be reminded, in English; `room` the
-owner's private room (the receiver's `GET /owner`) for the owner's own events and for organization events
-whose `tell` reaches the owner, and the room the receiver links to a member's account where it answers
-one (the receiver's accounts route), else the owner's private room naming the member.
+How an alarm is told (「Calls the calendar makes」): one `POST /instructions` on the receiver for each room
+it reaches, sort `calendar`, kind `calendar:<eventId>:<occurrence>`, `cause` `reply`, `summary` the event's
+title, `said.order` naming the event's title, its start, its calendar and realm, how late it is where it
+is late, and that the owner asked to be reminded, in English. Who is told: in the `mine` realm the
+account; in the `organization` realm the calendar's `tell`: `creator` the event's creator, `everyone` the
+owner and every account holding a `mine` realm, `nobody` none. Where each is told: the owner's private room
+(the receiver's `GET /owner`) for the owner's account (the account the account service links to the owner's
+sender); for a member, the room numbered as one of the senders the account service links to the member's
+account (`GET /users/{user}`) that the receiver holds registered (`GET /rooms/{roomId}`), else the owner's
+private room naming the member. One room is told once, naming every account it is told for. A telling the
+receiver refuses or does not answer keeps no mark, and the next beat tells it again.
 
 ## Console
 
 | Method | Path | Does |
 |---|---|---|
-| GET | `/console-manifest` | The bundle manifest (bmo-ui `docs/console-bundles.md`): `name` `calendar`, `title` `calendar.title`, `icon` `i-material-symbols-calendar-month-outline`, `screenPath` `/calendar`, `role` `member`, `ownerKey` true, `events` the stream below, `pushKinds` `[alarm.told]` |
+| GET | `/console-manifest` | The bundle manifest (bmo-ui `docs/console-bundles.md`): `name` `calendar`, `title` `calendar.title`, `icon` `i-material-symbols-calendar-month-outline`, `screenPath` `/calendar`, `serviceName` `calendar`, `apiPrefix` `/`, `role` `member`, `ownerKey` true, `events` true (the stream below), `websocket` false, `pushKinds` `[alarm.told]`, `calls`, `relays` and `shareReads` empty |
 | GET | `/console/words` | The bundle's words, every locale |
 | GET | `/console/{file}` | The bundle's module and stylesheet |
 
+The four take the console credential (or the service token) with no owner key and no role. They are read
+from the bundle's built folder (`[console] folder`) once at start: the module `bundle.js`, the stylesheet
+`bundle.css` and the words `words.json`, the module and the stylesheet answered at
+`/console/bundle-<digest>.js` and `.css`, the digest the first sixteen hex digits of their bytes' SHA-256,
+with `cache-control: private, max-age=31536000, immutable`. A folder that does not hold all three leaves the
+four answered 404 `not-found`.
+
 ## Events the calendar publishes
 
-`GET /events` is a server-sent stream in the platform's shape (`after`, `kinds`): `calendar.changed`
-(`realm`, `calendarId`), `event.changed` (`realm`, `eventId`, `occurrence?`), `alarm.told` (`realm`,
-`eventId`, `occurrence`, `at`). The console refreshes the visible span on `event.changed` and rings
-`alarm.told`.
+`GET /events` is a server-sent stream in the platform's shape (`after` or `Last-Event-ID`, `kinds`; the
+same events as a page to `Accept: application/json`, with `after` and `limit`): `calendar.changed`
+(`realm`, `calendarId`), `event.changed` (`realm`, `eventId`, `occurrence`, null where the change is the
+whole event's), `alarm.told` (`realm`, `eventId`, `occurrence`, `at`). A console reader is given the
+`organization` realm's events and its own account's `mine` events; the service token reads every one. The
+service keeps the events since it started, at most the last 1000, numbered upward from its start's moment
+in milliseconds times 1000; a resume from before them is 410 `gone`. The console refreshes the visible span
+on `event.changed` and rings `alarm.told`.
 
 ## The tool
 
@@ -109,10 +148,12 @@ output schema in `docs/openapi.json` under `x-tools`:
 | `calendar_change` | Changes the fields named |
 | `calendar_cancel` | Cancels an event or one occurrence |
 
-The `mine` realm of a tool call is the account the turn's holder is linked to: the owner's for the
-supervisor's turn (the session's `holderName` and the account the receiver links it to); a call that cannot
-name an account is refused `no-account`. The tool reaches the service with the service token from
-`env/calendar.env` (`CALENDAR_ADDRESS`, `CALENDAR_TOKEN`), which the deployment writes before the flip.
+The `mine` realm of a tool call is the account the turn's holder acts for: the tool hands the session's
+`holderName` to the service, which answers it with the owner's account (「Realms」); a call that cannot
+name an account is refused `no-account`. `calendar_events` with `n` and no span reads from now to 92 days
+ahead and answers the first `n`. The tool reaches the service with the service token from
+`env/calendar.env` under the data root (`CALENDAR_ADDRESS`, `CALENDAR_TOKEN`; the same names in the call's
+environment come first), which the deployment writes before the flip with `bmo-calendar tool-env`.
 
 ## Calls the calendar makes
 
@@ -121,7 +162,49 @@ name an account is refused `no-account`. The tool reaches the service with the s
 | the realm's brain, made on first write | brain `GET /brains?accountKey=&agentKey=`, `POST /brains` |
 | calendars and events read, written, versioned, retired | brain `GET /memories`, `POST /memories`, `POST /memories/{id}/versions`, `PATCH /memories/{id}` |
 | the brain's changes followed | brain `GET /events` (`memory.written`, `memory.moved`, `scope=brain:<id>`) |
-| an alarm told | receiver `POST /instructions`; the owner's room from `GET /owner`; a member's room from the receiver's account link |
+| an alarm told | receiver `POST /instructions`; the owner's sender and room from `GET /owner`; a member's room by `GET /rooms/{roomId}` |
+| whose account is whose | the account service `GET /senders/{sender}/user` (the owner's account), `GET /users/{user}` (a member's name and senders) |
 
 The brain's address and token are `BRAIN_ADDRESS` and `BRAIN_TOKEN` from `env/brain.env`; the receiver's
-from `env/receiver.toml` and `env/receiver.token`. Every call waits for its answer; no clock cuts one.
+`listen` from `env/receiver.toml` and its token from `env/receiver.token`; the account service's `[server]
+listen` and `token` from `env/web.toml`; each under the data root, read afresh for every call, and each
+overridden by the settings where they name one (「Settings」). Every call waits for its answer; no clock cuts
+one. A brain or receiver that refuses the connection is asked again two seconds later; the brain's event
+stream, once broken, is opened again from its last event two seconds later, and a resume the brain answers
+410 `gone` reads the realm's memories whole again.
+
+## Codes
+
+Beside the common codes of bmo-chat's `docs/conventions.md` (`bad-request`, `unauthorized`, `forbidden`,
+`no-route`, `not-found`, `gone`, `failed`, `upstream-failed`, `not-ready`), each answered 422:
+
+| Code | When |
+|---|---|
+| `no-account` | a `mine` call names no account, or its holder's account cannot be found |
+| `not-a-writer` | a write the caller may not make (answered 403) |
+| `end-before-start` | an end not after its start |
+| `unknown-calendar` | an event written under a calendar the realm does not hold live |
+| `span-too-long` | a span over 92 days, or one ending before it starts |
+| `not-an-occurrence` | an `occurrence` that is not one of the event's |
+
+`upstream-failed` (502) is the brain, the receiver or the account service answering a failure;
+`not-ready` (503) is a realm asked for before the service has read the brain once.
+
+## Settings
+
+The settings are read at start in layers, each overriding the one before: the defaults built into the binary
+(the repository's `settings.toml`); then `settings.toml` and `settings.local.toml` in the settings folder,
+the one `BMO_CALENDAR_SETTINGS` names, else the folder above the one holding the binary (a deployment's
+root, where `settings.local.toml` links to the data root's `env/calendar.toml`); then
+`BMO_CALENDAR_<TABLE>__<KEY>` in the environment.
+
+| Table | Key | What it is |
+|---|---|---|
+| `server` | `listen` | where the service answers, `host:port` |
+| `server` | `token` | the service token; an empty one lets no caller in |
+| `server` | `data_root` | the data root whose `env/` the peers' addresses and tokens are read from, and under which `tool-env` writes `env/calendar.env` |
+| `console` | `token` | the console credential; empty, the console reaches nothing |
+| `console` | `folder` | the console bundle's built folder (`client/dist` where none is set; a relative one read from where the process starts) |
+| `store` | `path` | the SQLite file of the told marks |
+| `calendars` | `mine_name`, `organization_name` | the names of the calendar a realm is given when it holds none |
+| `brain`, `receiver`, `accounts` | `address`, `token` | a peer's base address and token where the data root's files are not to be read; empty, the files are read |
