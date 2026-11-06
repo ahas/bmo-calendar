@@ -44,10 +44,19 @@ async fn a_due_alarm_is_told_once_and_none_twice_across_a_restart() {
   assert_eq!(instruction["summary"], "Dentist");
   assert_eq!(instruction["kind"], format!("calendar:{id}:{}", event["start"].as_str().unwrap()));
   let order = instruction["said"]["order"].as_str().unwrap();
+  assert!(order.starts_with("CALENDAR ALARM."), "the turn opens on its marker: {order}");
+  assert!(order.contains("\"Dentist\""), "the event's title: {order}");
   assert!(
-    order.contains("\"Dentist\"") && order.contains("the owner") && !order.contains("late"),
-    "{order}"
+    order.contains(&event["start"].as_str().unwrap().replace('T', " ")),
+    "the event's start: {order}"
   );
+  assert!(order.contains("a personal calendar"), "its realm: {order}");
+  assert!(order.contains("It was asked to be reminded of."), "{order}");
+  assert!(order.contains("It is for the owner."), "whom it is for: {order}");
+  assert!(!order.contains("late"), "{order}");
+  for sentence in ["Remind", "in your own words", "tell the owner", "so it reaches them"] {
+    assert!(!order.contains(sentence), "the turn holds no instruction ({sentence}): {order}");
+  }
 
   let (_, again) = service.post("/beats", json!({})).await;
   assert_eq!(again["told"], json!([]));
@@ -90,7 +99,10 @@ async fn an_alarm_that_came_due_while_the_service_was_down_is_told_late() {
   let service = Service::start(&stand, folder).await;
   service.until(async |service| !service.stand.instructions().is_empty()).await;
   let order = service.stand.instructions()[0]["said"]["order"].as_str().unwrap().to_owned();
-  assert!(order.contains("minutes late"), "{order}");
+  assert!(order.starts_with("CALENDAR ALARM."), "the turn opens on its marker: {order}");
+  assert!(order.contains("Standup"), "the event's title: {order}");
+  assert!(order.contains("minutes late"), "how late it is: {order}");
+  assert!(!order.contains("Remind"), "the turn holds no instruction: {order}");
 
   let from = now - 3_600_000;
   let (_, alarms) =
@@ -127,14 +139,23 @@ async fn each_account_is_told_in_the_room_it_reaches() {
 
   let member = in_room(MEMBER_ROOM);
   assert_eq!(member["summary"], "Member with a room");
-  assert!(member["said"]["order"].as_str().unwrap().contains("member-a (account 2)"));
+  let order = member["said"]["order"].as_str().unwrap();
+  assert!(order.starts_with("CALENDAR ALARM."), "the turn opens on its marker: {order}");
+  assert!(order.contains("Member with a room"), "the event's title: {order}");
+  assert!(order.contains("It is for member-a (account 2)."), "whom it is for: {order}");
+  assert!(!order.contains("Remind"), "the turn holds no instruction: {order}");
   let relayed = in_room(OWNER_ROOM);
   assert_eq!(relayed["summary"], "Member without one");
   let order = relayed["said"]["order"].as_str().unwrap();
+  assert!(order.starts_with("CALENDAR ALARM."), "the turn opens on its marker: {order}");
+  assert!(order.contains("Member without one"), "the event's title: {order}");
   assert!(
-    order.contains("member-b (account 3)") && order.contains("no room of their own"),
-    "{order}"
+    order.contains("It is for member-b (account 3), who has no room of their own here."),
+    "whom it is for, as data: {order}"
   );
+  for sentence in ["Remind", "in your own words", "tell the owner", "so it reaches them"] {
+    assert!(!order.contains(sentence), "the turn holds no instruction ({sentence}): {order}");
+  }
 }
 
 #[tokio::test]

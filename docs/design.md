@@ -57,8 +57,10 @@ beat, which is how far back a beat looks; an event written after its alarm's mom
 told at the next beat. The telling is the receiver's instruction route: an order for the
 supervisor in the recipient's room — the owner's private room for the owner; for a member, the room numbered
 as one of the senders the account service links to the member's account, where the receiver holds it
-registered, and the owner's private room naming the member where it holds none — so the supervisor says it
-in its own words (「비모가 알려준다」). A
+registered, and the owner's private room naming the member where it holds none. The order opens on the
+marker `CALENDAR ALARM.` and carries the alarm's data alone — the event, its start, its calendar and realm,
+how late it is and whom it is for — never an instruction; how a quiet instruction is answered stands in the
+receiving session's own rules, so the supervisor says it in its own words (「비모가 알려준다」). A
 repeating event's next occurrence is told when its moment comes; a cancelled event's pending alarm is told
 no more.
 

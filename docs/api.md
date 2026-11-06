@@ -98,10 +98,12 @@ start after the service was down is told with how late it is (`lateMs`, 0 where 
 
 How an alarm is told (「Calls the calendar makes」): one `POST /instructions` on the receiver for each room
 it reaches, sort `calendar`, kind `calendar:<eventId>:<occurrence>`, `cause` `reply`, `summary` the event's
-title, `said.order` naming the event's title, its start, its calendar and realm, how late it is where it
-is late, and that the owner asked to be reminded, in English. Who is told: in the `mine` realm the
-account; in the `organization` realm the calendar's `tell`: `creator` the event's creator, `everyone` the
-owner and every account holding a `mine` realm, `nobody` none. Where each is told: the owner's private room
+title, `said.order` opening on the marker `CALENDAR ALARM.` and then the data alone, in English: the event's
+title, its start, its calendar and realm, how late it is where it is late, that a reminder of it was asked
+for, and whom it is for. The turn carries no instruction; how a quiet instruction is answered stands in the
+receiving session's own rules. Who is told: in the `mine` realm the account; in the `organization` realm the
+calendar's `tell`: `creator` the event's creator, `everyone` the owner and every account holding a `mine`
+realm, `nobody` none. Where each is told: the owner's private room
 (the receiver's `GET /owner`) for the owner's account (the account the account service links to the owner's
 sender); for a member, the room numbered as one of the senders the account service links to the member's
 account (`GET /users/{user}`) that the receiver holds registered (`GET /rooms/{roomId}`), else the owner's

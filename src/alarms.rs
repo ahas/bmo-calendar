@@ -262,8 +262,9 @@ async fn tell(app: &App, one: &Due, occurrence: &str) -> Result<Vec<i64>, String
   Ok(told)
 }
 
-/// The order a room's supervisor is handed, in English: the event, its start, its calendar and realm, how late
-/// it is, and whom to remind.
+/// The order a room's supervisor is handed, in English: a marker naming the alarm, the event, its start, its
+/// calendar and realm, how late it is, and whom it is for. What to do with a quiet instruction stands in the
+/// receiving session's own rules, never in the turn.
 fn order(one: &Due, listeners: &[Listener]) -> String {
   let event = &one.event;
   let start = local_text(one.moment.start).replace('T', " ");
@@ -278,8 +279,7 @@ fn order(one: &Due, listeners: &[Listener]) -> String {
     format!(" \"{}\"", one.calendar_name)
   };
   let mut text = format!(
-    "A calendar alarm has come: \"{}\" starts {when} (local time), in{calendar}, {realm}. It was asked to be \
-     reminded of.",
+    "CALENDAR ALARM. \"{}\" starts {when} (local time), in{calendar}, {realm}. It was asked to be reminded of.",
     event.title
   );
   if one.late_ms > 0 {
@@ -295,11 +295,9 @@ fn order(one: &Due, listeners: &[Listener]) -> String {
       (None, false) => format!("the member with account {}", listener.account),
     };
     if listener.owner || listener.own_room {
-      text.push_str(&format!(" Remind {who} of it now, in your own words."));
+      text.push_str(&format!(" It is for {who}."));
     } else {
-      text.push_str(&format!(
-        " It is for {who}, who has no room of their own here: tell the owner, so it reaches them."
-      ));
+      text.push_str(&format!(" It is for {who}, who has no room of their own here."));
     }
   }
   text
