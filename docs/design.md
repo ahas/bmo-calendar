@@ -76,7 +76,7 @@ account service links to the owner's sender.
 
 The console screen follows the Nuxt UI calendar template (day, week, month and year views, drag to move
 and resize, a popover to edit, a quick natural-language entry, colour-coded calendars with visibility, a
-mini calendar), stood as a console bundle under the sidebar entry 일정. The sidebar lists 내 일정 and 조직
+mini calendar), stood as a console bundle under the sidebar entry 캘린더. The sidebar lists 내 일정 and 조직
 일정 calendars apart; one grid shows both.
 
 The screen is used by finger and by ear as well as by mouse:
