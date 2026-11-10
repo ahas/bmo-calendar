@@ -165,7 +165,7 @@ export function startStandIn(seed: { calendars?: Partial<Record<Realm, Calendar[
 }
 
 /** A call that never reaches anything: what a browser with no network answers. */
-export const unreachable: Call = () => ofetch("http://127.0.0.1:1/");
+export const unreachable: Call = () => ofetch("http://[::1]:1/");
 
 /** Waits for the store's writes and reads in flight to land. */
 export function settle(): Promise<void> {

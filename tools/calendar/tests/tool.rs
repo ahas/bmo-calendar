@@ -231,7 +231,7 @@ fn the_service_is_found_in_the_data_roots_env_file() {
   std::fs::create_dir_all(root.join("env")).unwrap();
   std::fs::write(
     root.join("env/calendar.env"),
-    "CALENDAR_ADDRESS=http://127.0.0.1:1/\nCALENDAR_TOKEN=tool-token\n",
+    "CALENDAR_ADDRESS=http://[::1]:1/\nCALENDAR_TOKEN=tool-token\n",
   )
   .unwrap();
   let session = Session {
@@ -241,7 +241,7 @@ fn the_service_is_found_in_the_data_roots_env_file() {
   assert_eq!(
     service(&session),
     Ok(Service {
-      url: "http://127.0.0.1:1".into(),
+      url: "http://[::1]:1".into(),
       token: "tool-token".into()
     })
   );
