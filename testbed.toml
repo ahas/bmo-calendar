@@ -21,7 +21,7 @@ dir = "tools"
 # The sweeps that read the tree before anything runs: the README's folder table, the dependencies the manifests
 # name, the build profiles and the shared versions.
 quick = ["layout", "dependencies", "cargo-profile", "shared-versions"]
-base_libraries = ["bmo-chat", "bmo-chat-client", "bmo-ui"]
+base_libraries = ["bmo-chat", "bmo-chat-client", "bmo-console-face", "bmo-ui"]
 
 # The repository whose root holds the shared versions the manifests and the lock hold to.
 [check.shared_versions]

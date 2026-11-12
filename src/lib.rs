@@ -1,5 +1,5 @@
 //! The calendar service: dated events kept as memories in the brain (the brain the master, this unit the
-//! subordinate), their alarms told to the supervisor through the receiver, and the console bundle that shows
+//! subordinate), their alarms told to the supervisor through the receiver, and the console face that shows
 //! them (`docs/design.md`, `docs/api.md`).
 
 pub mod alarms;
@@ -24,7 +24,6 @@ use tokio::net::TcpListener;
 
 use crate::api::{Served, router};
 use crate::app::App;
-use crate::console::Bundle;
 use crate::settings::Settings;
 use crate::store::Store;
 
@@ -47,11 +46,17 @@ pub async fn serve_on(
   stop: impl Future<Output = ()> + Send + 'static,
 ) -> Result<(), String> {
   let store = Store::open(&settings.store.path)?;
-  let bundle = match Bundle::read(&settings.console.folder) {
-    Ok(bundle) => Some(Arc::new(bundle)),
-    Err(why) => {
-      eprintln!("bmo-calendar: the console bundle is not served: {why}");
-      None
+  // An empty console credential reaches nothing, so no face stands to be reached.
+  let face = if settings.console.token.is_empty() {
+    eprintln!("bmo-calendar: the console face is not served: no console credential is set");
+    None
+  } else {
+    match console::face(&settings.console.folder, &settings.console.token) {
+      Ok(face) => Some(face),
+      Err(why) => {
+        eprintln!("bmo-calendar: the console face is not served: {why}");
+        None
+      }
     }
   };
   let app = App::new(settings, store);
@@ -67,7 +72,7 @@ pub async fn serve_on(
     }
   });
   let stopping = Arc::clone(&app);
-  let served = axum::serve(listener, router(Served { app, bundle }))
+  let served = axum::serve(listener, router(Served { app, face }))
     .with_graceful_shutdown(async move {
       stop.await;
       stopping.events.stop();

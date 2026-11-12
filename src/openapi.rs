@@ -12,8 +12,8 @@ use crate::error::CODES;
 use crate::events::KINDS;
 use crate::wire::{
   AccountQuery, AlarmMoment, AlarmTold, AlarmsQuery, Beat, Calendar, CalendarChange, CalendarChanged,
-  CancelQuery, ConsoleManifest, Event, EventChange, EventChanged, EventsQuery, Health, NewCalendar,
-  NewEvent, Page, SpanQuery, StreamEvent, WireError,
+  CancelQuery, Event, EventChange, EventChanged, EventsQuery, Health, NewCalendar, NewEvent, Page,
+  SpanQuery, StreamEvent, WireError,
 };
 
 const SCHEMAS: &str = "/components/schemas";
@@ -404,38 +404,21 @@ fn routes(g: &mut SchemaGenerator) -> Vec<Route> {
       path: "/console-manifest",
       id: "readConsoleManifest",
       tag: "console",
-      summary: "The console bundle's manifest, to the console's credential alone.",
-      parameters: vec![],
-      body: None,
-      answers: vec![(200, content::<ConsoleManifest>(g))],
-      codes: vec!["not-found"],
-    },
-    Route {
-      method: "get",
-      path: "/console/words",
-      id: "readConsoleWords",
-      tag: "console",
-      summary: "The console bundle's words, each locale's tree under the locale's code, to the console's credential alone.",
+      summary: "The console face's manifest, by bmo-ui's console plugin contract, to the console's credential alone.",
       parameters: vec![],
       body: None,
       answers: vec![(200, Some(json!({ "application/json": { "schema": { "type": "object" } } })))],
-      codes: vec!["not-found"],
+      codes: vec![],
     },
     Route {
       method: "get",
       path: "/console/{file}",
       id: "readConsoleFile",
       tag: "console",
-      summary: "The console bundle's module or stylesheet, at the name the manifest gives it, to the console's credential with a reader's Owner-Key and Owner-Role.",
+      summary: "A file of the console bundle at the path the manifest names: the words to the console's credential alone, the module, the stylesheet and every other file to it with the manifest's Owner-Role and Owner-Key.",
       parameters: vec![path_parameter(g, "file", "The file's name, as the manifest gives it.")],
       body: None,
-      answers: vec![(
-        200,
-        Some(json!({
-          "text/javascript": { "schema": { "type": "string" } },
-          "text/css": { "schema": { "type": "string" } },
-        })),
-      )],
+      answers: vec![(200, Some(json!({ "*/*": { "schema": { "type": "string" } } })))],
       codes: vec!["not-found"],
     },
   ]

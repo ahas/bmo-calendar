@@ -113,8 +113,10 @@ receiver refuses or does not answer keeps no mark, and the next beat tells it ag
 
 The calendar's screen is a console bundle under bmo-ui's console plugin contract (bmo-ui
 `docs/console-bundles.md`), which states the manifest, the bundle's files, the layer a bundle is built on
-and the guard of every route a console reaches. This section names only what the calendar chooses within
-it.
+and the guard of every route a console reaches. The service serves its console face through bmo-chat's
+`bmo-console-face` crate (bmo-chat `docs/console-face.md`), which assembles the manifest, answers the
+bundle's files and guards them and the screens' routes as the contract states. This section names only what
+the calendar chooses within it.
 
 - **The bundle.** Named `calendar`, its title the word `calendar.title` and a month icon, its screens under
   `/calendar`, relayed as the service `calendar` with the whole API under the prefix `/`.
@@ -123,13 +125,13 @@ it.
 - **What it reads.** The event stream (「Events the calendar publishes」), whose `alarm.told` a console raises
   as a notice. No WebSocket, no share page, no sidebar count, no other service called and no route relayed
   outside the prefix.
-- **Its files.** The words are answered at `/console/words`, the module and the stylesheet under `/console/`
-  at names made from their bytes. They are read once at start from the folder `bun run bundle` builds in
-  `client/` with bmo-ui's bundle build (`[console] folder`), and the manifest names the layer that build
-  wrote there. A folder missing any of the module, the stylesheet, the words or the layer leaves the bundle
-  unserved, its routes answered 404 `not-found`.
-- **Its guard.** The four routes take the console credential alone; the service token is refused there with
-  a 401, as any credential that is not the console's is.
+- **Its files.** The folder `bun run bundle` builds in `client/` with bmo-ui's bundle build (`[console]
+  folder`), read once at start: the module `bundle.js`, the stylesheet `bundle.css` and the words
+  `words.json`, beside the layer that build wrote. A folder the face cannot be built from leaves the service
+  with no console face, and the console's routes answer 404.
+- **The screens' routes.** The calendars, the events, the alarms and the event stream, held to the
+  manifest's role and owner key for a call carrying the console credential, and then to this document's own
+  terms.
 
 ## Events the calendar publishes
 

@@ -237,97 +237,6 @@
         ],
         "type": "string"
       },
-      "ConsoleManifest": {
-        "description": "The console bundle's manifest (bmo-ui's `docs/console-bundles.md`, 「The manifest」).",
-        "properties": {
-          "apiPrefix": {
-            "type": "string"
-          },
-          "bundle": {
-            "type": "string"
-          },
-          "calls": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array"
-          },
-          "events": {
-            "type": "boolean"
-          },
-          "icon": {
-            "type": "string"
-          },
-          "layer": {
-            "description": "The bmo-ui release the bundle was built on.",
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          },
-          "ownerKey": {
-            "type": "boolean"
-          },
-          "pushKinds": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array"
-          },
-          "relays": {
-            "items": true,
-            "type": "array"
-          },
-          "role": {
-            "$ref": "#/components/schemas/Role"
-          },
-          "screenPath": {
-            "type": "string"
-          },
-          "serviceName": {
-            "type": "string"
-          },
-          "shareReads": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array"
-          },
-          "stylesheet": {
-            "type": "string"
-          },
-          "title": {
-            "type": "string"
-          },
-          "websocket": {
-            "type": "boolean"
-          },
-          "words": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "name",
-          "title",
-          "icon",
-          "screenPath",
-          "serviceName",
-          "layer",
-          "bundle",
-          "stylesheet",
-          "words",
-          "apiPrefix",
-          "role",
-          "ownerKey",
-          "events",
-          "websocket",
-          "pushKinds",
-          "calls",
-          "relays",
-          "shareReads"
-        ],
-        "type": "object"
-      },
       "Event": {
         "description": "An event, or one occurrence of a repeating event in a span's rows.",
         "properties": {
@@ -769,14 +678,6 @@
         ],
         "type": "string"
       },
-      "Role": {
-        "description": "A role a reader holds.",
-        "enum": [
-          "administrator",
-          "member"
-        ],
-        "type": "string"
-      },
       "StreamEvent": {
         "description": "One event the service publishes.",
         "properties": {
@@ -991,62 +892,6 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConsoleManifest"
-                }
-              }
-            },
-            "description": "Answered."
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WireError"
-                }
-              }
-            },
-            "description": "`unauthorized`: the token is missing or wrong"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WireError"
-                }
-              }
-            },
-            "description": "`forbidden`: the token is right but the caller may not do this"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WireError"
-                }
-              }
-            },
-            "description": "`not-found`: nothing stands at the key the path names"
-          }
-        },
-        "summary": "The console bundle's manifest, to the console's credential alone.",
-        "tags": [
-          "console"
-        ],
-        "x-codes": [
-          "unauthorized",
-          "forbidden",
-          "not-found"
-        ]
-      }
-    },
-    "/console/words": {
-      "get": {
-        "operationId": "readConsoleWords",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
                   "type": "object"
                 }
               }
@@ -1072,26 +917,15 @@
               }
             },
             "description": "`forbidden`: the token is right but the caller may not do this"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WireError"
-                }
-              }
-            },
-            "description": "`not-found`: nothing stands at the key the path names"
           }
         },
-        "summary": "The console bundle's words, each locale's tree under the locale's code, to the console's credential alone.",
+        "summary": "The console face's manifest, by bmo-ui's console plugin contract, to the console's credential alone.",
         "tags": [
           "console"
         ],
         "x-codes": [
           "unauthorized",
-          "forbidden",
-          "not-found"
+          "forbidden"
         ]
       }
     },
@@ -1112,12 +946,7 @@
         "responses": {
           "200": {
             "content": {
-              "text/css": {
-                "schema": {
-                  "type": "string"
-                }
-              },
-              "text/javascript": {
+              "*/*": {
                 "schema": {
                   "type": "string"
                 }
@@ -1156,7 +985,7 @@
             "description": "`not-found`: nothing stands at the key the path names"
           }
         },
-        "summary": "The console bundle's module or stylesheet, at the name the manifest gives it, to the console's credential with a reader's Owner-Key and Owner-Role.",
+        "summary": "A file of the console bundle at the path the manifest names: the words to the console's credential alone, the module, the stylesheet and every other file to it with the manifest's Owner-Role and Owner-Key.",
         "tags": [
           "console"
         ],

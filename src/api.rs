@@ -1,5 +1,5 @@
 //! The routes (`docs/api.md`): who calls (the service token or the console's credential with the reader's key
-//! and role), the realms, the calendars, the events, the alarms, the beat, the event stream, the console bundle
+//! and role), the realms, the calendars, the events, the alarms, the beat, the event stream, the console face
 //! and the health.
 
 use std::convert::Infallible;
@@ -14,6 +14,7 @@ use axum::http::{HeaderMap, StatusCode, header};
 use axum::response::sse::{Event as Sent, KeepAlive, Sse};
 use axum::response::{IntoResponse, Json, Response};
 use axum::routing::{get, post};
+use bmo_console_face::ConsoleFace;
 use chrono::{Duration, NaiveDateTime};
 use futures_util::{StreamExt, stream};
 use serde::de::DeserializeOwned;
@@ -22,7 +23,6 @@ use serde_json::json;
 use crate::alarms;
 use crate::app::App;
 use crate::cache::RealmKey;
-use crate::console::{Bundle, KEPT_FOR_GOOD};
 use crate::error::ApiError;
 use crate::events::Record;
 use crate::model::{
@@ -44,22 +44,18 @@ const KEEP_OPEN: StdDuration = StdDuration::from_secs(15);
 
 type Answer<T> = Result<T, ApiError>;
 
-/// The service as the routes see it: its state and its console bundle, where one is built.
+/// The service as the routes see it: its state and its console face, where one is built.
 #[derive(Clone)]
 pub struct Served {
   pub app: Arc<App>,
-  pub bundle: Option<Arc<Bundle>>,
+  pub face: Option<ConsoleFace>,
 }
 
-/// Every route, the unknown ones answered `no-route`.
+/// Every route, the unknown ones answered `no-route`: the service's own, the screens' ones under the console
+/// face's guard, and the face's own.
 pub fn router(served: Served) -> Router {
-  Router::new()
-    .route("/health", get(health))
+  let screens = Router::new()
     .route("/events", get(events))
-    .route("/beats", post(beats))
-    .route("/console-manifest", get(manifest))
-    .route("/console/words", get(words))
-    .route("/console/{file}", get(console_file))
     .route("/{realm}/calendars", get(list_calendars).post(create_calendar))
     .route(
       "/{realm}/calendars/{calendarId}",
@@ -67,7 +63,13 @@ pub fn router(served: Served) -> Router {
     )
     .route("/{realm}/events", get(list_events).post(create_event))
     .route("/{realm}/events/{eventId}", get(read_event).patch(change_event).delete(cancel_event))
-    .route("/{realm}/alarms", get(list_alarms))
+    .route("/{realm}/alarms", get(list_alarms));
+  let mut routes = Router::new().route("/health", get(health)).route("/beats", post(beats));
+  match &served.face {
+    Some(face) => routes = routes.merge(face.guard_screens(screens)).merge(face.router()),
+    None => routes = routes.merge(screens),
+  }
+  routes
     .fallback(|| async { ApiError::no_route() })
     .method_not_allowed_fallback(|| async { ApiError::no_route() })
     .with_state(served)
@@ -919,47 +921,4 @@ async fn events(
     .map(|record| Ok::<_, Infallible>(sent(&record.event)))
     .take_until(app.events.stopped());
   Ok(Sse::new(stream).keep_alive(KeepAlive::new().interval(KEEP_OPEN)).into_response())
-}
-
-// ---------------------------------------------------------------------------------------------------------
-// The console bundle
-
-/// The bundle, to the console's credential alone: the service's own is refused as any other is.
-fn bundle(served: &Served, headers: &HeaderMap) -> Answer<Arc<Bundle>> {
-  if credential(&served.app, headers)? != Credential::Console {
-    return Err(ApiError::unauthorized());
-  }
-  served
-    .bundle
-    .clone()
-    .ok_or_else(|| ApiError::not_found("The console bundle is not built here."))
-}
-
-async fn manifest(State(served): State<Served>, headers: HeaderMap) -> Answer<Response> {
-  Ok(Json(bundle(&served, &headers)?.manifest()).into_response())
-}
-
-async fn words(State(served): State<Served>, headers: HeaderMap) -> Answer<Response> {
-  Ok(Json(bundle(&served, &headers)?.words.clone()).into_response())
-}
-
-async fn console_file(
-  State(served): State<Served>,
-  headers: HeaderMap,
-  Path(file): Path<String>,
-) -> Answer<Response> {
-  let bundle = bundle(&served, &headers)?;
-  // The module and the stylesheet are routes the screens use, held to a reader as every other is; the
-  // manifest and the words are read for no reader.
-  reader(&headers)?;
-  let served = bundle
-    .file(&file)
-    .ok_or_else(|| ApiError::not_found(format!("The bundle has no file {file}.")))?;
-  Ok(
-    (
-      [(header::CONTENT_TYPE, served.content_type), (header::CACHE_CONTROL, KEPT_FOR_GOOD)],
-      served.bytes.clone(),
-    )
-      .into_response(),
-  )
 }

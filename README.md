@@ -15,15 +15,16 @@ the receiver and the account service on a loopback port: the calendars made on f
 documented and refreshed by the brain's stream (`events.rs`), repeating events expanded in a span and one
 occurrence changed or cancelled on its own (`repeats.rs`), the beat telling a due alarm once, a late one with
 its lateness and none twice across a restart, each in the room its account reaches (`alarms.rs`), the console's
-guard, its manifest read through bmo-ui's own reading of the contract, and its events (`console.rs`), the
-OpenAPI document (`openapi.rs`) and the repository's own checks (`repository.rs`). The tool's crate carries its
-own harness, `tools/calendar/tests/main.rs`, against a stand-in calendar service. The console bundle's check is `bun run check` inside `client/`.
+guard, the console face's manifest read through bmo-ui's own reading of the contract, and its events
+(`console.rs`), the OpenAPI document (`openapi.rs`) and the repository's own checks (`repository.rs`). The
+tool's crate carries its own harness, `tools/calendar/tests/main.rs`, against a stand-in calendar service. The
+console bundle's check is `bun run check` inside `client/`.
 
 ## Layout
 
 | Folder | Holds |
 |---|---|
-| `src/` | The service and its command: the routes, the cache of each realm's brain, the alarms and the beat, the told marks' store, the console bundle's serving and the OpenAPI document |
+| `src/` | The service and its command: the routes, the cache of each realm's brain, the alarms and the beat, the told marks' store, the console face's declaration and the OpenAPI document |
 | `tools/` | The calendar tool the deployment places on the tool host: its crate, its manifest, its input schemas and its manual |
 | `client/` | The console plugin bundle, a project of its own |
 | `deploy/` | The service's user unit |

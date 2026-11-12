@@ -1,9 +1,13 @@
-//! The console's reach: the guard of every route (401, 403), the bundle's manifest read through bmo-ui's own
-//! reading of the contract, its module, stylesheet and words to the console alone, a 404 where no bundle is
-//! built, and the events a reader is given.
+//! The console's reach: the guard of every route (401, 403), the console face's manifest read through bmo-ui's
+//! own reading of the contract on the release the client vendors, the face wired to the calendar's declaration
+//! and credential, a 404 where no bundle is built, and the events a reader is given. The face's own rules are
+//! bmo-console-face's tests'.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
+use bmo_calendar::console::DECLARATION;
+use bmo_calendar::events::KINDS;
+use bmo_console_face::read_manifest;
 use reqwest::Method;
 use serde_json::{Value, json};
 
@@ -49,12 +53,9 @@ async fn every_route_is_guarded() {
 }
 
 #[tokio::test]
-async fn no_bundle_is_answered_where_none_is_built() {
+async fn no_face_is_answered_where_no_bundle_is_built() {
   let service = Service::fresh().await;
-  for path in ["/console-manifest", "/console/words", "/console/bundle-0000000000000000.js"] {
-    let (status, refusal) = service.ask(Method::GET, path, Some(CONSOLE), &[], None).await;
-    assert_eq!((status, refusal["code"].as_str()), (404, Some("not-found")), "{path}");
-  }
+  assert_eq!(service.ask(Method::GET, "/console-manifest", Some(CONSOLE), &[], None).await.0, 404);
 }
 
 #[tokio::test]
@@ -62,12 +63,19 @@ async fn a_bundle_built_without_its_layer_is_not_served() {
   let folder = scratch();
   build(&folder, None);
   let service = Service::start(&stand().await, folder).await;
-  let (status, refusal) = service.ask(Method::GET, "/console-manifest", Some(CONSOLE), &[], None).await;
-  assert_eq!((status, refusal["code"].as_str()), (404, Some("not-found")));
+  assert_eq!(service.ask(Method::GET, "/console-manifest", Some(CONSOLE), &[], None).await.0, 404);
+}
+
+#[test]
+fn the_declaration_names_a_notice_the_service_publishes() {
+  let declared: Value = serde_json::from_str(DECLARATION).unwrap();
+  for kind in declared["pushKinds"].as_array().unwrap() {
+    assert!(KINDS.contains(&kind.as_str().unwrap()), "{kind}");
+  }
 }
 
 #[tokio::test]
-async fn a_built_bundle_is_answered_by_a_manifest_the_contract_reads() {
+async fn the_served_manifest_is_read_by_the_contract_on_the_vendored_release() {
   let layer = installed_layer();
   let folder = scratch();
   build(&folder, Some(&layer));
@@ -75,72 +83,28 @@ async fn a_built_bundle_is_answered_by_a_manifest_the_contract_reads() {
 
   let (status, served) = service.ask(Method::GET, "/console-manifest", Some(CONSOLE), &[], None).await;
   assert_eq!(status, 200, "{served}");
-  let read = read_by_contract(&served.to_string());
-  assert_eq!(read["onThisLayer"], true, "{read}");
-  let manifest = &read["manifest"];
-  assert_eq!(manifest["layer"], layer.as_str());
-  for (field, chosen) in [
-    ("name", json!("calendar")),
-    ("title", json!("calendar.title")),
-    ("screenPath", json!("/calendar")),
-    ("serviceName", json!("calendar")),
-    ("apiPrefix", json!("/")),
-    ("role", json!("member")),
-    ("ownerKey", json!(true)),
-    ("events", json!(true)),
-    ("websocket", json!(false)),
-    ("pushKinds", json!(["alarm.told"])),
-    ("shareReads", json!([])),
-  ] {
-    assert_eq!(manifest[field], chosen, "{field}");
-  }
+  let read = read_manifest(&served, &vendored_release()).unwrap_or_else(|why| panic!("{why}"));
+  assert_eq!(read["layer"], layer.as_str());
+  assert_eq!(read["name"], "calendar");
 
-  // The words name the screen in every locale they hold.
-  let (status, words) = service
-    .ask(Method::GET, manifest["words"].as_str().unwrap(), Some(CONSOLE), &[], None)
-    .await;
+  // The face is guarded by the console's credential, not the service's own token.
+  assert_eq!(fetch(&service, "/console-manifest", TOKEN, &[]).await.0, 401);
+
+  // The words are read for no reader, and name the screen in every locale they hold.
+  let (status, _, words) = fetch(&service, read["words"].as_str().unwrap(), CONSOLE, &[]).await;
   assert_eq!(status, 200);
+  let words: Value = serde_json::from_str(&words).unwrap();
   for locale in ["en", "ko"] {
     assert!(words[locale]["calendar"]["title"].is_string(), "{locale}: {words}");
   }
 
-  let module = manifest["bundle"].as_str().unwrap();
-  let stylesheet = manifest["stylesheet"].as_str().unwrap();
-  assert!(module.starts_with("/console/bundle-") && module.ends_with(".js"), "{module}");
+  // The module and the stylesheet are a reader's, the owner key among what the declaration asks.
+  let module = read["bundle"].as_str().unwrap();
+  let stylesheet = read["stylesheet"].as_str().unwrap();
+  assert_eq!(fetch(&service, module, CONSOLE, &[("Owner-Role", "member")]).await.0, 403);
   let reader = [("Owner-Key", "2"), ("Owner-Role", "member")];
-  let (status, kept, body) = fetch(&service, module, CONSOLE, &reader).await;
-  assert_eq!(
-    (status, kept.as_str(), body.as_str()),
-    (200, "private, max-age=31536000, immutable", MODULE)
-  );
-  let (status, _, body) = fetch(&service, stylesheet, CONSOLE, &reader).await;
-  assert_eq!((status, body.as_str()), (200, STYLESHEET));
-}
-
-#[tokio::test]
-async fn the_bundles_routes_are_the_consoles_alone() {
-  let folder = scratch();
-  build(&folder, Some("0.1.0-rev.1"));
-  let service = Service::start(&stand().await, folder).await;
-  let (_, manifest) = service.ask(Method::GET, "/console-manifest", Some(CONSOLE), &[], None).await;
-  let module = manifest["bundle"].as_str().unwrap();
-  let stylesheet = manifest["stylesheet"].as_str().unwrap();
-  let administrator = [("Owner-Key", "1"), ("Owner-Role", "administrator")];
-
-  // The service's own token is no console credential, on the four routes alike.
-  for path in ["/console-manifest", "/console/words", module, stylesheet] {
-    assert_eq!(fetch(&service, path, TOKEN, &administrator).await.0, 401, "{path}");
-  }
-  // The manifest and the words are read for no reader; the module and the stylesheet are a reader's.
-  for path in ["/console-manifest", "/console/words"] {
-    assert_eq!(fetch(&service, path, CONSOLE, &[]).await.0, 200, "{path}");
-  }
-  for path in [module, stylesheet] {
-    assert_eq!(fetch(&service, path, CONSOLE, &[]).await.0, 403, "{path}");
-    assert_eq!(fetch(&service, path, CONSOLE, &[("Owner-Key", "1")]).await.0, 403, "{path}");
-    assert_eq!(fetch(&service, path, CONSOLE, &[("Owner-Role", "member")]).await.0, 403, "{path}");
-    assert_eq!(fetch(&service, path, CONSOLE, &administrator).await.0, 200, "{path}");
-  }
+  assert_eq!(fetch(&service, module, CONSOLE, &reader).await.2, MODULE);
+  assert_eq!(fetch(&service, stylesheet, CONSOLE, &reader).await.2, STYLESHEET);
 }
 
 const MODULE: &str = "export default {};\n";
@@ -160,12 +124,23 @@ fn build(folder: &Path, layer: Option<&str>) {
   }
 }
 
+/// The client's folder.
+const CLIENT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/client");
+
 /// The release of bmo-ui the client has installed, as its own layer file names it.
 fn installed_layer() -> String {
-  let path = concat!(env!("CARGO_MANIFEST_DIR"), "/client/node_modules/bmo-ui/shared/layer.json");
+  let path = Path::new(CLIENT).join("node_modules/bmo-ui/shared/layer.json");
   let file: Value =
     serde_json::from_slice(&std::fs::read(path).expect("the client's packages are installed")).unwrap();
   file["layer"].as_str().unwrap().to_owned()
+}
+
+/// The bmo-ui release file the client vendors, as its package manifest names it.
+fn vendored_release() -> PathBuf {
+  let manifest: Value =
+    serde_json::from_slice(&std::fs::read(Path::new(CLIENT).join("package.json")).unwrap()).unwrap();
+  let taken = manifest["devDependencies"]["bmo-ui"].as_str().unwrap();
+  Path::new(CLIENT).join(taken.strip_prefix("file:").expect("bmo-ui is taken as a file"))
 }
 
 /// One GET under `bearer` with `headers`: its status, its cache line and its body.
@@ -188,34 +163,6 @@ async fn fetch(
     .unwrap_or("")
     .to_owned();
   (status, kept, response.text().await.unwrap())
-}
-
-/// The manifest read through bmo-ui's own reading of the contract, by the client's script under `bun`.
-fn read_by_contract(manifest: &str) -> Value {
-  use std::io::Write as _;
-  use std::process::{Command, Stdio};
-
-  let mut reading = Command::new("bun")
-    .args(["tests/read-manifest.ts"])
-    .current_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/client"))
-    .stdin(Stdio::piped())
-    .stdout(Stdio::piped())
-    .stderr(Stdio::piped())
-    .spawn()
-    .expect("bun runs in client/");
-  reading
-    .stdin
-    .take()
-    .expect("its input")
-    .write_all(manifest.as_bytes())
-    .expect("the manifest is handed over");
-  let read = reading.wait_with_output().expect("the reading ends");
-  assert!(
-    read.status.success(),
-    "the contract refuses the manifest: {}",
-    String::from_utf8_lossy(&read.stderr)
-  );
-  serde_json::from_slice(&read.stdout).expect("the reading answers JSON")
 }
 
 #[tokio::test]
