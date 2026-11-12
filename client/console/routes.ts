@@ -11,7 +11,7 @@ import type { RouteLocationNormalizedLoaded } from "vue-router";
 const bundle: ConsoleBundleModule = {
   routes: [
     { path: "/calendar", name: "calendar", component: CalendarIndex, meta: { consoleTitleBar: true } },
-    // One page for every day of a view, as its own page meta keys it in the Nuxt layer.
+    // One page for every day of a view, as its own page meta keys it in the Nuxt project.
     {
       path: "/calendar/:view/:date",
       name: "calendar-view-date",

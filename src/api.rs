@@ -99,35 +99,29 @@ fn header_text<'a>(headers: &'a HeaderMap, name: &str) -> Option<&'a str> {
   headers.get(name)?.to_str().ok().map(str::trim).filter(|value| !value.is_empty())
 }
 
-/// Whether the credential is the service's (true), the console's (false), or neither (401).
-fn credential(app: &App, headers: &HeaderMap) -> Answer<bool> {
+/// Whose credential a call carries.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Credential {
+  Service,
+  Console,
+}
+
+/// The credential the call carries: the service's or the console's, else 401.
+fn credential(app: &App, headers: &HeaderMap) -> Answer<Credential> {
   let given = bearer(headers).ok_or_else(ApiError::unauthorized)?;
   let server = &app.settings.server.token;
   let console = &app.settings.console.token;
   if !server.is_empty() && given == server {
-    Ok(true)
+    Ok(Credential::Service)
   } else if !console.is_empty() && given == console {
-    Ok(false)
+    Ok(Credential::Console)
   } else {
     Err(ApiError::unauthorized())
   }
 }
 
-/// The caller of a route the screens use: the service, or the console with a reader's key and role.
-fn caller(
-  app: &App,
-  headers: &HeaderMap,
-  account: Option<String>,
-  holder: Option<String>,
-) -> Answer<Caller> {
-  if credential(app, headers)? {
-    return Ok(Caller {
-      service: true,
-      key: account.filter(|account| !account.is_empty()),
-      holder: holder.filter(|holder| !holder.is_empty()),
-      administrator: true,
-    });
-  }
+/// The reader a console call names: its owner key, and whether its role is the administrator's.
+fn reader(headers: &HeaderMap) -> Answer<(String, bool)> {
   let key = header_text(headers, "owner-key")
     .ok_or_else(|| ApiError::forbidden("The call carries no Owner-Key."))?;
   if key.chars().count() > 200 {
@@ -138,9 +132,28 @@ fn caller(
     Some("member") => false,
     _ => return Err(ApiError::forbidden("The call carries no Owner-Role of administrator or member.")),
   };
+  Ok((key.to_owned(), administrator))
+}
+
+/// The caller of a route the screens use: the service, or the console with a reader's key and role.
+fn caller(
+  app: &App,
+  headers: &HeaderMap,
+  account: Option<String>,
+  holder: Option<String>,
+) -> Answer<Caller> {
+  if credential(app, headers)? == Credential::Service {
+    return Ok(Caller {
+      service: true,
+      key: account.filter(|account| !account.is_empty()),
+      holder: holder.filter(|holder| !holder.is_empty()),
+      administrator: true,
+    });
+  }
+  let (key, administrator) = reader(headers)?;
   Ok(Caller {
     service: false,
-    key: Some(key.to_owned()),
+    key: Some(key),
     holder: None,
     administrator,
   })
@@ -813,7 +826,7 @@ async fn list_alarms(
 }
 
 async fn beats(State(served): State<Served>, headers: HeaderMap) -> Answer<Json<crate::wire::Beat>> {
-  if !credential(&served.app, &headers)? {
+  if credential(&served.app, &headers)? != Credential::Service {
     return Err(ApiError::forbidden("A beat is run by the service token alone."));
   }
   if let Some(reason) = served.app.unready() {
@@ -911,8 +924,11 @@ async fn events(
 // ---------------------------------------------------------------------------------------------------------
 // The console bundle
 
+/// The bundle, to the console's credential alone: the service's own is refused as any other is.
 fn bundle(served: &Served, headers: &HeaderMap) -> Answer<Arc<Bundle>> {
-  credential(&served.app, headers)?;
+  if credential(&served.app, headers)? != Credential::Console {
+    return Err(ApiError::unauthorized());
+  }
   served
     .bundle
     .clone()
@@ -933,6 +949,9 @@ async fn console_file(
   Path(file): Path<String>,
 ) -> Answer<Response> {
   let bundle = bundle(&served, &headers)?;
+  // The module and the stylesheet are routes the screens use, held to a reader as every other is; the
+  // manifest and the words are read for no reader.
+  reader(&headers)?;
   let served = bundle
     .file(&file)
     .ok_or_else(|| ApiError::not_found(format!("The bundle has no file {file}.")))?;

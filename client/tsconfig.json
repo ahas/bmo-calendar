@@ -1,5 +1,5 @@
 {
-  // Nuxt's own project configs carry the layer's code, and the served bundle's build has its own.
+  // Nuxt's own project configs carry the screens' code, and the served bundle's build has its own.
   "files": [],
   "references": [
     { "path": "./.nuxt/tsconfig.app.json" },

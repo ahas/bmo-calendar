@@ -422,6 +422,8 @@ pub struct ConsoleManifest {
   pub icon: String,
   pub screen_path: String,
   pub service_name: String,
+  /// The bmo-ui release the bundle was built on.
+  pub layer: String,
   pub bundle: String,
   pub stylesheet: String,
   pub words: String,

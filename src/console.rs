@@ -1,6 +1,7 @@
 //! The console bundle the service serves (`docs/api.md`, 「Console」): its manifest by bmo-ui's console plugin
 //! contract, and the module, the stylesheet and the words the manifest names, read from the bundle's built
-//! folder once at start. Each file is answered under a path made from its bytes' digest.
+//! folder once at start with the layer bmo-ui's bundle build wrote beside them. Each file is answered under a
+//! path made from its bytes' digest.
 
 use std::path::Path;
 
@@ -18,6 +19,7 @@ pub const WORDS_PATH: &str = "/console/words";
 const MODULE_FILE: &str = "bundle.js";
 const STYLESHEET_FILE: &str = "bundle.css";
 const WORDS_FILE: &str = "words.json";
+const LAYER_FILE: &str = "layer.json";
 
 // How many hexadecimal digits of a file's digest stand in its path.
 const DIGEST_DIGITS: usize = 16;
@@ -58,6 +60,20 @@ pub struct Bundle {
   pub module: Served,
   pub stylesheet: Served,
   pub words: serde_json::Value,
+  /// The bmo-ui release the bundle was built on, as its build wrote it.
+  pub layer: String,
+}
+
+/// The layer file as bmo-ui's bundle build writes it.
+#[derive(serde::Deserialize)]
+struct LayerFile {
+  layer: String,
+}
+
+/// The JSON file at `path`, or why it cannot be read as one.
+fn read_json<T: serde::de::DeserializeOwned>(path: &Path) -> Result<T, String> {
+  let bytes = std::fs::read(path).map_err(|why| format!("{} could not be read: {why}", path.display()))?;
+  serde_json::from_slice(&bytes).map_err(|why| format!("{} does not read: {why}", path.display()))
 }
 
 impl Bundle {
@@ -66,17 +82,16 @@ impl Bundle {
     let module = Served::read(folder, MODULE_FILE, "js", "text/javascript")?;
     let stylesheet = Served::read(folder, STYLESHEET_FILE, "css", "text/css")?;
     let path = folder.join(WORDS_FILE);
-    let words =
-      std::fs::read(&path).map_err(|why| format!("{} could not be read: {why}", path.display()))?;
-    let words: serde_json::Value =
-      serde_json::from_slice(&words).map_err(|why| format!("{} is not JSON: {why}", path.display()))?;
+    let words: serde_json::Value = read_json(&path)?;
     if !words.is_object() {
       return Err(format!("{} is not one object keyed by locale", path.display()));
     }
+    let LayerFile { layer } = read_json(&folder.join(LAYER_FILE))?;
     Ok(Self {
       module,
       stylesheet,
       words,
+      layer,
     })
   }
 
@@ -88,6 +103,7 @@ impl Bundle {
       icon: "i-material-symbols-calendar-month-outline".into(),
       screen_path: "/calendar".into(),
       service_name: "calendar".into(),
+      layer: self.layer.clone(),
       bundle: self.module.path(),
       stylesheet: self.stylesheet.path(),
       words: WORDS_PATH.into(),

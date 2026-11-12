@@ -11,12 +11,11 @@ more}` read with `after` and `limit`. `docs/openapi.json` is generated from the 
 
 The service listens on the loopback at the address `env/calendar.toml` names (`[server] listen`, by
 convention `127.0.0.1:13127`), under `Authorization: Bearer <token>` with the service token
-(`[server] token`). The console reaches it with the console credential (`[console] token`) and the headers
-the console sets on every relayed call: `Owner-Key`, the signed-in account's id, and `Owner-Role`,
-`administrator` or `member`. A call with no credential or a wrong one is 401 `unauthorized`; a console call
-with no `Owner-Key` (or one longer than 200 characters), or with an `Owner-Role` that is neither, is 403
-`forbidden`, the console's own reads of the manifest, the words, the module and the stylesheet aside
-(「Console」). A service-token call acts as the administrator.
+(`[server] token`). The console reaches it with the console credential (`[console] token`) and the
+signed-in reader's owner key and role, carried as bmo-ui's console plugin contract states (「Console」). A
+call with no credential or a wrong one is 401 `unauthorized`; a console call the contract's guard refuses
+for its owner key or its role, or whose `Owner-Key` is longer than 200 characters, is 403 `forbidden`. A
+service-token call acts as the administrator.
 
 ## Realms
 
@@ -112,18 +111,25 @@ receiver refuses or does not answer keeps no mark, and the next beat tells it ag
 
 ## Console
 
-| Method | Path | Does |
-|---|---|---|
-| GET | `/console-manifest` | The bundle manifest (bmo-ui `docs/console-bundles.md`): `name` `calendar`, `title` `calendar.title`, `icon` `i-material-symbols-calendar-month-outline`, `screenPath` `/calendar`, `serviceName` `calendar`, `apiPrefix` `/`, `role` `member`, `ownerKey` true, `events` true (the stream below), `websocket` false, `pushKinds` `[alarm.told]`, `calls`, `relays` and `shareReads` empty |
-| GET | `/console/words` | The bundle's words, every locale |
-| GET | `/console/{file}` | The bundle's module and stylesheet |
+The calendar's screen is a console bundle under bmo-ui's console plugin contract (bmo-ui
+`docs/console-bundles.md`), which states the manifest, the bundle's files, the layer a bundle is built on
+and the guard of every route a console reaches. This section names only what the calendar chooses within
+it.
 
-The four take the console credential (or the service token) with no owner key and no role. They are read
-from the bundle's built folder (`[console] folder`) once at start: the module `bundle.js`, the stylesheet
-`bundle.css` and the words `words.json`, the module and the stylesheet answered at
-`/console/bundle-<digest>.js` and `.css`, the digest the first sixteen hex digits of their bytes' SHA-256,
-with `cache-control: private, max-age=31536000, immutable`. A folder that does not hold all three leaves the
-four answered 404 `not-found`.
+- **The bundle.** Named `calendar`, its title the word `calendar.title` and a month icon, its screens under
+  `/calendar`, relayed as the service `calendar` with the whole API under the prefix `/`.
+- **Its readers.** Every member and administrator, each with an owner key: the `mine` realm is the reader's
+  own account (「Realms」).
+- **What it reads.** The event stream (「Events the calendar publishes」), whose `alarm.told` a console raises
+  as a notice. No WebSocket, no share page, no sidebar count, no other service called and no route relayed
+  outside the prefix.
+- **Its files.** The words are answered at `/console/words`, the module and the stylesheet under `/console/`
+  at names made from their bytes. They are read once at start from the folder `bun run bundle` builds in
+  `client/` with bmo-ui's bundle build (`[console] folder`), and the manifest names the layer that build
+  wrote there. A folder missing any of the module, the stylesheet, the words or the layer leaves the bundle
+  unserved, its routes answered 404 `not-found`.
+- **Its guard.** The four routes take the console credential alone; the service token is refused there with
+  a 401, as any credential that is not the console's is.
 
 ## Events the calendar publishes
 

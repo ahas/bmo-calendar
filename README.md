@@ -15,9 +15,9 @@ the receiver and the account service on a loopback port: the calendars made on f
 documented and refreshed by the brain's stream (`events.rs`), repeating events expanded in a span and one
 occurrence changed or cancelled on its own (`repeats.rs`), the beat telling a due alarm once, a late one with
 its lateness and none twice across a restart, each in the room its account reaches (`alarms.rs`), the console's
-guard, manifest and events (`console.rs`), the OpenAPI document (`openapi.rs`) and the repository's own checks
-(`repository.rs`). The tool's crate carries its own harness, `tools/calendar/tests/main.rs`, against a stand-in
-calendar service. The console bundle's check is `bun run check` inside `client/`.
+guard, its manifest read through bmo-ui's own reading of the contract, and its events (`console.rs`), the
+OpenAPI document (`openapi.rs`) and the repository's own checks (`repository.rs`). The tool's crate carries its
+own harness, `tools/calendar/tests/main.rs`, against a stand-in calendar service. The console bundle's check is `bun run check` inside `client/`.
 
 ## Layout
 
