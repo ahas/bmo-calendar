@@ -79,6 +79,15 @@ and resize, a popover to edit, a quick natural-language entry, colour-coded cale
 mini calendar), stood as a console bundle under the sidebar entry 캘린더. The sidebar lists 내 일정 and 조직
 일정 calendars apart; one grid shows both.
 
+The screen's own row is its toolbar, directly under the top bar. Nothing but the screen's name and mark
+stands beside the title in the top bar, whether the console draws that bar or, on the unit's own app, the
+screen draws it. The toolbar holds the steps back and forward, the shown span's title that opens a day
+picker, the way to today, the view and a new event, and at its right end the refresh and, while the
+console is offline, the mark that says so. On a phone the way to today and a new event stand in a bar at
+the screen's foot instead, and the offline mark stands as its icon alone, its words in its tooltip, so the
+row keeps one line. Every button in either bar is the component library's small button at its own
+size, centred in the row, its hover and press colours filling only its own shape.
+
 The screen is used by finger and by ear as well as by mouse:
 
 - **Touch.** A finger scrolls the grid and never drags an event. A held finger (the console's one long

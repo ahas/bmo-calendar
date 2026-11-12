@@ -3,7 +3,7 @@
        and drawn where it says, its form open to put right what was read. -->
   <UPopover v-model:open="open" :content="content" :ui="{ content: 'w-80 max-w-[calc(100vw-2rem)] p-2' }">
     <UTooltip :text="$t('calendar.action.new_event')" :kbds="['n']">
-      <UButton :color="props.floating ? 'primary' : 'neutral'" :variant="props.floating ? 'solid' : 'ghost'" icon="i-material-symbols-add" :aria-label="$t('calendar.action.new_event')" />
+      <UButton :color="props.floating ? 'primary' : 'neutral'" :variant="props.floating ? 'solid' : 'ghost'" size="sm" icon="i-material-symbols-add" :aria-label="$t('calendar.action.new_event')" />
     </UTooltip>
 
     <template #content>

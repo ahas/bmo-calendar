@@ -4,52 +4,31 @@
        the calendars rise from the bottom edge, and the day's steps stand in a bar at its foot. The view and
        the day are the address. -->
   <UDashboardPanel id="calendar" :ui="{ body: 'p-0 sm:p-0 gap-0 sm:gap-0 overflow-y-hidden [&>*]:max-w-none' }">
-    <template v-if="barOffer === null" #header>
-      <UDashboardNavbar :title="$t('calendar.title')" icon="i-material-symbols-calendar-month-outline">
-        <template #right>
-          <div class="flex items-center gap-2">
-            <UTooltip v-if="!online" :text="$t('calendar.label.offline_hint')">
-              <UBadge icon="i-material-symbols-cloud-off-outline" color="warning" variant="soft" :label="offlineLabel" />
-            </UTooltip>
-            <UTooltip :text="$t('calendar.action.refresh')">
-              <UButton color="neutral" variant="ghost" icon="i-material-symbols-refresh" :aria-label="$t('calendar.action.refresh')" :loading="refreshing" @click="refresh" />
-            </UTooltip>
-          </div>
-        </template>
-      </UDashboardNavbar>
+    <!-- Beside the title stands only the screen's name and mark; what acts on the screen stands in its toolbar. -->
+    <template v-if="!consoleBar" #header>
+      <UDashboardNavbar :title="$t('calendar.title')" icon="i-material-symbols-calendar-month-outline" />
     </template>
 
     <template #body>
-      <Teleport v-if="barOffer !== null" defer :to="barOffer.screenActions">
-        <div class="flex items-center gap-2">
-          <UTooltip v-if="!online" :text="$t('calendar.label.offline_hint')">
-            <UBadge icon="i-material-symbols-cloud-off-outline" color="warning" variant="soft" :label="offlineLabel" />
-          </UTooltip>
-          <UTooltip :text="$t('calendar.action.refresh')">
-            <UButton color="neutral" variant="ghost" icon="i-material-symbols-refresh" :aria-label="$t('calendar.action.refresh')" :loading="refreshing" @click="refresh" />
-          </UTooltip>
-        </div>
-      </Teleport>
-
       <ToolBar :label="$t('calendar.aria.toolbar')">
         <div v-if="narrow">
           <UTooltip :text="$t('calendar.action.calendars')">
-            <UButton color="neutral" variant="ghost" icon="i-material-symbols-calendar-view-month-outline" :aria-label="$t('calendar.action.calendars')" @click="isSidebarOpen = true" />
+            <UButton color="neutral" variant="ghost" size="sm" icon="i-material-symbols-calendar-view-month-outline" :aria-label="$t('calendar.action.calendars')" @click="isSidebarOpen = true" />
           </UTooltip>
         </div>
 
         <div>
           <UTooltip :text="$t('calendar.action.previous')" :kbds="['arrowleft']">
-            <UButton color="neutral" variant="ghost" icon="i-material-symbols-chevron-left" class="h-full min-w-9 justify-center p-0 pointer-coarse:min-w-10" :aria-label="$t('calendar.action.previous')" :to="pathFor(prevDate)" />
+            <UButton color="neutral" variant="ghost" size="sm" icon="i-material-symbols-chevron-left" :aria-label="$t('calendar.action.previous')" :to="pathFor(prevDate)" />
           </UTooltip>
           <UTooltip :text="$t('calendar.action.next')" :kbds="['arrowright']">
-            <UButton color="neutral" variant="ghost" icon="i-material-symbols-chevron-right" class="h-full min-w-9 justify-center p-0 pointer-coarse:min-w-10" :aria-label="$t('calendar.action.next')" :to="pathFor(nextDate)" />
+            <UButton color="neutral" variant="ghost" size="sm" icon="i-material-symbols-chevron-right" :aria-label="$t('calendar.action.next')" :to="pathFor(nextDate)" />
           </UTooltip>
         </div>
 
-        <div class="flex-1">
+        <div class="min-w-0 flex-1">
           <UPopover v-model:open="pickerOpen" :content="{ align: 'start' }">
-            <UButton color="neutral" variant="ghost" class="text-lg font-semibold text-highlighted" :aria-label="$t('calendar.aria.pick_day_named', { title: `${title.months} ${title.year}`.trim() })">
+            <UButton color="neutral" variant="ghost" size="sm" class="max-w-full py-1 text-lg/6 font-semibold text-highlighted" :aria-label="$t('calendar.aria.pick_day_named', { title: `${title.months} ${title.year}`.trim() })">
               <!-- Short of room the year gives way, and the months stand whole: they are what the title is read
                    for, and the toolbar flows sideways before it cuts them. -->
               <span class="shrink-0 whitespace-nowrap">{{ title.months }}</span>
@@ -64,18 +43,31 @@
 
         <div v-if="!narrow">
           <UTooltip :text="$t('calendar.action.today')" :kbds="['t']">
-            <UButton color="neutral" variant="ghost" class="h-full" :label="$t('calendar.action.today')" :to="pathFor(todayDate())" />
+            <UButton color="neutral" variant="ghost" size="sm" :label="$t('calendar.action.today')" :to="pathFor(todayDate())" />
           </UTooltip>
         </div>
 
         <div>
           <UDropdownMenu :items="viewItems" :content="{ align: 'end' }">
-            <UButton color="neutral" variant="ghost" class="h-full" :label="$t(VIEW_LABELS[view])" trailing-icon="i-material-symbols-arrow-drop-down" :aria-label="$t('calendar.aria.view_named', { view: $t(VIEW_LABELS[view]) })" />
+            <UButton color="neutral" variant="ghost" size="sm" :label="$t(VIEW_LABELS[view])" trailing-icon="i-material-symbols-arrow-drop-down" :aria-label="$t('calendar.aria.view_named', { view: $t(VIEW_LABELS[view]) })" />
           </UDropdownMenu>
         </div>
 
-        <div v-if="!narrow">
-          <CalendarNewEvent />
+        <!-- On a phone the mark stands alone, so the row keeps its steps and its title; its words stay in its
+             tooltip and for a screen reader. -->
+        <div v-if="!online">
+          <UTooltip :text="narrow ? offlineLabel : $t('calendar.label.offline_hint')">
+            <UBadge icon="i-material-symbols-cloud-off-outline" color="warning" variant="soft">
+              <span :class="narrow && 'sr-only'">{{ offlineLabel }}</span>
+            </UBadge>
+          </UTooltip>
+        </div>
+
+        <div>
+          <CalendarNewEvent v-if="!narrow" />
+          <UTooltip :text="$t('calendar.action.refresh')">
+            <UButton color="neutral" variant="ghost" size="sm" icon="i-material-symbols-refresh" :aria-label="$t('calendar.action.refresh')" :loading="refreshing" @click="refresh" />
+          </UTooltip>
         </div>
       </ToolBar>
 
@@ -95,7 +87,7 @@
 
         <ToolBar :label="$t('calendar.aria.foot_bar')" data-screen-foot class="box-content border-t border-default pb-[var(--bmo-safe-bottom)]">
           <div>
-            <UButton color="neutral" variant="ghost" class="h-full" :label="$t('calendar.action.today')" :to="pathFor(todayDate())" />
+            <UButton color="neutral" variant="ghost" size="sm" :label="$t('calendar.action.today')" :to="pathFor(todayDate())" />
           </div>
           <div class="ms-auto">
             <CalendarNewEvent floating />
@@ -192,8 +184,9 @@ const sheetBodyRef = useTemplateRef<{ $el: HTMLElement }>("sheetBody");
 const { t, locale } = useI18n();
 const island = useIsland(t);
 const narrow = useNarrow();
-// Whether a console offers its title bar, under the key bmo-ui's bundle contract names.
-const barOffer = inject<{ screenActions: string } | null>("bmo-console-title-bar", null);
+// Whether a console draws its title bar over the screen, under the key bmo-ui's bundle contract names; where
+// none does, the screen draws its own. Nothing of the screen's is laid into that bar.
+const consoleBar = inject<object | null>("bmo-console-title-bar", null) !== null;
 
 const { view, date, range, title, visibleMonth, prevDate, nextDate, pathFor, go, isSidebarOpen } = useCalendar();
 const { online, queue, loadCalendars, loadSpan, showSpans, refreshVisible, failedSpans, readEvent } = useCalendarEvents();

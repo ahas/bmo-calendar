@@ -3,6 +3,9 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 import { consoleManifest } from "bmo-ui/shared/console-manifest";
+import { parse } from "vue/compiler-sfc";
+
+import type { SFCDescriptor } from "vue/compiler-sfc";
 
 import { PACKS, keysOf, word } from "./words";
 
@@ -61,5 +64,56 @@ describe("the code", () => {
     const korean = new RegExp(`[${String.fromCharCode(0x3131)}-${String.fromCharCode(0x318e)}${String.fromCharCode(0xac00)}-${String.fromCharCode(0xd7a3)}]`);
 
     for (const path of [...sources, ...files(join(root, "tests"))]) expect([path, korean.test(readFileSync(path, "utf8"))]).toEqual([path, false]);
+  });
+});
+
+// The screen's template as the Vue compiler reads it: its elements by tag, an attribute by its name whether
+// written plain or bound.
+type TemplateNode = NonNullable<NonNullable<SFCDescriptor["template"]>["ast"]>["children"][number];
+type Element = Extract<TemplateNode, { tag: string }>;
+
+describe("the screen's bars", () => {
+  const screen = parse(readFileSync(join(root, "app/pages/calendar/[view]/[date].vue"), "utf8")).descriptor.template!.ast!;
+
+  function elements(node: { children?: unknown }): Element[] {
+    const children = Array.isArray(node.children) ? (node.children as TemplateNode[]) : [];
+
+    return children.flatMap((child) => ("tag" in child ? [child, ...elements(child)] : elements(child)));
+  }
+
+  function attribute(element: Element, name: string): string | undefined {
+    for (const prop of element.props) {
+      if (!("exp" in prop) && prop.name === name) return prop.value?.content;
+      if ("exp" in prop && prop.name === "bind" && prop.arg && "content" in prop.arg && prop.arg.content === name) return prop.exp?.loc.source;
+    }
+
+    return undefined;
+  }
+
+  const toolbars = elements(screen).filter((element) => element.tag === "ToolBar");
+  const head = toolbars.find((bar) => attribute(bar, "label")?.includes("calendar.aria.toolbar"))!;
+
+  test("lays nothing into the console's title bar, and its own bar holds the title alone", () => {
+    for (const path of sources) expect([path, /screenActions|screenLead|<Teleport/.test(readFileSync(path, "utf8"))]).toEqual([path, false]);
+
+    const ownBars = elements(screen).filter((element) => element.tag === "UDashboardNavbar");
+
+    expect(ownBars.map((bar) => bar.children.length)).toEqual([0]);
+  });
+
+  test("its toolbar holds the refresh and the offline mark at the right end", () => {
+    const cells = head.children.filter((child): child is Element => "tag" in child);
+    const last = elements(cells.at(-1)!);
+
+    expect(last.some((element) => element.tag === "UButton" && attribute(element, "icon") === "i-material-symbols-refresh")).toBe(true);
+    expect(elements(cells.at(-2)!).some((element) => element.tag === "UBadge" && attribute(element, "icon") === "i-material-symbols-cloud-off-outline")).toBe(true);
+  });
+
+  test("every button in either bar is the small button at its own size", () => {
+    const buttons = toolbars.flatMap((bar) => elements(bar)).filter((element) => element.tag === "UButton");
+
+    expect(buttons.length).toBeGreaterThan(5);
+
+    for (const button of buttons) expect([button.loc.start.line, attribute(button, "size"), /\b(h-full|min-w-|p-0)\b/.test(attribute(button, "class") ?? "")]).toEqual([button.loc.start.line, "sm", false]);
   });
 });
