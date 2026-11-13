@@ -165,15 +165,12 @@ const _useEventDraft = () => {
     discardDraft(true);
   }
 
-  /**
-   * The new-event button and the `n` key: a draft an hour from now on the day the screen stands on, or on
-   * the day of the grid the keyboard stands on.
-   */
-  async function createAtAnchor(title = "", day?: Date): Promise<void> {
+  /** The new event's first row: a draft an hour from now on the day the screen stands on. */
+  async function createAtAnchor(title = ""): Promise<void> {
     if (!hosts.value) await navigateTo(pathFor(date.value, gridView.value));
 
     const hour = Math.min(23, new Date().getHours() + 1);
-    const start = addMinutes(startOfDay(day ?? toDate(date.value)), hour * 60);
+    const start = addMinutes(startOfDay(toDate(date.value)), hour * 60);
 
     createDraft({ start, end: addMinutes(start, 60), title, scroll: true });
   }

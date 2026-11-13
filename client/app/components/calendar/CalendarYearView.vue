@@ -1,7 +1,7 @@
 <template>
   <!-- The year: every month on the six weeks the month view gives it, so they line up row by row. A month's
        name opens it; a day opens that day. -->
-  <UScrollArea class="min-h-0 flex-1">
+  <UScrollArea class="min-h-0 flex-1 pb-[var(--bmo-create-room)]">
     <div class="grid grid-cols-2 gap-x-6 gap-y-8 p-4 sm:grid-cols-3 lg:p-6 xl:grid-cols-4">
       <section v-for="month in months" ref="sections" :key="month.first.getMonth()" :data-month="month.first.getMonth() + 1">
         <ULink

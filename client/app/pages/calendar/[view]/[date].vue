@@ -1,8 +1,8 @@
 <template>
   <!-- The calendar screen (docs/design.md, 「The console」): the calendars of both realms beside one grid. Where
        there is room the calendars stand beside the grid behind a splitter; on a phone the grid is the body,
-       the calendars rise from the bottom edge, and the day's steps stand in a bar at its foot. The view and
-       the day are the address. -->
+       the calendars rise from the bottom edge, the way to today stands in a bar at its foot and a new event
+       floats over that bar. The view and the day are the address. -->
   <UDashboardPanel id="calendar" :ui="{ body: 'p-0 sm:p-0 gap-0 sm:gap-0 overflow-y-hidden [&>*]:max-w-none' }">
     <!-- Beside the title stands only the screen's name and mark; what acts on the screen stands in its toolbar. -->
     <template v-if="!consoleBar" #header>
@@ -64,11 +64,12 @@
         </div>
 
         <div>
-          <CalendarNewEvent v-if="!narrow" />
           <UTooltip :text="$t('calendar.action.refresh')">
             <UButton color="neutral" variant="ghost" size="sm" icon="i-material-symbols-refresh" :aria-label="$t('calendar.action.refresh')" :loading="refreshing" @click="refresh" />
           </UTooltip>
         </div>
+
+        <CalendarNewEvent />
       </ToolBar>
 
       <!-- The span a step lands on, said once it has landed. -->
@@ -88,9 +89,6 @@
         <ToolBar :label="$t('calendar.aria.foot_bar')" data-screen-foot class="box-content border-t border-default pb-[var(--bmo-safe-bottom)]">
           <div>
             <UButton color="neutral" variant="ghost" size="sm" :label="$t('calendar.action.today')" :to="pathFor(todayDate())" />
-          </div>
-          <div class="ms-auto">
-            <CalendarNewEvent floating />
           </div>
         </ToolBar>
 
@@ -190,7 +188,7 @@ const consoleBar = inject<object | null>("bmo-console-title-bar", null) !== null
 
 const { view, date, range, title, visibleMonth, prevDate, nextDate, pathFor, go, isSidebarOpen } = useCalendar();
 const { online, queue, loadCalendars, loadSpan, showSpans, refreshVisible, failedSpans, readEvent } = useCalendarEvents();
-const { draft, createAtAnchor } = useEventDraft();
+const { draft } = useEventDraft();
 const { editingKey } = useEventEditor();
 
 const offlineLabel = computed(() => (queue.value.length ? t("calendar.label.offline_waiting", { n: countText(queue.value.length) }) : t("calendar.label.offline")));
@@ -313,7 +311,6 @@ defineShortcuts({
   w: unlessEditing(() => void navigateTo(pathFor(date.value, "week"))),
   m: unlessEditing(() => void navigateTo(pathFor(date.value, "month"))),
   y: unlessEditing(() => void navigateTo(pathFor(date.value, "year"))),
-  n: unlessEditing(() => void createAtAnchor()),
   arrowleft: unlessEditing(() => go("left")),
   arrowright: unlessEditing(() => go("right"))
 });

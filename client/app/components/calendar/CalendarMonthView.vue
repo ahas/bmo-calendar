@@ -31,7 +31,7 @@
       :items="weeks"
       :virtualize="{ estimateSize: rowHeight, skipMeasurement: true, overscan: 4, initialOffset }"
       :ui="{ item: 'snap-start' }"
-      class="min-h-0 flex-1 snap-y snap-proximity [scrollbar-gutter:stable]"
+      class="min-h-0 flex-1 snap-y snap-proximity pb-[var(--bmo-create-room)] [scrollbar-gutter:stable]"
       @scroll="onScroll"
     >
       <template #default="{ item, index }">
@@ -70,7 +70,7 @@ const gridRef = useTemplateRef<HTMLElement>("grid");
 const { locale } = useI18n();
 const { date, pathFor, visibleMonth } = useCalendar();
 const { loadSpan, showSpans, pendingSpans } = useCalendarEvents();
-const { draft, pendingScroll, registerHost, createAtAnchor } = useEventDraft();
+const { draft, pendingScroll, registerHost } = useEventDraft();
 const { scrollBehavior } = useMotion();
 
 registerHost();
@@ -324,10 +324,6 @@ function onKeydown(event: KeyboardEvent): void {
     event.preventDefault();
     event.stopPropagation();
     void navigateTo(pathFor(toCalendarDate(day), "day"));
-  } else if (event.key === "n" && !event.shiftKey) {
-    event.preventDefault();
-    event.stopPropagation();
-    void createAtAnchor("", day);
   }
 }
 </script>

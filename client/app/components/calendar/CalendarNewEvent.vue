@@ -1,17 +1,13 @@
 <template>
-  <!-- A new event: drawn on the day the screen stands on, or read out of a phrase that names a day and a time,
-       and drawn where it says, its form open to put right what was read. -->
-  <UPopover v-model:open="open" :content="content" :ui="{ content: 'w-80 max-w-[calc(100vw-2rem)] p-2' }">
-    <UTooltip :text="$t('calendar.action.new_event')" :kbds="['n']">
-      <UButton :color="props.floating ? 'primary' : 'neutral'" :variant="props.floating ? 'solid' : 'ghost'" size="sm" icon="i-material-symbols-add" :aria-label="$t('calendar.action.new_event')" />
-    </UTooltip>
+  <!-- A new event (docs/design.md, 「The console」): the layer's one create button, which stands at the
+       toolbar's right end on a wide screen and floats on a phone, wrapped by a popover that draws a new
+       event on the day the screen stands on, or reads one out of a phrase that names a day and a time and
+       draws it where it says, its form open to put right what was read. The button's own key presses it. -->
+  <UPopover v-model:open="open" :content="content" :reference="anchor" :ui="{ content: 'w-80 max-w-[calc(100vw-2rem)] p-2' }">
+    <CreateButton ref="button" :label="$t('calendar.action.new_event')" />
 
     <template #content>
-      <UButton icon="i-material-symbols-calendar-add-on-outline" :label="$t('calendar.action.new_event')" color="neutral" variant="ghost" block class="justify-start" @click="handOff(() => createAtAnchor())">
-        <template #trailing>
-          <UKbd value="n" class="ms-auto" />
-        </template>
-      </UButton>
+      <UButton icon="i-material-symbols-calendar-add-on-outline" :label="$t('calendar.action.new_event')" color="neutral" variant="ghost" block class="justify-start" @click="handOff(() => createAtAnchor())" />
 
       <USeparator class="my-2" />
 
@@ -25,32 +21,54 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, useTemplateRef, watch } from "vue";
+import CreateButton from "bmo-ui/app/components/CreateButton.vue";
+import { useNarrow } from "bmo-ui/app/domain/screen";
 
 import { parseQuickEvent } from "../../domain/quick";
 import { useEventDraft } from "../../composables/useEventDraft";
 
-const props = defineProps<{ floating?: boolean }>();
-
 const { createAtAnchor, createFromQuick } = useEventDraft();
+
+const narrow = useNarrow();
+const button = useTemplateRef<InstanceType<typeof CreateButton>>("button");
 
 const open = ref(false);
 const text = ref("");
 
-// The draft's form takes the focus as it opens; the focus this menu would hand back to its button as it
-// closes must not take it out again.
+// The popover stands against the button itself and hands the focus back to it: what the popover takes for
+// its trigger is the cell the button stands in on a wide screen, and on a phone, where the button floats
+// in a layer of its own, the place it was set in the screen, and neither takes the focus.
+const anchor = computed(() => button.value?.element() ?? undefined);
+
+// The draft's form takes the focus as it opens, and a press outside puts the focus where it landed; in
+// neither case does the closing popover take it back to the button. The library may call its closing
+// handler more than once, so what happened is read afresh each time the popover opens.
 let handedOff = false;
+let pressedOutside = false;
+
+watch(open, (opened) => {
+  if (!opened) return;
+
+  handedOff = false;
+  pressedOutside = false;
+});
 
 const content = computed(
   () =>
     ({
-      side: props.floating ? "top" : "bottom",
+      side: narrow.value ? "top" : "bottom",
       align: "end",
+      // At the toolbar's right end the button stands only a cell's inner room from the screen's edge; the
+      // popover may come as near the edge as the button does, so it ends on the button's own edge.
+      collisionPadding: 4,
+      onInteractOutside: () => {
+        pressedOutside = true;
+      },
       onCloseAutoFocus: (event: Event) => {
-        if (handedOff) {
-          event.preventDefault();
-          handedOff = false;
-        }
+        event.preventDefault();
+
+        if (!handedOff && !pressedOutside) anchor.value?.focus();
       }
     }) as const
 );

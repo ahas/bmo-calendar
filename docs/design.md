@@ -127,11 +127,20 @@ Received schedules stand on the same grid as layers, one for each source in each
 The screen's own row is its toolbar, directly under the top bar. Nothing but the screen's name and mark
 stands beside the title in the top bar, whether the console draws that bar or, on the unit's own app, the
 screen draws it. The toolbar holds the steps back and forward, the shown span's title that opens a day
-picker, the way to today, the view and a new event, and at its right end the refresh and, while the
-console is offline, the mark that says so. On a phone the way to today and a new event stand in a bar at
-the screen's foot instead, and the offline mark stands as its icon alone, its words in its tooltip, so the
-row keeps one line. Every button in either bar is the component library's small button at its own
-size, centred in the row, its hover and press colours filling only its own shape.
+picker, the way to today, the view, while the console is offline the mark that says so, the refresh, and
+at its right end a new event. On a phone the way to today stands in a bar at the screen's foot instead,
+and the offline mark stands as its icon alone, its words in its tooltip, so the row keeps one line. Every
+other button in either bar is the component library's small button at its own size, centred in the row,
+its hover and press colours filling only its own shape.
+
+A new event is made from bmo-ui's one create button (`CreateButton`, its components document, 「Creating」),
+named 새 일정 and wrapped by the calendar's popover: its first row draws a new event on the day the screen
+stands on, and below it the quick entry reads a phrase that names a day and a time. The button's own key,
+`n`, presses it, so the key opens the same popover; the calendar binds no key of its own for creating. On
+a wide screen the button is the grey icon at the toolbar's right end; on a phone it floats at the screen's
+bottom right over the foot bar's right end, and each view's scrolling grid keeps the layer's create room
+(`--bmo-create-room`) after its last hour, week or month, so what ends the grid stands clear of it. The add
+beside the calendars' group heading is that list's own control and not the screen's create button.
 
 The screen is used by finger and by ear as well as by mouse:
 
@@ -142,9 +151,9 @@ The screen is used by finger and by ear as well as by mouse:
   dialog rather than beside what opened them.
 - **Screen readers and keys.** The month view is a grid of days: the weekdays head its columns, each day
   is named by its full date, whether it is today and how many events it holds, and the arrow keys, Home,
-  End, Page Up and Page Down walk it; Enter opens the day and `n` draws a new event on it. The day and
-  week views name each day the same way. Every event is named by its title, its time, its calendar and
-  its repeat, and the span a step lands on is said once it has landed.
+  End, Page Up and Page Down walk it, and Enter opens the day. The day and week views name each day the
+  same way. Every event is named by its title, its time, its calendar and its repeat, and the span a step
+  lands on is said once it has landed.
 - **Reading.** The grid's heights follow the reader's text size, so a larger font grows the rows rather
   than cutting their words; the event's calendar colour is a fill and a stripe under words in the page's
   own text colour, so the words read on every colour in both themes. A reader who asked for less movement

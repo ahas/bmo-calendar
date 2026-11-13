@@ -85,12 +85,21 @@ describe("the screen's bars", () => {
     expect(ownBars.map((bar) => bar.children.length)).toEqual([0]);
   });
 
-  test("its toolbar holds the refresh and the offline mark at the right end", () => {
+  test("its toolbar holds the offline mark, the refresh and, at its right end, the new event", () => {
     const cells = head.children.filter((child): child is Element => "tag" in child);
-    const last = elements(cells.at(-1)!);
 
-    expect(last.some((element) => element.tag === "UButton" && attribute(element, "icon") === "i-material-symbols-refresh")).toBe(true);
-    expect(elements(cells.at(-2)!).some((element) => element.tag === "UBadge" && attribute(element, "icon") === "i-material-symbols-cloud-off-outline")).toBe(true);
+    expect(cells.at(-1)!.tag).toBe("CalendarNewEvent");
+    expect(elements(cells.at(-2)!).some((element) => element.tag === "UButton" && attribute(element, "icon") === "i-material-symbols-refresh")).toBe(true);
+    expect(elements(cells.at(-3)!).some((element) => element.tag === "UBadge" && attribute(element, "icon") === "i-material-symbols-cloud-off-outline")).toBe(true);
+  });
+
+  test("a new event is made from the one create button alone, set once on the screen", () => {
+    const newEvent = parse(readFileSync(join(root, "app/components/calendar/CalendarNewEvent.vue"), "utf8")).descriptor.template!.ast!;
+    const all = elements(screen);
+
+    expect(all.filter((element) => element.tag === "CalendarNewEvent").length).toBe(1);
+    expect(elements(newEvent).filter((element) => element.tag === "CreateButton").length).toBe(1);
+    expect([...all, ...elements(newEvent)].some((element) => element.tag === "UButton" && attribute(element, "icon") === "i-material-symbols-add")).toBe(false);
   });
 
   test("every button in either bar is the small button at its own size", () => {

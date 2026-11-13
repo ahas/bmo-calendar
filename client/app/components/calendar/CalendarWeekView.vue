@@ -53,7 +53,7 @@
       </div>
     </div>
 
-    <UScrollArea ref="container" class="min-h-0 flex-1 snap-y snap-proximity scroll-pt-3 [scrollbar-gutter:stable]">
+    <UScrollArea ref="container" class="min-h-0 flex-1 snap-y snap-proximity scroll-pt-3 pb-[var(--bmo-create-room)] [scrollbar-gutter:stable]">
       <div data-week-grid class="grid" :style="gridStyle">
         <!-- The hours are a scale a reader does not need: every event says its own times. -->
         <div class="relative h-[calc(var(--calendar-hour)*24)]" aria-hidden="true">
