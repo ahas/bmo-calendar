@@ -147,7 +147,7 @@ import CalendarWeekView from "../../../components/calendar/CalendarWeekView.vue"
 import CalendarYearView from "../../../components/calendar/CalendarYearView.vue";
 import { rangeWords } from "../../../domain/a11y";
 import { WEEK_STARTS_ON, formatFullDate, fromLocalISO, rangeFor, toDate, todayDate } from "../../../domain/dates";
-import { useCalendarStream } from "../../../domain/stream";
+import { CALENDAR_CHANGED, useCalendarStream } from "../../../domain/stream";
 import { SERVICE, useCalendarEvents } from "../../../composables/useCalendarEvents";
 import { useCalendar } from "../../../composables/useCalendar";
 import { useEventDraft } from "../../../composables/useEventDraft";
@@ -291,7 +291,7 @@ useCalendarStream(
   SERVICE,
   (event) => {
     if (event.kind === "alarm.told") void ring(event.data);
-    else gatherRefresh(event.kind === "calendar.changed");
+    else gatherRefresh(event.kind === CALENDAR_CHANGED);
   },
   () => gatherRefresh(true)
 );
