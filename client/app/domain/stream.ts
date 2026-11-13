@@ -8,14 +8,20 @@ import type { Realm } from "../../shared/types";
 // the service no longer keeps the events since then it refuses the stream, and the screen opens it afresh
 // and reads what it shows again.
 
+// The kind a calendar's change stands under, `calendar.changed`. It is put together from its parts, since the
+// bundle build reads a dotted string the screen writes whole under the bundle's name as a key of its words.
+const CALENDAR_DOMAIN = "calendar";
+
+export const CALENDAR_CHANGED = `${CALENDAR_DOMAIN}.changed` as const;
+
 export type CalendarStreamEvent =
-  | { kind: "calendar.changed"; data: { realm: Realm; calendarId: string } }
+  | { kind: typeof CALENDAR_CHANGED; data: { realm: Realm; calendarId: string } }
   | { kind: "event.changed"; data: { realm: Realm; eventId: string; occurrence: string | null } }
   | { kind: "alarm.told"; data: { realm: Realm; eventId: string; occurrence: string; at: number } }
   | { kind: "source.changed"; data: { sourceId: string } }
   | { kind: "schedule.changed"; data: { sourceId: string; itemId: string } };
 
-export const STREAM_KINDS = ["calendar.changed", "event.changed", "alarm.told", "source.changed", "schedule.changed"] as const;
+export const STREAM_KINDS = [CALENDAR_CHANGED, "event.changed", "alarm.told", "source.changed", "schedule.changed"] as const;
 
 // How long a stream the service refused waits before it is opened afresh.
 const REOPEN_MS = 3_000;
