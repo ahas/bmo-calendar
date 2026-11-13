@@ -2,9 +2,7 @@
   <!-- What a calendar's settings, or a new calendar's, open in: a popover from the button that opened it,
        or on a phone a centred dialog. -->
   <CalendarFormFloat v-model:open="open" :dismissible="!dirty" :title="label" :content="{ align: 'end', collisionPadding: 16 }" width="w-80" @close:prevent="leave">
-    <UTooltip :text="label">
-      <UButton color="neutral" variant="ghost" size="sm" :icon="calendar ? 'i-material-symbols-settings-outline' : 'i-material-symbols-add'" :aria-label="label" class="pointer-coarse:size-11 pointer-coarse:justify-center" />
-    </UTooltip>
+    <IconButton size="sm" :icon="calendar ? 'i-material-symbols-settings-outline' : 'i-material-symbols-add'" :label="label" class="pointer-coarse:size-11 pointer-coarse:justify-center" />
 
     <template #content>
       <CalendarSettings v-model:dirty="dirty" :realm="realm" :calendar="calendar" @done="open = false" />

@@ -148,7 +148,11 @@ The screen is used by finger and by ear as well as by mouse:
   press) on an empty part of the grid draws a new event there, and on an event opens its menu. An event
   is moved by its start in its form, which carries the end along so the event keeps its length; the end
   alone changes its length. On a phone an event's form and a calendar's settings open as a centred
-  dialog rather than beside what opened them.
+  dialog rather than beside what opened them. Every name the screen shows in a tooltip is bmo-ui's
+  shared one (its components document, 「Tooltips」): an icon button is its icon button (`IconButton`)
+  and the way to today its shared tooltip standing on a press, so a finger holds either to read its
+  name and lifting presses nothing; the offline mark and a schedule source's received mark do nothing
+  else, so a tap opens theirs.
 - **Screen readers and keys.** The month view is a grid of days: the weekdays head its columns, each day
   is named by its full date, whether it is today and how many events it holds, and the arrow keys, Home,
   End, Page Up and Page Down walk it, and Enter opens the day. The day and week views name each day the

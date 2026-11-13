@@ -39,11 +39,9 @@
           <span v-if="sendingLayers.includes(`source:${group.realm}:${source.id}`)" class="flex size-8 shrink-0 items-center justify-center">
             <UIcon :name="SENDING_ICON" class="size-4 animate-spin text-muted motion-reduce:animate-none" />
           </span>
-          <UTooltip v-else :text="$t('calendar.label.received')">
-            <span class="flex size-8 shrink-0 items-center justify-center">
-              <UIcon :name="RECEIVED_ICON" class="size-4 text-muted" role="img" :aria-label="$t('calendar.label.received')" />
-            </span>
-          </UTooltip>
+          <HintTip v-else :text="$t('calendar.label.received')" class="flex size-8 shrink-0 items-center justify-center">
+            <UIcon :name="RECEIVED_ICON" class="size-4 text-muted" role="img" :aria-label="$t('calendar.label.received')" />
+          </HintTip>
         </div>
       </template>
       <div v-else class="flex flex-col gap-1 ps-2" role="status" :aria-label="$t('calendar.status.loading')">

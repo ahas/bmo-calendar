@@ -74,6 +74,8 @@ describe("the screen's bars", () => {
     return undefined;
   }
 
+  // The library's button, and bmo-ui's icon button drawing it as its icon alone.
+  const BUTTONS = ["UButton", "IconButton"];
   const toolbars = elements(screen).filter((element) => element.tag === "ToolBar");
   const head = toolbars.find((bar) => attribute(bar, "label")?.includes("calendar.aria.toolbar"))!;
 
@@ -89,7 +91,7 @@ describe("the screen's bars", () => {
     const cells = head.children.filter((child): child is Element => "tag" in child);
 
     expect(cells.at(-1)!.tag).toBe("CalendarNewEvent");
-    expect(elements(cells.at(-2)!).some((element) => element.tag === "UButton" && attribute(element, "icon") === "i-material-symbols-refresh")).toBe(true);
+    expect(elements(cells.at(-2)!).some((element) => BUTTONS.includes(element.tag) && attribute(element, "icon") === "i-material-symbols-refresh")).toBe(true);
     expect(elements(cells.at(-3)!).some((element) => element.tag === "UBadge" && attribute(element, "icon") === "i-material-symbols-cloud-off-outline")).toBe(true);
   });
 
@@ -103,10 +105,14 @@ describe("the screen's bars", () => {
   });
 
   test("every button in either bar is the small button at its own size", () => {
-    const buttons = toolbars.flatMap((bar) => elements(bar)).filter((element) => element.tag === "UButton");
+    const buttons = toolbars.flatMap((bar) => elements(bar)).filter((element) => BUTTONS.includes(element.tag));
 
     expect(buttons.length).toBeGreaterThan(5);
 
     for (const button of buttons) expect([button.loc.start.line, attribute(button, "size"), /\b(h-full|min-w-|p-0)\b/.test(attribute(button, "class") ?? "")]).toEqual([button.loc.start.line, "sm", false]);
+  });
+
+  test("names nothing with the library's own tooltip, which no finger opens, but with bmo-ui's shared one", () => {
+    for (const path of sources) expect([path, /<UTooltip\b/.test(readFileSync(path, "utf8"))]).toEqual([path, false]);
   });
 });

@@ -12,18 +12,12 @@
     <template #body>
       <ToolBar :label="$t('calendar.aria.toolbar')">
         <div v-if="narrow">
-          <UTooltip :text="$t('calendar.action.calendars')">
-            <UButton color="neutral" variant="ghost" size="sm" icon="i-material-symbols-calendar-view-month-outline" :aria-label="$t('calendar.action.calendars')" @click="isSidebarOpen = true" />
-          </UTooltip>
+          <IconButton size="sm" icon="i-material-symbols-calendar-view-month-outline" :label="$t('calendar.action.calendars')" @click="isSidebarOpen = true" />
         </div>
 
         <div>
-          <UTooltip :text="$t('calendar.action.previous')" :kbds="['arrowleft']">
-            <UButton color="neutral" variant="ghost" size="sm" icon="i-material-symbols-chevron-left" :aria-label="$t('calendar.action.previous')" :to="pathFor(prevDate)" />
-          </UTooltip>
-          <UTooltip :text="$t('calendar.action.next')" :kbds="['arrowright']">
-            <UButton color="neutral" variant="ghost" size="sm" icon="i-material-symbols-chevron-right" :aria-label="$t('calendar.action.next')" :to="pathFor(nextDate)" />
-          </UTooltip>
+          <IconButton size="sm" icon="i-material-symbols-chevron-left" :label="$t('calendar.action.previous')" :kbds="['arrowleft']" :to="pathFor(prevDate)" />
+          <IconButton size="sm" icon="i-material-symbols-chevron-right" :label="$t('calendar.action.next')" :kbds="['arrowright']" :to="pathFor(nextDate)" />
         </div>
 
         <div class="min-w-0 flex-1">
@@ -42,9 +36,9 @@
         </div>
 
         <div v-if="!narrow">
-          <UTooltip :text="$t('calendar.action.today')" :kbds="['t']">
+          <HintTip :text="$t('calendar.action.today')" :kbds="['t']" press>
             <UButton color="neutral" variant="ghost" size="sm" :label="$t('calendar.action.today')" :to="pathFor(todayDate())" />
-          </UTooltip>
+          </HintTip>
         </div>
 
         <div>
@@ -56,17 +50,15 @@
         <!-- On a phone the mark stands alone, so the row keeps its steps and its title; its words stay in its
              tooltip and for a screen reader. -->
         <div v-if="!online">
-          <UTooltip :text="narrow ? offlineLabel : $t('calendar.label.offline_hint')">
+          <HintTip :text="narrow ? offlineLabel : $t('calendar.label.offline_hint')">
             <UBadge icon="i-material-symbols-cloud-off-outline" color="warning" variant="soft">
               <span :class="narrow && 'sr-only'">{{ offlineLabel }}</span>
             </UBadge>
-          </UTooltip>
+          </HintTip>
         </div>
 
         <div>
-          <UTooltip :text="$t('calendar.action.refresh')">
-            <UButton color="neutral" variant="ghost" size="sm" icon="i-material-symbols-refresh" :aria-label="$t('calendar.action.refresh')" :loading="refreshing" @click="refresh" />
-          </UTooltip>
+          <IconButton size="sm" icon="i-material-symbols-refresh" :label="$t('calendar.action.refresh')" :loading="refreshing" @click="refresh" />
         </div>
 
         <CalendarNewEvent />
