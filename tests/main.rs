@@ -10,3 +10,4 @@ mod events;
 mod openapi;
 mod repeats;
 mod repository;
+mod schedules;

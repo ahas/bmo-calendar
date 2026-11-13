@@ -617,7 +617,7 @@
         "properties": {
           "items": {
             "items": {
-              "$ref": "#/components/schemas/AlarmMoment"
+              "$ref": "#/components/schemas/Source"
             },
             "type": "array"
           },
@@ -633,6 +633,46 @@
         "type": "object"
       },
       "Page4": {
+        "description": "A page of members.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Schedule"
+            },
+            "type": "array"
+          },
+          "more": {
+            "description": "Whether anything stands past the last item.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "more"
+        ],
+        "type": "object"
+      },
+      "Page5": {
+        "description": "A page of members.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AlarmMoment"
+            },
+            "type": "array"
+          },
+          "more": {
+            "description": "Whether anything stands past the last item.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "more"
+        ],
+        "type": "object"
+      },
+      "Page6": {
         "description": "A page of members.",
         "properties": {
           "items": {
@@ -667,6 +707,35 @@
           }
         ]
       },
+      "Reconciled": {
+        "description": "What a whole set did.",
+        "properties": {
+          "removed": {
+            "description": "Standing schedules the set did not name, removed.",
+            "format": "uint",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "unchanged": {
+            "description": "Schedules that already stood as sent.",
+            "format": "uint",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "written": {
+            "description": "Schedules made or changed.",
+            "format": "uint",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "written",
+          "unchanged",
+          "removed"
+        ],
+        "type": "object"
+      },
       "Repeat": {
         "description": "How an event repeats.",
         "enum": [
@@ -677,6 +746,278 @@
           "yearly"
         ],
         "type": "string"
+      },
+      "Schedule": {
+        "description": "A schedule as a read answers it.",
+        "properties": {
+          "allDay": {
+            "type": "boolean"
+          },
+          "assignee": {
+            "description": "Null where it has none.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "changedAt": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "createdAt": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "end": {
+            "description": "Local ISO datetime, after the start.",
+            "type": "string"
+          },
+          "itemId": {
+            "type": "string"
+          },
+          "link": {
+            "type": "string"
+          },
+          "realm": {
+            "$ref": "#/components/schemas/Realm",
+            "description": "The realm it is read in."
+          },
+          "sourceId": {
+            "type": "string"
+          },
+          "start": {
+            "description": "Local ISO datetime.",
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "sourceId",
+          "itemId",
+          "realm",
+          "title",
+          "start",
+          "end",
+          "allDay",
+          "link",
+          "assignee",
+          "createdAt",
+          "changedAt"
+        ],
+        "type": "object"
+      },
+      "ScheduleChanged": {
+        "description": "`schedule.changed`.",
+        "properties": {
+          "itemId": {
+            "type": "string"
+          },
+          "sourceId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "sourceId",
+          "itemId"
+        ],
+        "type": "object"
+      },
+      "ScheduleItem": {
+        "description": "One item of a source's whole set.",
+        "properties": {
+          "allDay": {
+            "default": null,
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "assignee": {
+            "default": null,
+            "description": "The account key of the person the item is assigned to; null, empty or absent where none.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "end": {
+            "description": "Local ISO datetime, after the start.",
+            "type": "string"
+          },
+          "itemId": {
+            "description": "1 to 64 letters, digits, `-` and `_`.",
+            "type": "string"
+          },
+          "link": {
+            "description": "Where the item it stands for is opened: a console path, or an `http` or `https` address.",
+            "type": "string"
+          },
+          "start": {
+            "description": "Local ISO datetime, `YYYY-MM-DDTHH:mm:ss`.",
+            "type": "string"
+          },
+          "title": {
+            "description": "One line, not blank.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "itemId",
+          "title",
+          "start",
+          "end",
+          "allDay",
+          "link",
+          "assignee"
+        ],
+        "type": "object"
+      },
+      "ScheduleSet": {
+        "description": "A source's whole set of schedules.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ScheduleItem"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "type": "object"
+      },
+      "ScheduleWrite": {
+        "description": "A schedule as its unit writes it.",
+        "properties": {
+          "allDay": {
+            "default": null,
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "assignee": {
+            "default": null,
+            "description": "The account key of the person the item is assigned to; null, empty or absent where none.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "end": {
+            "description": "Local ISO datetime, after the start.",
+            "type": "string"
+          },
+          "link": {
+            "description": "Where the item it stands for is opened: a console path, or an `http` or `https` address.",
+            "type": "string"
+          },
+          "start": {
+            "description": "Local ISO datetime, `YYYY-MM-DDTHH:mm:ss`.",
+            "type": "string"
+          },
+          "title": {
+            "description": "One line, not blank.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "start",
+          "end",
+          "allDay",
+          "link",
+          "assignee"
+        ],
+        "type": "object"
+      },
+      "Source": {
+        "description": "A source another unit writes its schedules under (`docs/api.md`, 「Sources and schedules」).",
+        "properties": {
+          "color": {
+            "$ref": "#/components/schemas/Color"
+          },
+          "createdAt": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "hidden": {
+            "description": "Whether the caller's account hid its schedules in the realm read.",
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "color",
+          "hidden",
+          "createdAt"
+        ],
+        "type": "object"
+      },
+      "SourceChange": {
+        "description": "A change of a source for the caller's account.",
+        "properties": {
+          "hidden": {
+            "default": null,
+            "description": "Hides or shows its schedules in the realm of the path, for the caller's account alone.",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "hidden"
+        ],
+        "type": "object"
+      },
+      "SourceChanged": {
+        "description": "`source.changed`.",
+        "properties": {
+          "sourceId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "sourceId"
+        ],
+        "type": "object"
+      },
+      "SourceWrite": {
+        "description": "A source's name and colour, as its unit sets them.",
+        "properties": {
+          "color": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Color"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "description": "`secondary` where none is given."
+          },
+          "name": {
+            "description": "One line.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "color"
+        ],
+        "type": "object"
       },
       "StreamEvent": {
         "description": "One event the service publishes.",
@@ -1060,7 +1401,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Page4"
+                  "$ref": "#/components/schemas/Page6"
                 }
               },
               "text/event-stream": {
@@ -1170,6 +1511,443 @@
         ]
       }
     },
+    "/sources/{sourceId}": {
+      "put": {
+        "operationId": "putSource",
+        "parameters": [
+          {
+            "description": "The source's id.",
+            "in": "path",
+            "name": "sourceId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SourceWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Source"
+                }
+              }
+            },
+            "description": "Answered."
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Source"
+                }
+              }
+            },
+            "description": "Created."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`bad-request`: the body or the query is not the shape the route takes"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`unauthorized`: the token is missing or wrong"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`forbidden`: the token is right but the caller may not do this"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`upstream-failed`: the brain, the receiver or the account service answered a failure"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-ready`: the service has not read the brain yet"
+          }
+        },
+        "summary": "Name and colour a source, every account's hidden mark kept. The service token alone.",
+        "tags": [
+          "sources"
+        ],
+        "x-codes": [
+          "bad-request",
+          "unauthorized",
+          "forbidden",
+          "upstream-failed",
+          "not-ready"
+        ]
+      }
+    },
+    "/sources/{sourceId}/schedules": {
+      "put": {
+        "operationId": "putScheduleSet",
+        "parameters": [
+          {
+            "description": "The source's id.",
+            "in": "path",
+            "name": "sourceId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScheduleSet"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Reconciled"
+                }
+              }
+            },
+            "description": "Answered."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`bad-request`: the body or the query is not the shape the route takes"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`unauthorized`: the token is missing or wrong"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`forbidden`: the token is right but the caller may not do this"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`end-before-start`: an end not after its start"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`upstream-failed`: the brain, the receiver or the account service answered a failure"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-ready`: the service has not read the brain yet"
+          }
+        },
+        "summary": "A source's whole set: each item that differs written, each standing one the set does not name removed. The service token alone.",
+        "tags": [
+          "sources"
+        ],
+        "x-codes": [
+          "bad-request",
+          "unauthorized",
+          "forbidden",
+          "end-before-start",
+          "upstream-failed",
+          "not-ready"
+        ]
+      }
+    },
+    "/sources/{sourceId}/schedules/{itemId}": {
+      "delete": {
+        "operationId": "removeSchedule",
+        "parameters": [
+          {
+            "description": "The source's id.",
+            "in": "path",
+            "name": "sourceId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The item's id, the unit's own.",
+            "in": "path",
+            "name": "itemId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Done; no content."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`bad-request`: the body or the query is not the shape the route takes"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`unauthorized`: the token is missing or wrong"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`forbidden`: the token is right but the caller may not do this"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`upstream-failed`: the brain, the receiver or the account service answered a failure"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-ready`: the service has not read the brain yet"
+          }
+        },
+        "summary": "Remove one schedule of a source; one that does not stand is no failure. The service token alone.",
+        "tags": [
+          "sources"
+        ],
+        "x-codes": [
+          "bad-request",
+          "unauthorized",
+          "forbidden",
+          "upstream-failed",
+          "not-ready"
+        ]
+      },
+      "put": {
+        "operationId": "putSchedule",
+        "parameters": [
+          {
+            "description": "The source's id.",
+            "in": "path",
+            "name": "sourceId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The item's id, the unit's own.",
+            "in": "path",
+            "name": "itemId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScheduleWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Schedule"
+                }
+              }
+            },
+            "description": "Answered."
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Schedule"
+                }
+              }
+            },
+            "description": "Created."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`bad-request`: the body or the query is not the shape the route takes"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`unauthorized`: the token is missing or wrong"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`forbidden`: the token is right but the caller may not do this"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`end-before-start`: an end not after its start"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`upstream-failed`: the brain, the receiver or the account service answered a failure"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-ready`: the service has not read the brain yet"
+          }
+        },
+        "summary": "Write or change one schedule of a source, the source made where none stands. The service token alone.",
+        "tags": [
+          "sources"
+        ],
+        "x-codes": [
+          "bad-request",
+          "unauthorized",
+          "forbidden",
+          "end-before-start",
+          "upstream-failed",
+          "not-ready"
+        ]
+      }
+    },
     "/{realm}/alarms": {
       "get": {
         "operationId": "listAlarms",
@@ -1239,7 +2017,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Page3"
+                  "$ref": "#/components/schemas/Page5"
                 }
               }
             },
@@ -2728,6 +3506,471 @@
           "not-ready"
         ]
       }
+    },
+    "/{realm}/schedules": {
+      "get": {
+        "operationId": "listSchedules",
+        "parameters": [
+          {
+            "description": "The realm: mine or organization.",
+            "in": "path",
+            "name": "realm",
+            "required": true,
+            "schema": {
+              "enum": [
+                "mine",
+                "organization"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "account",
+            "required": true,
+            "schema": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "Local ISO datetime, at most 92 days after the start.",
+            "in": "query",
+            "name": "end",
+            "required": true,
+            "schema": {
+              "description": "Local ISO datetime, at most 92 days after the start.",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "holderName",
+            "required": true,
+            "schema": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "Local ISO datetime.",
+            "in": "query",
+            "name": "start",
+            "required": true,
+            "schema": {
+              "description": "Local ISO datetime.",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page4"
+                }
+              }
+            },
+            "description": "Answered."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`bad-request`: the body or the query is not the shape the route takes"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`unauthorized`: the token is missing or wrong"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`forbidden`: the token is right but the caller may not do this"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-found`: nothing stands at the key the path names"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`no-account`: a mine call names no account, or its holder's account cannot be found\n`span-too-long`: a span over 92 days, or one ending before it starts"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`upstream-failed`: the brain, the receiver or the account service answered a failure"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-ready`: the service has not read the brain yet"
+          }
+        },
+        "summary": "The schedules overlapping a span of at most 92 days: every one in the organization realm, those assigned to the account in the mine realm.",
+        "tags": [
+          "sources"
+        ],
+        "x-codes": [
+          "bad-request",
+          "unauthorized",
+          "forbidden",
+          "not-found",
+          "no-account",
+          "span-too-long",
+          "upstream-failed",
+          "not-ready"
+        ]
+      }
+    },
+    "/{realm}/sources": {
+      "get": {
+        "operationId": "listSources",
+        "parameters": [
+          {
+            "description": "The realm: mine or organization.",
+            "in": "path",
+            "name": "realm",
+            "required": true,
+            "schema": {
+              "enum": [
+                "mine",
+                "organization"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "The account, by its key.",
+            "in": "query",
+            "name": "account",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The account, by its key.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "The holder of a tool session, which acts for the owner.",
+            "in": "query",
+            "name": "holderName",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The holder of a tool session, which acts for the owner.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page3"
+                }
+              }
+            },
+            "description": "Answered."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`bad-request`: the body or the query is not the shape the route takes"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`unauthorized`: the token is missing or wrong"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`forbidden`: the token is right but the caller may not do this"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-found`: nothing stands at the key the path names"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`no-account`: a mine call names no account, or its holder's account cannot be found"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`upstream-failed`: the brain, the receiver or the account service answered a failure"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-ready`: the service has not read the brain yet"
+          }
+        },
+        "summary": "Every source, the caller's hidden mark for the realm on each.",
+        "tags": [
+          "sources"
+        ],
+        "x-codes": [
+          "bad-request",
+          "unauthorized",
+          "forbidden",
+          "not-found",
+          "no-account",
+          "upstream-failed",
+          "not-ready"
+        ]
+      }
+    },
+    "/{realm}/sources/{sourceId}": {
+      "patch": {
+        "operationId": "changeSource",
+        "parameters": [
+          {
+            "description": "The realm: mine or organization.",
+            "in": "path",
+            "name": "realm",
+            "required": true,
+            "schema": {
+              "enum": [
+                "mine",
+                "organization"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "The source's id.",
+            "in": "path",
+            "name": "sourceId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The account, by its key.",
+            "in": "query",
+            "name": "account",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The account, by its key.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "The holder of a tool session, which acts for the owner.",
+            "in": "query",
+            "name": "holderName",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The holder of a tool session, which acts for the owner.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SourceChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Source"
+                }
+              }
+            },
+            "description": "Answered."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`bad-request`: the body or the query is not the shape the route takes"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`unauthorized`: the token is missing or wrong"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`forbidden`: the token is right but the caller may not do this"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-found`: nothing stands at the key the path names"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`no-account`: a mine call names no account, or its holder's account cannot be found"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`upstream-failed`: the brain, the receiver or the account service answered a failure"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-ready`: the service has not read the brain yet"
+          }
+        },
+        "summary": "Hide or show a source's schedules in the realm for the caller's account.",
+        "tags": [
+          "sources"
+        ],
+        "x-codes": [
+          "bad-request",
+          "unauthorized",
+          "forbidden",
+          "not-found",
+          "no-account",
+          "upstream-failed",
+          "not-ready"
+        ]
+      }
     }
   },
   "security": [
@@ -2750,6 +3993,9 @@
     },
     {
       "name": "events"
+    },
+    {
+      "name": "sources"
     },
     {
       "name": "alarms"
@@ -2775,12 +4021,20 @@
     },
     "event.changed": {
       "$ref": "#/components/schemas/EventChanged"
+    },
+    "schedule.changed": {
+      "$ref": "#/components/schemas/ScheduleChanged"
+    },
+    "source.changed": {
+      "$ref": "#/components/schemas/SourceChanged"
     }
   },
   "x-events": [
     "calendar.changed",
     "event.changed",
-    "alarm.told"
+    "alarm.told",
+    "source.changed",
+    "schedule.changed"
   ],
   "x-layer": "downstream",
   "x-tools": [

@@ -1,20 +1,24 @@
 import { ofetch } from "ofetch";
 
 import type { Call } from "../app/domain/api";
-import type { Calendar, CalendarEventRow, Realm } from "../shared/types";
+import type { Calendar, CalendarEventRow, Realm, ScheduleRow, Source } from "../shared/types";
 
 // A stand-in of the calendar service's routes the screen calls (`docs/api.md`, 「Calendars」 and
 // 「Events」), served on the loopback for the length of a test: two realms, their calendars with a hidden
 // mark, events in spans answered in pages, every write idempotent on its id, and a calendar a write under
-// is refused `not-a-writer`.
+// is refused `not-a-writer`; and each realm's sources and received schedules, as the realm's reads answer
+// them (「Sources and schedules」), a source's hidden mark refused where it is listed as refused.
 
 export interface StandIn {
   url: string;
   calendars: Record<Realm, Calendar[]>;
   events: Record<Realm, CalendarEventRow[]>;
+  sources: Record<Realm, Source[]>;
+  schedules: Record<Realm, ScheduleRow[]>;
   /** Every call made, as `METHOD path?query`. */
   calls: string[];
-  /** Calendars a write under is refused, as `realm:id`. */
+  /** Calendars a write under is refused, as `realm:id`, and sources a hidden mark is refused for, as
+   *  `realm:source:id`. */
   refused: Set<string>;
   /** How many rows one page of events holds. */
   pageSize: number;
@@ -58,14 +62,32 @@ export function eventRow(realm: Realm, id: string, calendarId: string, start: st
   };
 }
 
+export function source(id: string, extra: Partial<Source> = {}): Source {
+  return { id, name: id, color: "warning", hidden: false, createdAt: 1, ...extra };
+}
+
+export function scheduleRow(realm: Realm, sourceId: string, itemId: string, start: string, end: string, extra: Partial<ScheduleRow> = {}): ScheduleRow {
+  return { sourceId, itemId, realm, title: itemId, start, end, allDay: false, link: `/items/${itemId}`, assignee: null, createdAt: 1, changedAt: 1, ...extra };
+}
+
 function refusal(status: number, code: string, error: string): Response {
   return Response.json({ code, error }, { status });
 }
 
-export function startStandIn(seed: { calendars?: Partial<Record<Realm, Calendar[]>>; events?: Partial<Record<Realm, CalendarEventRow[]>>; pageSize?: number } = {}): StandIn {
+interface Seed {
+  calendars?: Partial<Record<Realm, Calendar[]>>;
+  events?: Partial<Record<Realm, CalendarEventRow[]>>;
+  sources?: Partial<Record<Realm, Source[]>>;
+  schedules?: Partial<Record<Realm, ScheduleRow[]>>;
+  pageSize?: number;
+}
+
+export function startStandIn(seed: Seed = {}): StandIn {
   const state: Omit<StandIn, "url" | "stop" | "call"> = {
     calendars: { mine: [...(seed.calendars?.mine ?? [])], organization: [...(seed.calendars?.organization ?? [])] },
     events: { mine: [...(seed.events?.mine ?? [])], organization: [...(seed.events?.organization ?? [])] },
+    sources: { mine: [...(seed.sources?.mine ?? [])], organization: [...(seed.sources?.organization ?? [])] },
+    schedules: { mine: [...(seed.schedules?.mine ?? [])], organization: [...(seed.schedules?.organization ?? [])] },
     calls: [],
     refused: new Set(),
     pageSize: seed.pageSize ?? 100
@@ -96,6 +118,28 @@ export function startStandIn(seed: { calendars?: Partial<Record<Realm, Calendar[
 
           return Response.json(state.calendars[realm][index]);
         }
+      }
+
+      if (parts[1] === "sources") {
+        if (parts.length === 2 && request.method === "GET") return Response.json({ items: state.sources[realm], more: false });
+
+        const index = state.sources[realm].findIndex((one) => one.id === parts[2]);
+
+        if (index === -1) return refusal(404, "not-found", "No such source.");
+        if (state.refused.has(`${realm}:source:${parts[2]}`)) return refusal(502, "upstream-failed", "The brain failed.");
+
+        if (request.method === "PATCH") {
+          state.sources[realm][index] = { ...state.sources[realm][index]!, ...(body as Partial<Source>) };
+
+          return Response.json(state.sources[realm][index]);
+        }
+      }
+
+      if (parts[1] === "schedules" && request.method === "GET") {
+        const start = url.searchParams.get("start")!;
+        const end = url.searchParams.get("end")!;
+
+        return Response.json({ items: state.schedules[realm].filter((row) => row.start < end && row.end > start), more: false });
       }
 
       if (parts[1] === "events") {

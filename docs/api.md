@@ -82,6 +82,55 @@ every account.
 Every write is idempotent on `id`: a POST that names an `id` the realm already holds answers 200 with the
 event as it stands after the write (the console's offline replay sends the same write twice).
 
+## Sources and schedules
+
+Another unit pushes its own dated items here as **schedules** under a **source** of its own
+(`docs/design.md`, 「Received schedules」). A source is only data: the name a unit writes under. The
+calendar's code names no unit, and treats every source alike.
+
+| Method | Path | Does |
+|---|---|---|
+| PUT | `/sources/{sourceId}` | Service token only: the source's `name` and `color` (where none is given, the one it has, else `secondary`) — 201 made, 200 otherwise |
+| PUT | `/sources/{sourceId}/schedules/{itemId}` | Service token only: writes or changes one schedule — 201 made, 200 otherwise |
+| DELETE | `/sources/{sourceId}/schedules/{itemId}` | Service token only: removes one schedule — 204, also where none stands |
+| PUT | `/sources/{sourceId}/schedules` | Service token only: the source's whole set, `{items}` — 200, `written`, `unchanged`, `removed` (counts) |
+| GET | `/{realm}/sources` | Every source, the caller's `hidden` mark for the realm on each, oldest first — `{items, more}` |
+| PATCH | `/{realm}/sources/{sourceId}` | `hidden` — 200 |
+| GET | `/{realm}/schedules?start=&end=` | The schedules overlapping the span (local ISO datetimes, at most 92 days), by start — `{items, more}` |
+
+- **A source** is `id`, `name`, `color` (one of the six), `hidden`, `createdAt`. A schedule written under a
+  source the calendar does not hold yet makes the source, named by its id, its colour `secondary`; a
+  `PUT /sources/{sourceId}` names it and colours it at any time, and keeps every account's `hidden` mark.
+- **A schedule written** is `title` (one line, not blank), `start` and `end` (local ISO datetimes, `end`
+  after `start`), `allDay` (default `false`, read as an event's), `link` and `assignee`. `link` is the
+  place the item it stands for is opened at: a console path (one `/` and then the path) or an `http` or
+  `https` address. `assignee` is the account key of the person the item is assigned to, at most 200
+  characters; null, empty or absent where it has none.
+- **A schedule read** is `sourceId`, `itemId`, `realm` (the realm it is read in), `title`, `start`, `end`,
+  `allDay`, `link`, `assignee` (null where none), `createdAt`, `changedAt`.
+- **The ids.** A `sourceId` and an `itemId` are each 1 to 64 letters, digits, `-` and `_`; a unit writes
+  under its own source and keeps its own item ids, so a schedule is known by the pair alone.
+- **Writes are idempotent.** A write that names what already stands keeps it and answers 200; a delete of a
+  schedule that does not stand answers 204, so a unit sends a write again without asking first.
+- **The whole set.** `PUT /sources/{sourceId}/schedules` takes `items`, each a schedule written with its
+  `itemId`. Every item is checked before anything is written; then each one that differs from what stands
+  is written, each standing schedule of the source the set does not name is removed, and the rest is left
+  as it is. An empty set removes every schedule of the source. One source's writes are made one at a time,
+  so two sets never interleave. A set the brain fails part way through answers 502 and keeps what was
+  written; the same set sent again finishes it.
+- **Who writes.** The writes are the service token's, the units' own credential (`env/calendar.env`,
+  「The tool」); a console call to one is 403 `forbidden`.
+- **Who reads.** Every console reader reads every source and every schedule. In the `organization` realm a
+  read answers every schedule; in the `mine` realm only the schedules whose `assignee` is the account
+  (「Realms」). `hidden` is the caller's own for the realm in the path, as a calendar's is: a PATCH of it
+  hides or shows the source's schedules in that realm for the caller's account alone. A read answers the
+  hidden ones as well; the screen leaves them off the grid.
+- **Refusals.** An id, a title, a link, an assignee or a colour outside its shape, or an `itemId` named
+  twice in one set, is 400 `bad-request`; an end not after the start is 422 `end-before-start`; a span
+  over 92 days or ending before it starts is 422 `span-too-long`; a source the calendar does not hold in a
+  PATCH is 404 `not-found`.
+- **No alarms.** A schedule is never told: its unit tells of its own items.
+
 ## Alarms
 
 | Method | Path | Does |
@@ -129,7 +178,8 @@ the calendar chooses within it.
   folder`), read once at start: the module `bundle.js`, the stylesheet `bundle.css` and the words
   `words.json`, beside the layer that build wrote. A folder the face cannot be built from leaves the service
   with no console face, and the console's routes answer 404.
-- **The screens' routes.** The calendars, the events, the alarms and the event stream, held to the
+- **The screens' routes.** The calendars, the events, the sources, the schedules, the alarms and the event
+  stream, held to the
   manifest's role and owner key for a call carrying the console credential, and then to this document's own
   terms.
 
@@ -138,11 +188,13 @@ the calendar chooses within it.
 `GET /events` is a server-sent stream in the platform's shape (`after` or `Last-Event-ID`, `kinds`; the
 same events as a page to `Accept: application/json`, with `after` and `limit`): `calendar.changed`
 (`realm`, `calendarId`), `event.changed` (`realm`, `eventId`, `occurrence`, null where the change is the
-whole event's), `alarm.told` (`realm`, `eventId`, `occurrence`, `at`). A console reader is given the
-`organization` realm's events and its own account's `mine` events; the service token reads every one. The
+whole event's), `alarm.told` (`realm`, `eventId`, `occurrence`, `at`), `source.changed` (`sourceId`),
+`schedule.changed` (`sourceId`, `itemId`). A console reader is given the `organization` realm's events,
+every source's and schedule's, and its own account's `mine` events; the service token reads every one. The
 service keeps the events since it started, at most the last 1000, numbered upward from its start's moment
 in milliseconds times 1000; a resume from before them is 410 `gone`. The console refreshes the visible span
-on `event.changed` and rings `alarm.told`.
+on `event.changed` and `schedule.changed`, reads the calendars and sources again on `calendar.changed` and
+`source.changed`, and rings `alarm.told`.
 
 ## The tool
 
@@ -171,7 +223,7 @@ environment come first), which the deployment writes before the flip with `bmo-c
 | What | Route |
 |---|---|
 | the realm's brain, made on first write | brain `GET /brains?accountKey=&agentKey=`, `POST /brains` |
-| calendars and events read, written, versioned, retired | brain `GET /memories`, `POST /memories`, `POST /memories/{id}/versions`, `PATCH /memories/{id}` |
+| calendars, events, sources and schedules read, written, versioned, retired | brain `GET /memories`, `POST /memories`, `POST /memories/{id}/versions`, `PATCH /memories/{id}` |
 | the brain's changes followed | brain `GET /events` (`memory.written`, `memory.moved`, `scope=brain:<id>`) |
 | an alarm told | receiver `POST /instructions`; the owner's sender and room from `GET /owner`; a member's room by `GET /rooms/{roomId}` |
 | whose account is whose | the account service `GET /senders/{sender}/user` (the owner's account), `GET /users/{user}` (a member's name and senders) |

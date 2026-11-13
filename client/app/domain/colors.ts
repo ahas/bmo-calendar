@@ -34,6 +34,12 @@ export const CALENDAR_DOT: Record<CalendarColor, string> = {
   error: "bg-error"
 };
 
+/** The mark a received schedule carries beside its realm's, and its source carries in the sidebar. */
+export const RECEIVED_ICON = "i-material-symbols-link";
+
+/** The mark that spins while a change is on its way. */
+export const SENDING_ICON = "i-material-symbols-progress-activity";
+
 /** The mark a realm's event carries beside its title, so the two realms are told apart on one grid. */
 export const REALM_ICON = {
   mine: "i-material-symbols-person-outline",

@@ -31,6 +31,7 @@
       "offline_waiting": "오프라인 · {n}건 대기",
       "organization": "조직 일정",
       "quick_entry": "빠른 입력",
+      "received": "외부 일정",
       "repeat": "반복",
       "repeat_none": "없음",
       "repeat_daily": "매일",

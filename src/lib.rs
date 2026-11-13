@@ -12,6 +12,7 @@ pub mod events;
 pub mod model;
 pub mod openapi;
 pub mod peers;
+pub mod schedules;
 pub mod settings;
 pub mod store;
 pub mod tool_env;

@@ -4,10 +4,11 @@ import { Refusal, Unreachable } from "./api";
 import { fromLocalISO, toLocalISO } from "./dates";
 
 import type { CalendarApi } from "./api";
-import type { Calendar, CalendarEvent, CalendarEventRow, CalendarWrite, DateRange, EventWrite, Realm, RepeatScope } from "../../shared/types";
+import type { Calendar, CalendarEvent, CalendarEventRow, CalendarWrite, DateRange, EventWrite, Realm, RepeatScope, ScheduleRow, Source } from "../../shared/types";
 
-// What the screen holds of the calendar service: the calendars of both realms, the events of every span it
-// has read, the changes it has made and not yet heard answered, and the changes waiting for the network.
+// What the screen holds of the calendar service: the calendars and the sources of both realms, the events
+// and received schedules of every span it has read, the changes it has made and not yet heard answered,
+// and the changes waiting for the network.
 //
 // A change is drawn at once and sent behind it. A refusal takes it back and says why; a call that never
 // reached the service keeps it drawn and puts it in a line that is sent again, in order, once the service
@@ -62,6 +63,32 @@ export function held(row: CalendarEventRow): CalendarEvent {
   return { ...row, key: rowKey(row) };
 }
 
+/** A received schedule as a row of the grid: drawn as an event is, known by its realm, source and item, and
+ *  carrying where it came from, which is what keeps every way of changing it off it. */
+export function scheduleRow(row: ScheduleRow): CalendarEvent {
+  const id = `${row.sourceId}:${row.itemId}`;
+
+  return {
+    id,
+    realm: row.realm,
+    calendarId: "",
+    title: row.title,
+    description: "",
+    start: row.start,
+    end: row.end,
+    allDay: row.allDay,
+    alarm: "none",
+    repeat: "none",
+    creator: "",
+    createdAt: row.createdAt,
+    changedAt: row.changedAt,
+    told: null,
+    occurrence: null,
+    key: `schedule:${row.realm}:${id}`,
+    origin: { sourceId: row.sourceId, itemId: row.itemId, link: row.link }
+  };
+}
+
 export function spanKey(span: DateRange): string {
   return `${toLocalISO(span.start)}_${toLocalISO(span.end)}`;
 }
@@ -96,6 +123,21 @@ export function createCalendarStore(options: StoreOptions) {
   const { api, tell } = options;
 
   const calendars = ref<Record<Realm, Calendar[]>>({ mine: [], organization: [] });
+  const sources = ref<Record<Realm, Source[]>>({ mine: [], organization: [] });
+
+  // The layers whose shown or hidden mark is on its way to the service, as `calendar:<realm>:<id>` and
+  // `source:<realm>:<id>`, so each shows it is being sent until the service answers.
+  const sendingLayers = ref<string[]>([]);
+
+  async function sendingLayer(key: string, send: () => Promise<void>): Promise<void> {
+    sendingLayers.value = [...sendingLayers.value, key];
+
+    try {
+      await send();
+    } finally {
+      sendingLayers.value = sendingLayers.value.filter((one) => one !== key);
+    }
+  }
   const calendarsRead = ref(false);
   const calendarsFailed = ref(false);
 
@@ -113,10 +155,19 @@ export function createCalendarStore(options: StoreOptions) {
 
   // ---- Calendars ----------------------------------------------------------------------------------
 
-  const groups = computed(() => (["mine", "organization"] as const).map((realm) => ({ realm, calendars: calendars.value[realm] })));
+  const groups = computed(() => (["mine", "organization"] as const).map((realm) => ({ realm, calendars: calendars.value[realm], sources: sources.value[realm] })));
 
   function calendarOf(realm: Realm, id: string): Calendar | undefined {
     return calendars.value[realm].find((calendar) => calendar.id === id);
+  }
+
+  function sourceOf(realm: Realm, id: string): Source | undefined {
+    return sources.value[realm].find((source) => source.id === id);
+  }
+
+  /** What a row is drawn in and named by: its source for a received schedule, else its calendar. */
+  function layerOf(row: Pick<CalendarEvent, "realm" | "calendarId" | "origin">): Calendar | Source | undefined {
+    return row.origin ? sourceOf(row.realm, row.origin.sourceId) : calendarOf(row.realm, row.calendarId);
   }
 
   function replaceCalendar(next: Calendar): void {
@@ -125,9 +176,15 @@ export function createCalendarStore(options: StoreOptions) {
 
   async function loadCalendars(): Promise<void> {
     try {
-      const [mine, organization] = await Promise.all([api.calendars("mine"), api.calendars("organization")]);
+      const [mine, organization, mineSources, organizationSources] = await Promise.all([
+        api.calendars("mine"),
+        api.calendars("organization"),
+        api.sources("mine"),
+        api.sources("organization")
+      ]);
 
       calendars.value = { mine, organization };
+      sources.value = { mine: mineSources, organization: organizationSources };
       calendarsFailed.value = false;
     } catch (error) {
       if (error instanceof Unreachable) forcedOffline.value = true;
@@ -143,7 +200,29 @@ export function createCalendarStore(options: StoreOptions) {
     const before = calendarOf(calendar.realm, calendar.id) ?? calendar;
 
     replaceCalendar({ ...before, hidden });
-    await sendCalendar({ kind: "calendar", realm: calendar.realm, id: calendar.id, write: { hidden } }, () => replaceCalendar(before));
+    await sendingLayer(`calendar:${calendar.realm}:${calendar.id}`, () =>
+      sendCalendar({ kind: "calendar", realm: calendar.realm, id: calendar.id, write: { hidden } }, () => replaceCalendar(before))
+    );
+  }
+
+  // A source's layer shown or hidden in one realm, kept per account by the service (`docs/api.md`, 「Sources
+  // and schedules」). Taken back where the service does not take it; a layer waits for no network.
+  async function setSourceHidden(realm: Realm, source: Source, hidden: boolean): Promise<void> {
+    const replace = (next: Source) => (sources.value = { ...sources.value, [realm]: sources.value[realm].map((one) => (one.id === next.id ? next : one)) });
+    const before = sourceOf(realm, source.id) ?? source;
+
+    replace({ ...before, hidden });
+
+    await sendingLayer(`source:${realm}:${source.id}`, async () => {
+      try {
+        replace(await api.changeSource(realm, source.id, { hidden }));
+      } catch (error) {
+        if (error instanceof Unreachable) forcedOffline.value = true;
+
+        replace(before);
+        tell({ tone: "error", title: refusalWord(error) });
+      }
+    });
   }
 
   async function sendCalendar(request: Extract<Queued, { kind: "calendar" }>, undo: () => void): Promise<void> {
@@ -196,7 +275,8 @@ export function createCalendarStore(options: StoreOptions) {
     chunks.value = { ...chunks.value, [key]: chunk };
   }
 
-  /** The events of a span, both realms, read once and kept; `force` reads it again over what is kept. */
+  /** The events and received schedules of a span, both realms, read once and kept; `force` reads it again
+   *  over what is kept. */
   async function loadSpan(span: DateRange, force = false): Promise<void> {
     const key = spanKey(span);
     const kept = chunks.value[key];
@@ -205,14 +285,19 @@ export function createCalendarStore(options: StoreOptions) {
 
     setChunk(key, { span, rows: kept?.rows ?? [], loading: true, read: kept?.read ?? false, failed: false });
 
-    const read = await Promise.allSettled([api.events("mine", span), api.events("organization", span)]);
-    const rows = read.flatMap((one) => (one.status === "fulfilled" ? one.value.map(held) : []));
+    // Each part a span is read in: one realm's events or its schedules, and which kept rows are its own.
+    const parts = (["mine", "organization"] as const).flatMap((realm) => [
+      { read: () => api.events(realm, span).then((rows) => rows.map(held)), owns: (row: CalendarEvent) => row.realm === realm && !row.origin },
+      { read: () => api.schedules(realm, span).then((rows) => rows.map(scheduleRow)), owns: (row: CalendarEvent) => row.realm === realm && !!row.origin }
+    ]);
+    const read = await Promise.allSettled(parts.map((part) => part.read()));
+    const rows = read.flatMap((one) => (one.status === "fulfilled" ? one.value : []));
     const failures = read.flatMap((one) => (one.status === "rejected" ? [one.reason] : []));
 
     if (failures.some((error) => error instanceof Unreachable)) forcedOffline.value = true;
 
-    // A realm that did not answer keeps what was read of it before rather than emptying its rows.
-    const keptRows = failures.length ? (kept?.rows ?? []).filter((row) => read.some((one, index) => one.status === "rejected" && row.realm === (index === 0 ? "mine" : "organization"))) : [];
+    // A part that did not answer keeps what was read of it before rather than emptying its rows.
+    const keptRows = (kept?.rows ?? []).filter((row) => read.some((one, index) => one.status === "rejected" && parts[index]!.owns(row)));
 
     setChunk(key, { span, rows: [...rows, ...keptRows], loading: false, read: true, failed: failures.length > 0 });
   }
@@ -247,7 +332,14 @@ export function createCalendarStore(options: StoreOptions) {
     return [...merged.values()];
   });
 
-  const events = computed(() => allEvents.value.filter((row) => !calendarOf(row.realm, row.calendarId)?.hidden));
+  // The rows on layers shown. A schedule shown in the reader's own realm stands there alone, rather than a
+  // second time in the organization's.
+  const events = computed(() => {
+    const shown = allEvents.value.filter((row) => !layerOf(row)?.hidden);
+    const own = new Set(shown.filter((row) => row.origin && row.realm === "mine").map((row) => row.id));
+
+    return shown.filter((row) => !(row.origin && row.realm === "organization" && own.has(row.id)));
+  });
 
   // The answered row takes the place of what was drawn for it in every span it falls in. Answers whether
   // any span read so far holds it.
@@ -486,6 +578,11 @@ export function createCalendarStore(options: StoreOptions) {
     calendarsFailed,
     groups,
     calendarOf,
+    sources,
+    sourceOf,
+    layerOf,
+    setSourceHidden,
+    sendingLayers,
     loadCalendars,
     setHidden,
     saveCalendar,

@@ -2,7 +2,8 @@
   <!-- What pressing an event opens: its form, beside it, or on a phone as a centred dialog. A right press
        or a held finger (the grid's hold menu) offers the same form and the cancellation as a menu. Where a
        mouse points, neither is made until the event is first pointed at, since the month view puts hundreds
-       of events up at once; on a touch screen they stand from the first. -->
+       of events up at once; on a touch screen they stand from the first. A received schedule opens neither:
+       it is a link to the item it stands for. -->
   <div ref="root" class="contents" @pointerover="arm" @focusin="arm" @contextmenu="arm">
     <slot v-if="!active" :open="false" />
 
@@ -49,8 +50,11 @@ const armed = ref(false);
 const dirty = ref(false);
 const root = useTemplateRef("root");
 
+// A received schedule is changed by its unit alone, so nothing here offers to change it.
+const received = computed(() => !!props.event.origin);
+
 function arm(event: Event): void {
-  if (armed.value) return;
+  if (armed.value || received.value) return;
 
   armed.value = true;
 
@@ -59,7 +63,7 @@ function arm(event: Event): void {
 }
 
 const open = computed(() => props.anchored && editingKey.value === props.event.key);
-const active = computed(() => armed.value || open.value || coarse.value);
+const active = computed(() => !received.value && (armed.value || open.value || coarse.value));
 
 function onUpdateOpen(value: boolean): void {
   if (props.disabled) return;

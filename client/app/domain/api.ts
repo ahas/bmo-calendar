@@ -1,9 +1,10 @@
 import { MAX_SPAN_DAYS, toLocalISO } from "./dates";
 
-import type { Calendar, CalendarEventRow, CalendarWrite, DateRange, EventWrite, ListPage, Realm } from "../../shared/types";
+import type { Calendar, CalendarEventRow, CalendarWrite, DateRange, EventWrite, ListPage, Realm, ScheduleRow, Source } from "../../shared/types";
 
 // The screen's calls to the calendar service, each at the path the service's own API writes it
-// (`docs/api.md`): the calendars of a realm, the events of a span and the writes on either. The caller
+// (`docs/api.md`): the calendars of a realm, the events of a span and the writes on either, and the
+// sources and schedules other units push, which the screen reads and only hides or shows. The caller
 // hands the call itself — through the console's relay in the browser, to a stand-in in a test — so this
 // module names no address and no fetcher.
 
@@ -53,6 +54,9 @@ export interface CalendarApi {
   addEvent: (realm: Realm, write: EventWrite & { id: string }) => Promise<CalendarEventRow>;
   changeEvent: (realm: Realm, id: string, write: Partial<EventWrite>) => Promise<CalendarEventRow>;
   cancelEvent: (realm: Realm, id: string, occurrence?: string | null) => Promise<void>;
+  sources: (realm: Realm) => Promise<Source[]>;
+  changeSource: (realm: Realm, id: string, write: { hidden: boolean }) => Promise<Source>;
+  schedules: (realm: Realm, span: DateRange) => Promise<ScheduleRow[]>;
 }
 
 export function createCalendarApi(call: Call): CalendarApi {
@@ -64,13 +68,15 @@ export function createCalendarApi(call: Call): CalendarApi {
     }
   }
 
-  // A realm's calendars, every page of them, oldest first.
-  async function calendars(realm: Realm): Promise<Calendar[]> {
-    const items: Calendar[] = [];
+  // Every page of a list, each one after the last item of the page before: a page that says there is more
+  // is followed from its last item on.
+  async function paged<T>(path: string, lastId: (item: T) => string, query: Record<string, string> = {}): Promise<T[]> {
+    const items: T[] = [];
     let after: string | null = null;
 
     for (;;) {
-      const page: ListPage<Calendar> = await sent<ListPage<Calendar>>(`/${realm}/calendars`, after === null ? undefined : { query: { after } });
+      const asked = after === null ? query : { ...query, after };
+      const page: ListPage<T> = await sent<ListPage<T>>(path, Object.keys(asked).length ? { query: asked } : undefined);
 
       items.push(...page.items);
 
@@ -78,37 +84,23 @@ export function createCalendarApi(call: Call): CalendarApi {
 
       if (!page.more || last === undefined) return items;
 
-      after = last.id;
+      after = lastId(last);
     }
   }
 
-  // The events of a span, every page of them: a page that says there is more is followed from its last
-  // row on. A span longer than the service reads at once is read as several.
-  async function events(realm: Realm, span: DateRange): Promise<CalendarEventRow[]> {
-    const rows: CalendarEventRow[] = [];
+  // The rows of a span, a span longer than the service reads at once read as several.
+  async function spanned<T>(path: string, span: DateRange, lastId: (item: T) => string): Promise<T[]> {
+    const rows: T[] = [];
 
-    for (const part of spanParts(span)) {
-      let after: string | null = null;
-
-      for (;;) {
-        const query: Record<string, string> = { start: toLocalISO(part.start), end: toLocalISO(part.end) };
-
-        if (after !== null) query.after = after;
-
-        const page: ListPage<CalendarEventRow> = await sent<ListPage<CalendarEventRow>>(`/${realm}/events`, { query });
-
-        rows.push(...page.items);
-
-        const last = page.items.at(-1);
-
-        if (!page.more || last === undefined) break;
-
-        after = last.id;
-      }
-    }
+    for (const part of spanParts(span)) rows.push(...(await paged<T>(path, lastId, { start: toLocalISO(part.start), end: toLocalISO(part.end) })));
 
     return rows;
   }
+
+  // A realm's calendars, oldest first.
+  const calendars = (realm: Realm) => paged<Calendar>(`/${realm}/calendars`, (calendar) => calendar.id);
+
+  const events = (realm: Realm, span: DateRange) => spanned<CalendarEventRow>(`/${realm}/events`, span, (row) => row.id);
 
   return {
     calendars,
@@ -120,7 +112,10 @@ export function createCalendarApi(call: Call): CalendarApi {
     addEvent: (realm, write) => sent<CalendarEventRow>(`/${realm}/events`, { method: "POST", body: write }),
     changeEvent: (realm, id, write) => sent<CalendarEventRow>(`/${realm}/events/${segment(id)}`, { method: "PATCH", body: write }),
     cancelEvent: (realm, id, occurrence) =>
-      sent<void>(`/${realm}/events/${segment(id)}`, { method: "DELETE", ...(occurrence ? { query: { occurrence } } : {}) })
+      sent<void>(`/${realm}/events/${segment(id)}`, { method: "DELETE", ...(occurrence ? { query: { occurrence } } : {}) }),
+    sources: (realm) => paged<Source>(`/${realm}/sources`, (source) => source.id),
+    changeSource: (realm, id, write) => sent<Source>(`/${realm}/sources/${segment(id)}`, { method: "PATCH", body: write }),
+    schedules: (realm, span) => spanned<ScheduleRow>(`/${realm}/schedules`, span, (row) => `${row.sourceId}:${row.itemId}`)
   };
 }
 

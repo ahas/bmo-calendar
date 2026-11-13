@@ -8,8 +8,15 @@ use bmo_calendar::openapi::{openapi, openapi_json};
 const ROOT: &str = env!("CARGO_MANIFEST_DIR");
 
 /// The routes docs/api.md states, by method and path.
-const ROUTES: [&str; 15] = [
+const ROUTES: [&str; 22] = [
   "get /health",
+  "put /sources/{sourceId}",
+  "put /sources/{sourceId}/schedules",
+  "put /sources/{sourceId}/schedules/{itemId}",
+  "delete /sources/{sourceId}/schedules/{itemId}",
+  "get /{realm}/sources",
+  "patch /{realm}/sources/{sourceId}",
+  "get /{realm}/schedules",
   "get /{realm}/calendars",
   "post /{realm}/calendars",
   "patch /{realm}/calendars/{calendarId}",
@@ -50,7 +57,13 @@ fn the_document_states_every_route_and_tool_and_nothing_else() {
   assert_eq!(document["info"]["version"], env!("CARGO_PKG_VERSION"));
   assert_eq!(
     document["x-events"],
-    serde_json::json!(["calendar.changed", "event.changed", "alarm.told"])
+    serde_json::json!([
+      "calendar.changed",
+      "event.changed",
+      "alarm.told",
+      "source.changed",
+      "schedule.changed"
+    ])
   );
 
   let manifest: toml::Table = std::fs::read_to_string(format!("{ROOT}/tools/calendar/tool.toml"))

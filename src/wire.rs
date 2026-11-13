@@ -404,3 +404,119 @@ pub struct AlarmTold {
   pub occurrence: String,
   pub at: i64,
 }
+
+/// `source.changed`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SourceChanged {
+  pub source_id: String,
+}
+
+/// `schedule.changed`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ScheduleChanged {
+  pub source_id: String,
+  pub item_id: String,
+}
+
+/// A source another unit writes its schedules under (`docs/api.md`, 「Sources and schedules」).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct Source {
+  pub id: String,
+  pub name: String,
+  pub color: Color,
+  /// Whether the caller's account hid its schedules in the realm read.
+  pub hidden: bool,
+  pub created_at: i64,
+}
+
+/// A source's name and colour, as its unit sets them.
+#[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SourceWrite {
+  /// One line.
+  pub name: String,
+  /// `secondary` where none is given.
+  #[serde(default)]
+  pub color: Option<Color>,
+}
+
+/// A change of a source for the caller's account.
+#[derive(Clone, Debug, Default, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct SourceChange {
+  /// Hides or shows its schedules in the realm of the path, for the caller's account alone.
+  #[serde(default)]
+  pub hidden: Option<bool>,
+}
+
+/// A schedule as its unit writes it.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ScheduleWrite {
+  /// One line, not blank.
+  pub title: String,
+  /// Local ISO datetime, `YYYY-MM-DDTHH:mm:ss`.
+  pub start: String,
+  /// Local ISO datetime, after the start.
+  pub end: String,
+  #[serde(default)]
+  pub all_day: Option<bool>,
+  /// Where the item it stands for is opened: a console path, or an `http` or `https` address.
+  pub link: String,
+  /// The account key of the person the item is assigned to; null, empty or absent where none.
+  #[serde(default)]
+  pub assignee: Option<String>,
+}
+
+/// One item of a source's whole set.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ScheduleItem {
+  /// 1 to 64 letters, digits, `-` and `_`.
+  pub item_id: String,
+  #[serde(flatten)]
+  pub schedule: ScheduleWrite,
+}
+
+/// A source's whole set of schedules.
+#[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ScheduleSet {
+  pub items: Vec<ScheduleItem>,
+}
+
+/// What a whole set did.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct Reconciled {
+  /// Schedules made or changed.
+  pub written: usize,
+  /// Schedules that already stood as sent.
+  pub unchanged: usize,
+  /// Standing schedules the set did not name, removed.
+  pub removed: usize,
+}
+
+/// A schedule as a read answers it.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct Schedule {
+  pub source_id: String,
+  pub item_id: String,
+  /// The realm it is read in.
+  pub realm: Realm,
+  pub title: String,
+  /// Local ISO datetime.
+  pub start: String,
+  /// Local ISO datetime, after the start.
+  pub end: String,
+  pub all_day: bool,
+  pub link: String,
+  /// Null where it has none.
+  pub assignee: Option<String>,
+  pub created_at: i64,
+  pub changed_at: i64,
+}

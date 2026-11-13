@@ -64,6 +64,10 @@ describe("an event's name", () => {
     expect(eventName(t, event({}), "calendar-a")).toBe("dentist, 15:00~16:00, calendar-a");
   });
 
+  test("names a received schedule by its source and as received", () => {
+    expect(eventName(t, event({ origin: { sourceId: "plans", itemId: "a", link: "/items/a" } }), "Plans")).toBe(`dentist, 15:00~16:00, Plans, ${t("calendar.label.received")}`);
+  });
+
   test("names its repeat, and an untitled event by the untitled word", () => {
     expect(eventName(t, event({ title: "", repeat: "weekly" }), "calendar-a")).toBe(`${t("calendar.label.untitled")}, 15:00~16:00, calendar-a, ${t("calendar.label.repeat_weekly")}`);
   });

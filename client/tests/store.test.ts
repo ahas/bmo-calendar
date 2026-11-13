@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 
 import { createCalendarApi } from "../app/domain/api";
 import { createCalendarStore, held } from "../app/domain/store";
-import { calendar, eventRow, settle, startStandIn, unreachable } from "./stand-in";
+import { calendar, eventRow, scheduleRow, settle, source, startStandIn, unreachable } from "./stand-in";
 
 import type { Call } from "../app/domain/api";
 import type { Notice } from "../app/domain/store";
@@ -10,7 +10,8 @@ import type { StandIn } from "./stand-in";
 
 // The screen's hold on the calendar service, against a stand-in of its routes: the two realms kept apart,
 // a calendar hidden for the account, a refused write taken back, a write sent again after the network
-// failed landing once, and a span read page by page.
+// failed landing once, a span read page by page, and the schedules other units push laid on the grid in
+// their sources' layers.
 
 const SPAN = { start: new Date(2026, 10, 1), end: new Date(2026, 11, 13) };
 
@@ -293,5 +294,73 @@ describe("spans", () => {
 
     expect(standIn.calls.filter((one) => one.startsWith("GET /mine/events"))).toHaveLength(2);
     expect(store.allEvents.value.map((event) => event.id)).toEqual(["late"]);
+  });
+});
+
+describe("received schedules", () => {
+  const RECEIVED = {
+    sources: { mine: [source("plans")], organization: [source("plans"), source("work", { color: "success" })] },
+    schedules: {
+      mine: [scheduleRow("mine", "plans", "own", "2026-11-05T09:00:00", "2026-11-05T10:00:00", { assignee: "7" })],
+      organization: [
+        scheduleRow("organization", "plans", "own", "2026-11-05T09:00:00", "2026-11-05T10:00:00", { assignee: "7" }),
+        scheduleRow("organization", "plans", "team", "2026-11-06T09:00:00", "2026-11-06T10:00:00"),
+        scheduleRow("organization", "work", "build", "2026-11-07T09:00:00", "2026-11-07T10:00:00")
+      ]
+    }
+  };
+
+  test("stand on the grid in their sources' layers, one assigned to the reader once, as the reader's own", async () => {
+    standIn = startStandIn(RECEIVED);
+
+    const { store } = storeOver(standIn.call);
+
+    await store.loadCalendars();
+    await store.loadSpan(SPAN);
+
+    expect(store.groups.value.map((group) => [group.realm, group.sources.map((one) => one.id)])).toEqual([
+      ["mine", ["plans"]],
+      ["organization", ["plans", "work"]]
+    ]);
+    expect(store.events.value.map((row) => row.key).sort()).toEqual(["organization:plans:team", "organization:work:build", "mine:plans:own"].map((key) => `schedule:${key}`).sort());
+
+    const build = store.events.value.find((row) => row.origin?.itemId === "build")!;
+
+    expect(build.origin).toEqual({ sourceId: "work", itemId: "build", link: "/items/build" });
+    expect(store.layerOf(build)?.color).toBe("success");
+  });
+
+  test("a layer hidden in one realm leaves that realm's rows alone off the grid, and is kept per realm", async () => {
+    standIn = startStandIn(RECEIVED);
+
+    const { store } = storeOver(standIn.call);
+
+    await store.loadCalendars();
+    await store.loadSpan(SPAN);
+    const sent = store.setSourceHidden("mine", store.sourceOf("mine", "plans")!, true);
+
+    expect(store.sendingLayers.value).toEqual(["source:mine:plans"]);
+    await sent;
+    expect(store.sendingLayers.value).toEqual([]);
+    expect(standIn.calls).toContain("PATCH /mine/sources/plans");
+    expect(standIn.sources.mine[0]!.hidden).toBe(true);
+    expect(store.events.value.map((row) => row.key).sort()).toEqual(["schedule:organization:plans:own", "schedule:organization:plans:team", "schedule:organization:work:build"]);
+
+    await store.setSourceHidden("organization", store.sourceOf("organization", "plans")!, true);
+
+    expect(store.events.value.map((row) => row.key)).toEqual(["schedule:organization:work:build"]);
+  });
+
+  test("a layer the service does not take is shown as it was, and the reader told", async () => {
+    standIn = startStandIn(RECEIVED);
+    standIn.refused.add("organization:source:work");
+
+    const { store, notices } = storeOver(standIn.call);
+
+    await store.loadCalendars();
+    await store.setSourceHidden("organization", store.sourceOf("organization", "work")!, true);
+
+    expect(store.sourceOf("organization", "work")!.hidden).toBe(false);
+    expect(notices.map((notice) => notice.tone)).toEqual(["error"]);
   });
 });

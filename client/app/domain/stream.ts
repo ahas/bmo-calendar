@@ -11,9 +11,11 @@ import type { Realm } from "../../shared/types";
 export type CalendarStreamEvent =
   | { kind: "calendar.changed"; data: { realm: Realm; calendarId: string } }
   | { kind: "event.changed"; data: { realm: Realm; eventId: string; occurrence: string | null } }
-  | { kind: "alarm.told"; data: { realm: Realm; eventId: string; occurrence: string; at: number } };
+  | { kind: "alarm.told"; data: { realm: Realm; eventId: string; occurrence: string; at: number } }
+  | { kind: "source.changed"; data: { sourceId: string } }
+  | { kind: "schedule.changed"; data: { sourceId: string; itemId: string } };
 
-export const STREAM_KINDS = ["calendar.changed", "event.changed", "alarm.told"] as const;
+export const STREAM_KINDS = ["calendar.changed", "event.changed", "alarm.told", "source.changed", "schedule.changed"] as const;
 
 // How long a stream the service refused waits before it is opened afresh.
 const REOPEN_MS = 3_000;

@@ -15,7 +15,8 @@ use crate::wire::StreamEvent;
 pub const KEPT: usize = 1000;
 
 /// The kinds the calendar publishes.
-pub const KINDS: [&str; 3] = ["calendar.changed", "event.changed", "alarm.told"];
+pub const KINDS: [&str; 5] =
+  ["calendar.changed", "event.changed", "alarm.told", "source.changed", "schedule.changed"];
 
 /// One event, and the account whose `mine` realm it belongs to, where it is one's.
 #[derive(Clone, Debug)]

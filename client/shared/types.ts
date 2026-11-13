@@ -56,9 +56,44 @@ export interface CalendarEventRow {
   occurrence?: string | null;
 }
 
-/** A row as the screen holds it: the key one row is known by on the grid, across both realms. */
+/** A source another unit writes its schedules under (`docs/api.md`, 「Sources and schedules」). */
+export interface Source {
+  id: string;
+  name: string;
+  color: CalendarColor;
+  /** Whether the reader hid its schedules in the realm it was read in. */
+  hidden: boolean;
+  createdAt: number;
+}
+
+/** One schedule another unit pushed, as a realm's read answers it. */
+export interface ScheduleRow {
+  sourceId: string;
+  itemId: string;
+  realm: Realm;
+  title: string;
+  start: string;
+  end: string;
+  allDay: boolean;
+  /** Where the item it stands for opens: a console path, or an `http` or `https` address. */
+  link: string;
+  assignee: string | null;
+  createdAt: number;
+  changedAt: number;
+}
+
+/** Where a row received from another unit came from and opens: never written from the screen. */
+export interface Origin {
+  sourceId: string;
+  itemId: string;
+  link: string;
+}
+
+/** A row as the screen holds it: the key one row is known by on the grid, across both realms, and, for a
+ *  received schedule, its origin. */
 export interface CalendarEvent extends CalendarEventRow {
   key: string;
+  origin?: Origin;
 }
 
 /** What a write names (`docs/api.md`, 「Events」). */

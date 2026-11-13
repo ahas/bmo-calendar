@@ -1,10 +1,11 @@
 //! What the calendar last read of the brain (`docs/design.md`, 「What a calendar and an event are in the
-//! brain」): each realm's brain and its live calendars and events, by their own ids. It is rebuilt from the
+//! brain」): each realm's brain and its live calendars and events, and the organization's sources and
+//! received schedules, by their own ids. It is rebuilt from the
 //! brain at start and kept by the brain's event stream and the calendar's own writes.
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 
-use crate::model::{CALENDAR_TYPE, EVENT_TYPE, Memory};
+use crate::model::{CALENDAR_TYPE, EVENT_TYPE, Memory, SCHEDULE_TYPE, SOURCE_TYPE};
 use crate::wire::Realm;
 
 /// A realm as a brain is keyed: the organization's, or one account's.
@@ -39,6 +40,15 @@ impl RealmKey {
     }
   }
 
+  /// The memory types its brain holds: every realm its calendars and events; the organization's also the
+  /// sources and the schedules received (`docs/design.md`, 「Received schedules」).
+  pub fn kinds(&self) -> &'static [&'static str] {
+    match self {
+      Self::Mine(_) => &[CALENDAR_TYPE, EVENT_TYPE],
+      Self::Organization => &[CALENDAR_TYPE, EVENT_TYPE, SOURCE_TYPE, SCHEDULE_TYPE],
+    }
+  }
+
   /// The realm a brain's `accountKey` names, where it names one.
   pub fn of_account_key(key: &str) -> Option<Self> {
     if key == "organization" {
@@ -57,6 +67,9 @@ pub struct Held {
   pub brain: i64,
   pub calendars: BTreeMap<String, Memory>,
   pub events: BTreeMap<String, Memory>,
+  pub sources: BTreeMap<String, Memory>,
+  /// By their own ids, the source's and the item's joined by a colon.
+  pub schedules: BTreeMap<String, Memory>,
   /// The ids of the memories seen closed, so a late read of them does not bring them back.
   closed: HashSet<i64>,
 }
@@ -67,16 +80,21 @@ impl Held {
       brain,
       calendars: BTreeMap::new(),
       events: BTreeMap::new(),
+      sources: BTreeMap::new(),
+      schedules: BTreeMap::new(),
       closed: HashSet::new(),
     }
   }
 }
 
-/// What changed in the cache: a calendar or an event, by its own id.
+/// What changed in the cache, by its own id.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Changed {
   Calendar(String),
   Event(String),
+  Source(String),
+  /// A schedule: its source's id and its item's.
+  Schedule(String, String),
 }
 
 /// Every realm held.
@@ -99,6 +117,11 @@ impl Cache {
     let (map, changed) = match memory.kind.as_str() {
       CALENDAR_TYPE => (&mut held.calendars, Changed::Calendar(id.clone())),
       EVENT_TYPE => (&mut held.events, Changed::Event(id.clone())),
+      SOURCE_TYPE => (&mut held.sources, Changed::Source(id.clone())),
+      SCHEDULE_TYPE => (
+        &mut held.schedules,
+        Changed::Schedule(memory.label("source").to_owned(), memory.label("item").to_owned()),
+      ),
       _ => return None,
     };
     if memory.live() {

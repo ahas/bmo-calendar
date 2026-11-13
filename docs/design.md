@@ -39,6 +39,14 @@ names the realm it reads or writes.
   `createdAt` (epoch ms, the moment its first version was written) and `skip` (the occurrences of a repeating
   event that no longer stand in it, each its local start, joined by commas, empty where none: one cancelled,
   or one changed on its own and so made an event of its own).
+- **A source** is a memory of type `source` in the organization realm's brain: `key` `source:<id>`, `text`
+  its name, labels `color` (one of the six), `realm` (`organization`), `hiddenOrganization` and `hiddenMine`
+  (the accounts that hid its schedules in that realm, their Owner-Keys joined by commas, empty where none
+  did) and `createdAt`.
+- **A schedule** is a memory of type `schedule` in the organization realm's brain: `key`
+  `schedule:<source id>:<item id>`, `text` its title, `validFrom` its start; labels `source`, `item`,
+  `start`, `end` and `allDay` (as an event's), `link`, `assignee` (an account's Owner-Key, empty where
+  none), `realm` (`organization`) and `createdAt`. A removed schedule is moved to `done`.
 - **Local times** are the wall clock of the time zone the calendar unit's host keeps; `validFrom` is the
   start read in that zone. A daily or weekly event repeats on the same wall-clock time; a monthly or yearly
   one on the same day of the month, skipping a month that has no such day.
@@ -46,6 +54,31 @@ names the realm it reads or writes.
   memory to `done` with the reason; nothing is deleted. The calendar reads the brain by `type`, the realm
   and `order=validFrom`, pages through, and keeps what it read in its cache, which the brain's event
   stream (`memory.written`, `memory.moved`) refreshes.
+
+## Received schedules
+
+The owner's words: the calendar shows everything the platform's other units hold as schedules and plans,
+and knows nothing of those units; they use the calendar's API.
+
+```mermaid
+flowchart TD
+  U[A unit with dated items] -->|writes, deletes, sends its whole set| A[Calendar API under its source]
+  A --> B[Organization brain: source and schedule memories]
+  B --> O[Organization realm: every schedule]
+  B --> M[Mine realm: the schedules assigned to the account]
+```
+
+- **A source is data.** A unit pushes its dated items under a source id of its own choosing, each item by
+  its own id, with a title, a start and an end, a link to where the item is opened and an assignee where it
+  has one. The calendar holds no list of units and no branch for any of them: every source is read,
+  written and shown the same way, and a new unit needs nothing of the calendar's but the API.
+- **Kept once.** A schedule is kept once, in the organization realm's brain; the brain is its master here as
+  for every event. The unit stays the master of the item itself, and the calendar never writes back.
+- **Where it stands.** Every schedule stands in the organization realm. One whose assignee is an account
+  also stands in that account's own realm, read from the same memory rather than copied into the
+  account's brain, so the two realms' brains stay apart.
+- **Read-only.** A schedule is changed only by its unit: the screen never moves, stretches, edits or
+  cancels one, and a schedule is never told as an alarm.
 
 ## Alarms
 
@@ -78,6 +111,18 @@ The console screen follows the Nuxt UI calendar template (day, week, month and y
 and resize, a popover to edit, a quick natural-language entry, colour-coded calendars with visibility, a
 mini calendar), stood as a console bundle under the sidebar entry 캘린더 (bmo-ui's console plugin contract;
 `docs/api.md`, 「Console」). The sidebar lists 내 일정 and 조직 일정 calendars apart; one grid shows both.
+
+Received schedules stand on the same grid as layers, one for each source in each realm:
+
+- **Layers.** Under each realm's calendars the sidebar lists every source as a layer, by its name and
+  colour, marked as received; each is shown or hidden for the reader's account alone, in that realm
+  alone, a mark spinning beside it while the change is sent. The 조직 일정 layer of a source carries all
+  its schedules, the 내 일정 layer those assigned to the reader.
+- **One row each.** Where an item stands in both shown layers, the grid draws it once, as the reader's own.
+- **Drawn as an event, read-only.** A schedule is drawn as an event is, in its source's colour with its
+  realm's mark and a mark that it is received; it is never dragged, stretched or opened in a form, and a
+  held finger opens none of the calendar's menus on it. It is a link: a press, or Enter on it, opens the
+  item it stands for, a console path in the console and an address in a new tab.
 
 The screen's own row is its toolbar, directly under the top bar. Nothing but the screen's name and mark
 stands beside the title in the top bar, whether the console draws that bar or, on the unit's own app, the

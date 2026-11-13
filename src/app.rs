@@ -9,11 +9,11 @@ use serde_json::Value;
 use crate::cache::{Cache, Changed, Held, RealmKey};
 use crate::error::ApiError;
 use crate::events::Events;
-use crate::model::{CALENDAR_TYPE, EVENT_TYPE, Memory};
+use crate::model::Memory;
 use crate::peers::{self, AGAIN, BrainCalls, BrainRow, CallFault};
 use crate::settings::Settings;
 use crate::store::Store;
-use crate::wire::{CalendarChanged, EventChanged};
+use crate::wire::{CalendarChanged, EventChanged, ScheduleChanged, SourceChanged};
 
 /// The service's state, shared by every route and task.
 pub struct App {
@@ -28,6 +28,8 @@ pub struct App {
   pub realm_lock: tokio::sync::Mutex<()>,
   /// One beat at a time.
   pub beat_lock: tokio::sync::Mutex<()>,
+  /// One write of sources and schedules at a time, so two sets of a source never interleave.
+  pub schedule_lock: tokio::sync::Mutex<()>,
 }
 
 impl App {
@@ -41,6 +43,7 @@ impl App {
       unready: Mutex::new(Some("the brain has not been read yet".to_owned())),
       realm_lock: tokio::sync::Mutex::new(()),
       beat_lock: tokio::sync::Mutex::new(()),
+      schedule_lock: tokio::sync::Mutex::new(()),
     })
   }
 
@@ -146,11 +149,13 @@ impl App {
     Ok(())
   }
 
-  /// A realm's live calendars and events read whole and taken in.
+  /// A realm's live memories of every type it holds read whole and taken in.
   async fn read_realm(&self, realm: &RealmKey, brain: i64) -> Result<(), CallFault> {
     let calls = self.brain()?;
-    let mut memories = calls.memories(brain, CALENDAR_TYPE).await?;
-    memories.extend(calls.memories(brain, EVENT_TYPE).await?);
+    let mut memories = Vec::new();
+    for kind in realm.kinds() {
+      memories.extend(calls.memories(brain, kind).await?);
+    }
     for memory in &memories {
       self.take_in(realm, memory);
     }
@@ -182,6 +187,12 @@ impl App {
         },
         account,
       ),
+      Some(Changed::Source(source_id)) => {
+        self.events.publish("source.changed", SourceChanged { source_id }, None)
+      }
+      Some(Changed::Schedule(source_id, item_id)) => {
+        self.events.publish("schedule.changed", ScheduleChanged { source_id, item_id }, None)
+      }
       None => {}
     }
   }

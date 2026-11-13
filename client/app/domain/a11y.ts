@@ -39,11 +39,13 @@ export function eventWhen(t: Translate, event: Pick<CalendarEvent, "start" | "en
   return `${formatMonthDay(start)} ${formatTime(start)}~${formatMonthDay(end)} ${formatTime(end)}`;
 }
 
-/** An event's name to a reader who does not see it: its title, when, its calendar and its repeat. */
-export function eventName(t: Translate, event: Pick<CalendarEvent, "title" | "start" | "end" | "allDay" | "repeat">, calendar: string | undefined): string {
+/** An event's name to a reader who does not see it: its title, when, its calendar or source, whether it was
+ *  received, and its repeat. */
+export function eventName(t: Translate, event: Pick<CalendarEvent, "title" | "start" | "end" | "allDay" | "repeat" | "origin">, calendar: string | undefined): string {
   const parts = [event.title || t("calendar.label.untitled"), eventWhen(t, event)];
 
   if (calendar) parts.push(calendar);
+  if (event.origin) parts.push(t("calendar.label.received"));
 
   const repeat = REPEAT_CHOICES.find((choice) => choice.value === event.repeat);
 

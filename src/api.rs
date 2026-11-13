@@ -1,6 +1,6 @@
 //! The routes (`docs/api.md`): who calls (the service token or the console's credential with the reader's key
 //! and role), the realms, the calendars, the events, the alarms, the beat, the event stream, the console face
-//! and the health.
+//! and the health; the sources and schedules other units push stand in their own module.
 
 use std::convert::Infallible;
 use std::sync::Arc;
@@ -31,6 +31,7 @@ use crate::model::{
   parse_local, skipped, starts_between, valid_id,
 };
 use crate::peers;
+use crate::schedules;
 use crate::wire::{
   AccountQuery, Alarm, AlarmMoment, AlarmsQuery, Calendar, CalendarChange, CancelQuery, Color, Event,
   EventChange, EventsQuery, Health, NewCalendar, NewEvent, Page, Realm, Repeat, SpanQuery, Tell, Writers,
@@ -42,7 +43,7 @@ pub const SPAN_DAYS: i64 = 92;
 /// How often a comment line keeps a stream open.
 const KEEP_OPEN: StdDuration = StdDuration::from_secs(15);
 
-type Answer<T> = Result<T, ApiError>;
+pub(crate) type Answer<T> = Result<T, ApiError>;
 
 /// The service as the routes see it: its state and its console face, where one is built.
 #[derive(Clone)]
@@ -63,7 +64,8 @@ pub fn router(served: Served) -> Router {
     )
     .route("/{realm}/events", get(list_events).post(create_event))
     .route("/{realm}/events/{eventId}", get(read_event).patch(change_event).delete(cancel_event))
-    .route("/{realm}/alarms", get(list_alarms));
+    .route("/{realm}/alarms", get(list_alarms))
+    .merge(schedules::routes());
   let mut routes = Router::new().route("/health", get(health)).route("/beats", post(beats));
   match &served.face {
     Some(face) => routes = routes.merge(face.guard_screens(screens)).merge(face.router()),
@@ -103,13 +105,13 @@ fn header_text<'a>(headers: &'a HeaderMap, name: &str) -> Option<&'a str> {
 
 /// Whose credential a call carries.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum Credential {
+pub(crate) enum Credential {
   Service,
   Console,
 }
 
 /// The credential the call carries: the service's or the console's, else 401.
-fn credential(app: &App, headers: &HeaderMap) -> Answer<Credential> {
+pub(crate) fn credential(app: &App, headers: &HeaderMap) -> Answer<Credential> {
   let given = bearer(headers).ok_or_else(ApiError::unauthorized)?;
   let server = &app.settings.server.token;
   let console = &app.settings.console.token;
@@ -177,13 +179,13 @@ async fn account_of(app: &App, caller: &Caller) -> Answer<Option<String>> {
 }
 
 /// A realm asked for: its key and the account the call acts for.
-struct Asked {
-  realm: RealmKey,
-  account: Option<String>,
+pub(crate) struct Asked {
+  pub(crate) realm: RealmKey,
+  pub(crate) account: Option<String>,
   caller: Caller,
 }
 
-async fn asked(
+pub(crate) async fn asked(
   app: &App,
   headers: &HeaderMap,
   realm: &str,
@@ -207,7 +209,7 @@ async fn asked(
   })
 }
 
-fn actor(asked: &Asked) -> String {
+pub(crate) fn actor(asked: &Asked) -> String {
   asked
     .account
     .as_ref()
@@ -215,16 +217,16 @@ fn actor(asked: &Asked) -> String {
     .unwrap_or_else(|| "calendar".to_owned())
 }
 
-fn query<T: DeserializeOwned>(given: Result<Query<T>, QueryRejection>) -> Answer<T> {
+pub(crate) fn query<T: DeserializeOwned>(given: Result<Query<T>, QueryRejection>) -> Answer<T> {
   given.map(|Query(query)| query).map_err(|why| ApiError::bad_request(why.body_text()))
 }
 
-fn body<T: DeserializeOwned>(bytes: &Bytes) -> Answer<T> {
+pub(crate) fn body<T: DeserializeOwned>(bytes: &Bytes) -> Answer<T> {
   serde_json::from_slice(bytes)
     .map_err(|why| ApiError::bad_request(format!("The body does not read: {why}")))
 }
 
-fn json_answer(status: StatusCode, value: impl serde::Serialize) -> Response {
+pub(crate) fn json_answer(status: StatusCode, value: impl serde::Serialize) -> Response {
   (status, Json(value)).into_response()
 }
 
@@ -364,7 +366,7 @@ async fn list_calendars(
   }))
 }
 
-fn one_line(text: &str, what: &str) -> Answer<String> {
+pub(crate) fn one_line(text: &str, what: &str) -> Answer<String> {
   let text = text.trim();
   if text.is_empty() || text.contains('\n') {
     return Err(ApiError::bad_request(format!("The {what} is blank or more than one line.")));
@@ -492,7 +494,7 @@ async fn retire_calendar(
 // Events
 
 /// A span read from two local datetimes, at most 92 days long.
-fn span(start: &str, end: &str) -> Answer<(NaiveDateTime, NaiveDateTime)> {
+pub(crate) fn span(start: &str, end: &str) -> Answer<(NaiveDateTime, NaiveDateTime)> {
   let start = parse_local(start).ok_or_else(|| ApiError::bad_request("start is no local ISO datetime"))?;
   let end = parse_local(end).ok_or_else(|| ApiError::bad_request("end is no local ISO datetime"))?;
   if end <= start || end - start > Duration::days(SPAN_DAYS) {

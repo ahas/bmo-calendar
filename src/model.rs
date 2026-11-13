@@ -7,7 +7,9 @@ use std::collections::BTreeMap;
 use chrono::{Datelike, Duration, Local, LocalResult, Months, NaiveDate, NaiveDateTime, TimeZone};
 use serde::{Deserialize, Serialize};
 
-use crate::wire::{Alarm, Calendar, Color, Event, Realm, Repeat, Tell, Writers};
+use crate::wire::{
+  Alarm, Calendar, Color, Event, Realm, Repeat, Schedule, ScheduleWrite, Source, Tell, Writers,
+};
 
 /// The labels of a memory: the caller's own metadata.
 pub type Labels = BTreeMap<String, String>;
@@ -16,6 +18,13 @@ pub type Labels = BTreeMap<String, String>;
 pub const CALENDAR_TYPE: &str = "calendar";
 /// The memory type an event is kept as.
 pub const EVENT_TYPE: &str = "event";
+/// The memory type a source is kept as.
+pub const SOURCE_TYPE: &str = "source";
+/// The memory type a received schedule is kept as.
+pub const SCHEDULE_TYPE: &str = "schedule";
+
+/// The longest assignee a schedule names, in characters: the longest Owner-Key a call carries.
+const ASSIGNEE_CHARS: usize = 200;
 
 /// The shape of a local datetime.
 const LOCAL_SHAPE: &str = "%Y-%m-%dT%H:%M:%S";
@@ -45,12 +54,15 @@ impl Memory {
     matches!(self.status.as_str(), "active" | "pending")
   }
 
-  /// The calendar's or event's own id, the key less its type's prefix.
+  /// The calendar's, event's, source's or schedule's own id, the key less its type's prefix; a schedule's is
+  /// its source's id and its item's, joined by a colon.
   pub fn own_id(&self) -> Option<&str> {
     let key = self.key.as_deref()?;
     match self.kind.as_str() {
       CALENDAR_TYPE => key.strip_prefix("calendar:"),
       EVENT_TYPE => key.strip_prefix("event:"),
+      SOURCE_TYPE => key.strip_prefix("source:"),
+      SCHEDULE_TYPE => key.strip_prefix("schedule:"),
       _ => None,
     }
   }
@@ -68,6 +80,21 @@ pub fn calendar_key(id: &str) -> String {
 /// The key an event is kept under.
 pub fn event_key(id: &str) -> String {
   format!("event:{id}")
+}
+
+/// The key a source is kept under.
+pub fn source_key(id: &str) -> String {
+  format!("source:{id}")
+}
+
+/// A schedule's own id: its source's and its item's.
+pub fn schedule_id(source: &str, item: &str) -> String {
+  format!("{source}:{item}")
+}
+
+/// The key a schedule is kept under.
+pub fn schedule_key(source: &str, item: &str) -> String {
+  format!("schedule:{}", schedule_id(source, item))
 }
 
 /// Whether an id the caller names can stand in a key: 1 to 64 letters, digits, `-` and `_`.
@@ -151,8 +178,13 @@ pub fn label_word<T: Serialize>(value: &T) -> String {
 
 /// The accounts a `hidden` label names.
 pub fn hidden_accounts(memory: &Memory) -> Vec<String> {
+  accounts_in(memory, "hidden")
+}
+
+/// The accounts a label lists, joined by commas.
+pub fn accounts_in(memory: &Memory, label: &str) -> Vec<String> {
   memory
-    .label("hidden")
+    .label(label)
     .split(',')
     .filter(|key| !key.is_empty())
     .map(str::to_owned)
@@ -332,4 +364,128 @@ pub fn is_occurrence(
   occurrence: NaiveDateTime,
 ) -> bool {
   starts_between(start, repeat, skip, occurrence, occurrence + Duration::seconds(1)).contains(&occurrence)
+}
+
+/// The label a source keeps the accounts in that hid its schedules in a realm.
+pub fn source_hidden_label(realm: Realm) -> &'static str {
+  match realm {
+    Realm::Mine => "hiddenMine",
+    Realm::Organization => "hiddenOrganization",
+  }
+}
+
+/// A source read from its memory, `hidden` for the account named in the realm named.
+pub fn source_of(memory: &Memory, realm: Realm, account: Option<&str>) -> Option<Source> {
+  let hidden = accounts_in(memory, source_hidden_label(realm));
+  Some(Source {
+    id: memory.own_id()?.to_owned(),
+    name: memory.text.clone(),
+    color: word(memory.label("color")).unwrap_or(Color::Secondary),
+    hidden: account.is_some_and(|account| hidden.iter().any(|key| key == account)),
+    created_at: number(memory, "createdAt"),
+  })
+}
+
+/// The labels of a source: its colour, the moment it was made and the accounts that hid it in each realm,
+/// the standing memory's kept where one stands.
+pub fn source_labels(color: Color, created_at: i64, standing: Option<&Memory>) -> Labels {
+  let mut labels = Labels::new();
+  labels.insert("color".into(), label_word(&color));
+  labels.insert("realm".into(), Realm::Organization.word().into());
+  for realm in [Realm::Mine, Realm::Organization] {
+    let name = source_hidden_label(realm);
+    let hidden = standing.map(|memory| memory.label(name)).unwrap_or("");
+    labels.insert(name.into(), hidden.to_owned());
+  }
+  labels.insert("createdAt".into(), created_at.to_string());
+  labels
+}
+
+/// Why a schedule written does not stand: a field outside its shape, or its end not after its start.
+#[derive(Debug)]
+pub enum ScheduleFault {
+  Shape(String),
+  EndBeforeStart,
+}
+
+/// Whether a schedule written stands: its title one line and not blank, its end after its start, its link a
+/// console path or an `http` or `https` address, its assignee no longer than an Owner-Key.
+pub fn check_schedule(write: &ScheduleWrite) -> Result<(), ScheduleFault> {
+  let shape = |why: &str| Err(ScheduleFault::Shape(why.to_owned()));
+  if write.title.trim().is_empty() || write.title.contains('\n') {
+    return shape("A title is one line, not blank.");
+  }
+  let (Some(start), Some(end)) = (parse_local(&write.start), parse_local(&write.end)) else {
+    return shape("start and end are local ISO datetimes.");
+  };
+  if !valid_link(&write.link) {
+    return shape("A link is a console path or an http or https address.");
+  }
+  if write
+    .assignee
+    .as_deref()
+    .is_some_and(|assignee| assignee.chars().count() > ASSIGNEE_CHARS)
+  {
+    return shape("An assignee is at most 200 characters.");
+  }
+  if end <= start {
+    return Err(ScheduleFault::EndBeforeStart);
+  }
+  Ok(())
+}
+
+/// Whether a link opens somewhere: a console path, one `/` and then the path, or an absolute `http` or
+/// `https` address.
+pub fn valid_link(link: &str) -> bool {
+  if link.chars().any(|c| c.is_whitespace() || c.is_control()) {
+    return false;
+  }
+  if link.starts_with('/') {
+    // A second slash or a backslash after the first is read by a browser as another site's address.
+    return !link.starts_with("//") && !link.starts_with("/\\");
+  }
+  reqwest::Url::parse(link).is_ok_and(|url| matches!(url.scheme(), "http" | "https") && url.has_host())
+}
+
+/// The assignee a write names, none where it names an empty one.
+fn assignee_of(write: &ScheduleWrite) -> Option<&str> {
+  write.assignee.as_deref().map(str::trim).filter(|assignee| !assignee.is_empty())
+}
+
+/// The memory text of a schedule: its title.
+pub fn schedule_text(write: &ScheduleWrite) -> String {
+  write.title.trim().to_owned()
+}
+
+/// The labels of a schedule, `createdAt` the moment its first version was written.
+pub fn schedule_labels(source: &str, item: &str, write: &ScheduleWrite, created_at: i64) -> Labels {
+  let mut labels = Labels::new();
+  labels.insert("source".into(), source.to_owned());
+  labels.insert("item".into(), item.to_owned());
+  labels.insert("start".into(), write.start.clone());
+  labels.insert("end".into(), write.end.clone());
+  labels.insert("allDay".into(), write.all_day.unwrap_or(false).to_string());
+  labels.insert("link".into(), write.link.clone());
+  labels.insert("assignee".into(), assignee_of(write).unwrap_or("").to_owned());
+  labels.insert("realm".into(), Realm::Organization.word().into());
+  labels.insert("createdAt".into(), created_at.to_string());
+  labels
+}
+
+/// A schedule read from its memory, as it is read in a realm.
+pub fn schedule_of(memory: &Memory, realm: Realm) -> Schedule {
+  let assignee = memory.label("assignee");
+  Schedule {
+    source_id: memory.label("source").to_owned(),
+    item_id: memory.label("item").to_owned(),
+    realm,
+    title: memory.text.clone(),
+    start: memory.label("start").to_owned(),
+    end: memory.label("end").to_owned(),
+    all_day: memory.label("allDay") == "true",
+    link: memory.label("link").to_owned(),
+    assignee: (!assignee.is_empty()).then(|| assignee.to_owned()),
+    created_at: number(memory, "createdAt"),
+    changed_at: memory.created_at,
+  }
 }

@@ -291,7 +291,7 @@ useCalendarStream(
   SERVICE,
   (event) => {
     if (event.kind === "alarm.told") void ring(event.data);
-    else gatherRefresh(event.kind === "calendar.changed");
+    else gatherRefresh(event.kind === "calendar.changed" || event.kind === "source.changed");
   },
   () => gatherRefresh(true)
 );
