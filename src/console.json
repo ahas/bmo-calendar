@@ -9,5 +9,5 @@
   "ownerKey": true,
   "events": true,
   "websocket": false,
-  "pushKinds": ["alarm.told"]
+  "pushKinds": ["alarm.told", "booking.decided"]
 }

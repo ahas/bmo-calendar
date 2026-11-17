@@ -1,5 +1,5 @@
-//! The units the calendar calls (`docs/api.md`, 「Calls the calendar makes」): the brain, the receiver and the
-//! account service, each found afresh for every call from the settings or the data root's files, and called
+//! The units the calendar calls (`docs/api.md`, 「Calls the calendar makes」): the brain, the receiver, the
+//! account service and agency, each found afresh for every call from the settings or the data root's files, and called
 //! with no clock on the answer. A call whose connection is refused is asked again two seconds later.
 
 use std::collections::BTreeMap;
@@ -164,6 +164,35 @@ pub fn accounts(settings: &Settings) -> Result<Reach, CallFault> {
   let text =
     |key: &str| server.and_then(|server| server.get(key)).and_then(|v| v.as_str()).map(str::to_owned);
   found("account service", text("listen").map(|listen| address(&listen)), text("token"))
+}
+
+/// Agency's control port the data root's `env/agency.env` stands for where it names none.
+const AGENCY_PORT: &str = "3220";
+
+/// Agency: the settings', else the control port of the data root's `env/agency.env` on the loopback and its
+/// token, `AGENCY_CONTROL_TOKEN` or the file `AGENCY_CONTROL_TOKEN_FILE` names.
+pub fn agency(settings: &Settings) -> Result<Reach, CallFault> {
+  if let Some(reach) = named("agency", &settings.agency) {
+    return Ok(reach);
+  }
+  let file = env_file(&settings.data_root().join("env/agency.env"));
+  let port = file.get("AGENCY_CONTROL_PORT").map_or(AGENCY_PORT, String::as_str);
+  let token = file.get("AGENCY_CONTROL_TOKEN").cloned().or_else(|| {
+    let path = file.get("AGENCY_CONTROL_TOKEN_FILE")?;
+    let token = std::fs::read_to_string(path).ok()?.trim().to_owned();
+    (!token.is_empty()).then_some(token)
+  });
+  found("agency", Some(format!("http://127.0.0.1:{port}")), token)
+}
+
+/// A path segment, percent-encoded.
+fn segment(text: &str) -> String {
+  let mut url =
+    reqwest::Url::parse("http://segment/").unwrap_or_else(|_| unreachable!("a fixed address reads"));
+  if let Ok(mut segments) = url.path_segments_mut() {
+    segments.push(text);
+  }
+  url.path().trim_start_matches('/').to_owned()
 }
 
 /// The one HTTP client every call shares, never through a proxy.
@@ -470,4 +499,109 @@ pub async fn owner_account(
 ) -> Result<Option<String>, CallFault> {
   let owner = owner(http, settings).await?;
   sender_user(http, settings, owner.sender_id).await
+}
+
+/// The account a tool session's holder acts for, as agency names its owner: a supervisor's `ownerAccount`, else
+/// a role agent's; none where agency names none.
+pub async fn holder_account(
+  http: &reqwest::Client,
+  settings: &Settings,
+  holder: &str,
+) -> Result<Option<String>, CallFault> {
+  let reach = agency(settings)?;
+  let path = format!("/supervisors/{}", segment(holder));
+  match call::<Value>(http, &reach, Method::GET, &path, &[], None).await {
+    Ok(supervisor) => return Ok(key_of(&supervisor["ownerAccount"])),
+    Err(fault) if fault.status() == Some(404) => {}
+    Err(fault) => return Err(fault),
+  }
+  let agents: Value = call(http, &reach, Method::GET, "/role-agents", &[], None).await?;
+  let Some(items) = agents["items"].as_array() else {
+    return Err(CallFault::Broken("agency's role agents do not read".into()));
+  };
+  Ok(
+    items
+      .iter()
+      .find(|agent| agent["name"].as_str() == Some(holder))
+      .and_then(|agent| key_of(&agent["ownerAccount"])),
+  )
+}
+
+/// A company as the account service names it: its unit id and its name.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CompanyRef {
+  pub id: String,
+  pub name: String,
+}
+
+/// The company an account stands in, where it stands in one.
+pub async fn company_of(
+  http: &reqwest::Client,
+  settings: &Settings,
+  user: &str,
+) -> Result<Option<CompanyRef>, CallFault> {
+  let path = format!("/users/{}/unit", segment(user));
+  match call::<Value>(http, &accounts(settings)?, Method::GET, &path, &[], None).await {
+    Ok(answer) => Ok(key_of(&answer["company"]["id"]).map(|id| CompanyRef {
+      name: answer["company"]["name"].as_str().map_or_else(|| id.clone(), str::to_owned),
+      id,
+    })),
+    Err(fault) if fault.status() == Some(404) => Ok(None),
+    Err(fault) => Err(fault),
+  }
+}
+
+/// Every company the account service holds, asked as the administrator who calls.
+pub async fn companies(
+  http: &reqwest::Client,
+  settings: &Settings,
+  owner_key: &str,
+) -> Result<Vec<CompanyRef>, CallFault> {
+  let reach = accounts(settings)?;
+  let url = format!("{}/units", reach.address);
+  let response = send(
+    || {
+      http
+        .get(&url)
+        .bearer_auth(&reach.token)
+        .header("Owner-Key", owner_key)
+        .header("Owner-Role", "administrator")
+    },
+    reach.name,
+  )
+  .await?;
+  let answer: Value = answered(response, reach.name).await?;
+  Ok(
+    answer["units"]
+      .as_array()
+      .map(Vec::as_slice)
+      .unwrap_or_default()
+      .iter()
+      .filter(|unit| unit["parent"].is_null())
+      .filter_map(|unit| {
+        let id = key_of(&unit["id"])?;
+        Some(CompanyRef {
+          name: unit["name"].as_str().map_or_else(|| id.clone(), str::to_owned),
+          id,
+        })
+      })
+      .collect(),
+  )
+}
+
+/// Whether an account heads a unit, or one above it.
+pub async fn heads(
+  http: &reqwest::Client,
+  settings: &Settings,
+  unit: &str,
+  user: &str,
+) -> Result<bool, CallFault> {
+  let unit = unit.parse::<i64>().map_or_else(|_| json!(unit), |number| json!(number));
+  let user = user.parse::<i64>().map_or_else(|_| json!(user), |number| json!(number));
+  let body = json!({ "unit": unit, "user": user });
+  match call::<Value>(http, &accounts(settings)?, Method::POST, "/checks/unit", &[], Some(&body)).await {
+    Ok(answer) => Ok(answer["allowed"].as_bool().unwrap_or(false)),
+    Err(fault) if fault.status() == Some(404) => Ok(false),
+    Err(fault) => Err(fault),
+  }
 }

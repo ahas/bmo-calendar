@@ -36,6 +36,15 @@ pub const MEMBER_WITH_ROOM: &str = "2";
 pub const MEMBER_ROOM: i64 = 200;
 /// A member with no room the receiver holds.
 pub const MEMBER_WITHOUT_ROOM: &str = "3";
+/// A member of another company.
+pub const OTHER_MEMBER: &str = "4";
+/// An account standing in no company.
+pub const NO_COMPANY: &str = "5";
+/// The company of the owner and the first members.
+pub const COMPANY: &str = "10";
+/// A supervisor agency names member 2 the owner of, and one of no account.
+pub const MEMBER_SUPERVISOR: &str = "supervisor-b";
+pub const NO_ACCOUNT_SUPERVISOR: &str = "supervisor-none";
 
 /// What the stand-ins hold and were asked.
 #[derive(Default)]
@@ -345,10 +354,58 @@ async fn user(Path(user): Path<String>) -> Response {
     OWNER_ACCOUNT => ("owner", vec![OWNER_SENDER]),
     MEMBER_WITH_ROOM => ("member-a", vec![MEMBER_ROOM]),
     MEMBER_WITHOUT_ROOM => ("member-b", vec![300]),
+    OTHER_MEMBER => ("member-c", vec![400]),
+    NO_COMPANY => ("member-d", vec![600]),
     _ => return refused(StatusCode::NOT_FOUND, "not-found"),
   };
   Json(json!({ "user": user, "name": name, "administrator": user == OWNER_ACCOUNT, "senders": senders }))
     .into_response()
+}
+
+/// The unit and company an account stands in: the owner and the first members in one company, member 4 in
+/// another, member 5 in none.
+async fn user_unit(Path(user): Path<String>) -> Response {
+  let (unit, company) = match user.as_str() {
+    OWNER_ACCOUNT | MEMBER_WITH_ROOM => {
+      (json!({ "id": 10, "name": "Company A" }), json!({ "id": 10, "name": "Company A" }))
+    }
+    MEMBER_WITHOUT_ROOM => {
+      (json!({ "id": 11, "name": "Team A" }), json!({ "id": 10, "name": "Company A" }))
+    }
+    OTHER_MEMBER => (json!({ "id": 20, "name": "Company B" }), json!({ "id": 20, "name": "Company B" })),
+    _ => return refused(StatusCode::NOT_FOUND, "not-found"),
+  };
+  Json(json!({ "user": user, "unit": unit, "company": company, "path": [company, unit] })).into_response()
+}
+
+async fn units(headers: axum::http::HeaderMap) -> Response {
+  if headers.get("owner-role").and_then(|role| role.to_str().ok()) != Some("administrator") {
+    return refused(StatusCode::FORBIDDEN, "forbidden");
+  }
+  Json(json!({ "units": [
+    { "id": 10, "name": "Company A", "heads": [], "members": [] },
+    { "id": 20, "name": "Company B", "heads": [], "members": [] },
+    { "id": 11, "name": "Team A", "parent": 10, "heads": [], "members": [] },
+  ] }))
+  .into_response()
+}
+
+/// Member 2 heads company 10.
+async fn unit_check(Json(body): Json<Value>) -> Json<Value> {
+  let allowed = body["unit"] == 10 && body["user"] == 2;
+  Json(json!({ "allowed": allowed, "grant": "organization:10#manage" }))
+}
+
+async fn supervisor(Path(name): Path<String>) -> Response {
+  match name.as_str() {
+    MEMBER_SUPERVISOR => Json(json!({ "name": name, "ownerAccount": 2 })).into_response(),
+    NO_ACCOUNT_SUPERVISOR => Json(json!({ "name": name, "ownerAccount": null })).into_response(),
+    _ => refused(StatusCode::NOT_FOUND, "not-found"),
+  }
+}
+
+async fn role_agents() -> Json<Value> {
+  Json(json!({ "items": [{ "name": "role-agent", "role": "voyager", "ownerAccount": 3 }], "more": false }))
 }
 
 /// The stand-ins, answering on a fresh loopback port.
@@ -371,6 +428,11 @@ pub async fn stand() -> Stand {
     .route("/instructions", post(instruct))
     .route("/senders/{sender}/user", get(sender_user))
     .route("/users/{user}", get(user))
+    .route("/users/{user}/unit", get(user_unit))
+    .route("/units", get(units))
+    .route("/checks/unit", post(unit_check))
+    .route("/supervisors/{name}", get(supervisor))
+    .route("/role-agents", get(role_agents))
     .with_state(stand.clone());
   tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
   stand
@@ -406,7 +468,8 @@ pub fn settings(stand: &Stand, folder: &std::path::Path) -> Settings {
      [store]\npath = \"{store}\"\n\
      [brain]\naddress = \"{peer}\"\ntoken = \"{PEER_TOKEN}\"\n\
      [receiver]\naddress = \"{peer}\"\ntoken = \"{PEER_TOKEN}\"\n\
-     [accounts]\naddress = \"{peer}\"\ntoken = \"{PEER_TOKEN}\"\n",
+     [accounts]\naddress = \"{peer}\"\ntoken = \"{PEER_TOKEN}\"\n\
+     [agency]\naddress = \"{peer}\"\ntoken = \"{PEER_TOKEN}\"\n",
     root = folder.join("data").display(),
     bundle = folder.join("bundle").display(),
     store = folder.join("data/calendar/calendar.db").display(),

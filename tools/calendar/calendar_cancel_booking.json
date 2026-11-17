@@ -1,0 +1,21 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "bookingId"
+  ],
+  "properties": {
+    "bookingId": {
+      "type": "string",
+      "description": "The booking's id, as a booking or a listing names it."
+    },
+    "occurrence": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}$",
+      "description": "One occurrence of a repeating booking, by its local start; the cancellation reaches that occurrence alone."
+    }
+  }
+}

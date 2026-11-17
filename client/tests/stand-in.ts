@@ -1,13 +1,14 @@
 import { ofetch } from "ofetch";
 
 import type { Call } from "../app/domain/api";
-import type { Calendar, CalendarEventRow, Realm, ScheduleRow, Source } from "../shared/types";
+import type { Booking, Calendar, CalendarEventRow, Realm, Resource, ScheduleRow, Source } from "../shared/types";
 
 // A stand-in of the calendar service's routes the screen calls (`docs/api.md`, 「Calendars」 and
 // 「Events」), served on the loopback for the length of a test: two realms, their calendars with a hidden
 // mark, events in spans answered in pages, every write idempotent on its id, and a calendar a write under
 // is refused `not-a-writer`; and each realm's sources and received schedules, as the realm's reads answer
-// them (「Sources and schedules」), a source's hidden mark refused where it is listed as refused.
+// them (「Sources and schedules」), a source's hidden mark refused where it is listed as refused; and the
+// company's resources and each realm's bookings of a span (「Resources and bookings」).
 
 export interface StandIn {
   url: string;
@@ -15,6 +16,8 @@ export interface StandIn {
   events: Record<Realm, CalendarEventRow[]>;
   sources: Record<Realm, Source[]>;
   schedules: Record<Realm, ScheduleRow[]>;
+  resources: Resource[];
+  bookings: Record<Realm, Booking[]>;
   /** Every call made, as `METHOD path?query`. */
   calls: string[];
   /** Calendars a write under is refused, as `realm:id`, and sources a hidden mark is refused for, as
@@ -26,10 +29,41 @@ export interface StandIn {
   call: Call;
 }
 
+/** The company every organization row of the stand-in stands in. */
+export const COMPANY = "company-a";
+
+export function resource(id: string, name: string, extra: Partial<Resource> = {}): Resource {
+  return { id, company: COMPANY, name, kind: "Meeting room", place: "Floor 1", seats: 4, approval: false, keepers: [], creator: "7", createdAt: 1, changedAt: 1, ...extra };
+}
+
+export function booking(realm: Realm, id: string, resourceId: string, start: string, end: string, extra: Partial<Booking> = {}): Booking {
+  return {
+    id,
+    realm,
+    company: COMPANY,
+    resourceId,
+    title: id,
+    start,
+    end,
+    allDay: false,
+    repeat: "none",
+    occurrence: null,
+    booker: "7",
+    state: "booked",
+    decidedBy: null,
+    decidedAt: null,
+    reason: null,
+    createdAt: 1,
+    changedAt: 1,
+    ...extra
+  };
+}
+
 export function calendar(realm: Realm, id: string, name: string, extra: Partial<Calendar> = {}): Calendar {
   return {
     id,
     realm,
+    company: realm === "mine" ? null : COMPANY,
     name,
     color: realm === "mine" ? "primary" : "info",
     writers: realm === "mine" ? null : "creator",
@@ -45,6 +79,7 @@ export function eventRow(realm: Realm, id: string, calendarId: string, start: st
   return {
     id,
     realm,
+    company: realm === "mine" ? null : COMPANY,
     calendarId,
     title: id,
     description: "",
@@ -67,7 +102,7 @@ export function source(id: string, extra: Partial<Source> = {}): Source {
 }
 
 export function scheduleRow(realm: Realm, sourceId: string, itemId: string, start: string, end: string, extra: Partial<ScheduleRow> = {}): ScheduleRow {
-  return { sourceId, itemId, realm, title: itemId, start, end, allDay: false, link: `/items/${itemId}`, assignee: null, createdAt: 1, changedAt: 1, ...extra };
+  return { sourceId, itemId, realm, company: COMPANY, title: itemId, start, end, allDay: false, link: `/items/${itemId}`, assignee: null, createdAt: 1, changedAt: 1, ...extra };
 }
 
 function refusal(status: number, code: string, error: string): Response {
@@ -79,6 +114,8 @@ interface Seed {
   events?: Partial<Record<Realm, CalendarEventRow[]>>;
   sources?: Partial<Record<Realm, Source[]>>;
   schedules?: Partial<Record<Realm, ScheduleRow[]>>;
+  resources?: Resource[];
+  bookings?: Partial<Record<Realm, Booking[]>>;
   pageSize?: number;
 }
 
@@ -88,6 +125,8 @@ export function startStandIn(seed: Seed = {}): StandIn {
     events: { mine: [...(seed.events?.mine ?? [])], organization: [...(seed.events?.organization ?? [])] },
     sources: { mine: [...(seed.sources?.mine ?? [])], organization: [...(seed.sources?.organization ?? [])] },
     schedules: { mine: [...(seed.schedules?.mine ?? [])], organization: [...(seed.schedules?.organization ?? [])] },
+    resources: [...(seed.resources ?? [])],
+    bookings: { mine: [...(seed.bookings?.mine ?? [])], organization: [...(seed.bookings?.organization ?? [])] },
     calls: [],
     refused: new Set(),
     pageSize: seed.pageSize ?? 100
@@ -140,6 +179,15 @@ export function startStandIn(seed: Seed = {}): StandIn {
         const end = url.searchParams.get("end")!;
 
         return Response.json({ items: state.schedules[realm].filter((row) => row.start < end && row.end > start), more: false });
+      }
+
+      if (parts[1] === "resources" && parts.length === 2 && request.method === "GET") return Response.json({ items: state.resources, more: false });
+
+      if (parts[1] === "bookings" && parts.length === 2 && request.method === "GET") {
+        const start = url.searchParams.get("start")!;
+        const end = url.searchParams.get("end")!;
+
+        return Response.json({ items: state.bookings[realm].filter((row) => row.start < end && row.end > start), more: false });
       }
 
       if (parts[1] === "events") {

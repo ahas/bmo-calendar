@@ -27,6 +27,8 @@ path = "calendar.db"
 [calendars]
 mine_name = "My calendar"
 organization_name = "Organization calendar"
+# The name the platform's own organization realm, which holds what belongs to no company, is listed by.
+platform_name = "Platform"
 
 # Each peer's base address and token where the data root's files are not to be read; empty, they are read.
 [brain]
@@ -38,5 +40,9 @@ address = ""
 token = ""
 
 [accounts]
+address = ""
+token = ""
+
+[agency]
 address = ""
 token = ""

@@ -36,7 +36,7 @@ export function useEventChange() {
     for (const field of FIELDS) if (before[field] !== after[field]) Object.assign(write, { [field]: after[field] });
 
     if (before.start !== after.start || before.end !== after.end) {
-      const series = await readEvent(before.realm, before.id);
+      const series = await readEvent(before.realm, before.id, before.company);
       const startShift = differenceInMinutes(fromLocalISO(after.start), fromLocalISO(before.start));
       const endShift = differenceInMinutes(fromLocalISO(after.end), fromLocalISO(before.end));
 

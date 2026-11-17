@@ -29,6 +29,7 @@ pub struct Settings {
   pub brain: Peer,
   pub receiver: Peer,
   pub accounts: Peer,
+  pub agency: Peer,
 }
 
 /// The HTTP server.
@@ -63,6 +64,8 @@ pub struct Store {
 pub struct Calendars {
   pub mine_name: String,
   pub organization_name: String,
+  /// The name the platform's own organization realm is listed by among the companies.
+  pub platform_name: String,
 }
 
 /// A peer named outright: its base address and token, or nothing where the data root's files are read.

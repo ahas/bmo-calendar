@@ -1,7 +1,7 @@
 import { onBeforeUnmount, onMounted } from "vue";
 import { relayAddress } from "bmo-ui/app/domain/relay";
 
-import type { Realm } from "../../shared/types";
+import type { BookingState, Realm } from "../../shared/types";
 
 // The calendar service's event stream as the screen reads it (`docs/api.md`, 「Events the calendar
 // publishes」), through the console's relay. The browser resumes it after the last event it read; where
@@ -15,13 +15,16 @@ const CALENDAR_DOMAIN = "calendar";
 export const CALENDAR_CHANGED = `${CALENDAR_DOMAIN}.changed` as const;
 
 export type CalendarStreamEvent =
-  | { kind: typeof CALENDAR_CHANGED; data: { realm: Realm; calendarId: string } }
-  | { kind: "event.changed"; data: { realm: Realm; eventId: string; occurrence: string | null } }
-  | { kind: "alarm.told"; data: { realm: Realm; eventId: string; occurrence: string; at: number } }
+  | { kind: typeof CALENDAR_CHANGED; data: { realm: Realm; company: string | null; calendarId: string } }
+  | { kind: "event.changed"; data: { realm: Realm; company: string | null; eventId: string; occurrence: string | null } }
+  | { kind: "alarm.told"; data: { realm: Realm; company: string | null; eventId: string; occurrence: string; at: number } }
   | { kind: "source.changed"; data: { sourceId: string } }
-  | { kind: "schedule.changed"; data: { sourceId: string; itemId: string } };
+  | { kind: "schedule.changed"; data: { company: string | null; sourceId: string; itemId: string } }
+  | { kind: "resource.changed"; data: { company: string; resourceId: string } }
+  | { kind: "booking.changed"; data: { company: string; bookingId: string; booker: string } }
+  | { kind: "booking.decided"; data: { company: string; bookingId: string; state: BookingState; title: string } };
 
-export const STREAM_KINDS = [CALENDAR_CHANGED, "event.changed", "alarm.told", "source.changed", "schedule.changed"] as const;
+export const STREAM_KINDS = [CALENDAR_CHANGED, "event.changed", "alarm.told", "source.changed", "schedule.changed", "resource.changed", "booking.changed", "booking.decided"] as const;
 
 // How long a stream the service refused waits before it is opened afresh.
 const REOPEN_MS = 3_000;

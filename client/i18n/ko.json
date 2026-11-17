@@ -51,7 +51,34 @@
       "writers": "쓰기 권한",
       "writers_administrator": "관리자만",
       "writers_creator": "관리자와 작성자",
-      "writers_everyone": "모두"
+      "writers_everyone": "모두",
+      "approval": "승인 필요",
+      "approval_needed": "승인 필요",
+      "booker": "예약자",
+      "booking": "예약",
+      "bookings": "예약",
+      "bookings_all": "전체",
+      "bookings_mine": "내 예약",
+      "company": "회사",
+      "keepers": "담당자",
+      "keepers_named": "담당자 {names}",
+      "kind": "종류",
+      "no_place": "위치 없음",
+      "own_company": "{name} (내 회사)",
+      "place": "위치",
+      "reason": "사유 (선택)",
+      "refusal_reason": "거부 사유: {reason}",
+      "requests": "요청",
+      "resource": "자원",
+      "resources": "자원",
+      "seats": "좌석",
+      "seats_count": "{n}석",
+      "seats_unit": "석",
+      "state": "상태",
+      "state_booked": "예약됨",
+      "state_refused": "거부됨",
+      "state_requested": "승인 대기",
+      "next_occurrence": "다음 {when}"
     },
     "action": {
       "add_calendar": "캘린더 추가",
@@ -65,7 +92,15 @@
       "refresh": "새로고침",
       "scope_all": "모든 반복",
       "scope_one": "이 일정만",
-      "today": "오늘"
+      "today": "오늘",
+      "add_resource": "자원 추가",
+      "back": "뒤로",
+      "book": "예약",
+      "booking_scope_one": "이 예약만",
+      "cancel_booking": "예약 취소",
+      "new_booking": "새 예약",
+      "refuse": "거부",
+      "retire": "삭제"
     },
     "aria": {
       "end_time": "종료 시각",
@@ -77,10 +112,24 @@
       "start_time": "시작 시각",
       "today": "오늘",
       "toolbar": "캘린더 툴바",
-      "view_named": "{view} 보기"
+      "view_named": "{view} 보기",
+      "approve_named": "{name} 승인",
+      "bookings_none": "예약 없음",
+      "bookings_toolbar": "예약 툴바",
+      "cancel_named": "{name} 예약 취소",
+      "edit_named": "{name} 수정",
+      "kind_named": "{kind} 종류 보기",
+      "refuse_named": "{name} 거부",
+      "remove_named": "{name} 제거",
+      "resource_bookings": "{name} 예약 {n}건",
+      "retire_named": "{name} 삭제",
+      "bookings_count": "예약 {n}건"
     },
     "placeholder": {
-      "quick_entry": "내일 오후 3시 치과"
+      "quick_entry": "내일 오후 3시 치과",
+      "keeper_keys": "계정 키",
+      "keeper_search": "이름 검색",
+      "kind": "회의실"
     },
     "status": {
       "loading": "불러오는 중…"
@@ -90,7 +139,20 @@
       "delete_calendar_effect": "이 캘린더의 일정도 함께 삭제됩니다.",
       "scope_cancel": "반복 일정을 삭제할까요?",
       "scope_change": "반복 일정을 변경할까요?",
-      "synced": "오프라인 변경 사항을 반영했습니다."
+      "synced": "오프라인 변경 사항을 반영했습니다.",
+      "booking_approved": "예약이 승인되었습니다.",
+      "booking_cancel": "예약을 취소할까요?",
+      "booking_meets": "이 시간에 다른 예약이 있습니다.",
+      "booking_refused": "예약이 거부되었습니다.",
+      "booking_scope_cancel": "반복 예약을 취소할까요?",
+      "booking_scope_change": "반복 예약을 변경할까요?",
+      "no_bookings": "예약이 없습니다.",
+      "no_requests": "승인 대기 중인 요청이 없습니다.",
+      "no_resources": "자원이 없습니다.",
+      "refuse_booking": "예약을 거부할까요?",
+      "retire_resource": "자원을 삭제할까요?",
+      "retire_resource_effect": "이 자원의 예약도 함께 취소됩니다.",
+      "booking_repeat_whole": "반복 변경은 모든 반복에 적용됩니다."
     },
     "error": {
       "calendars_failed": "캘린더를 불러오지 못했습니다.",
@@ -101,12 +163,33 @@
       "no_time": "시작과 종료를 입력해 주세요.",
       "not_a_writer": "이 캘린더에 쓸 권한이 없습니다.",
       "sync_failed": "오프라인 변경 사항 하나를 반영하지 못했습니다.",
-      "unknown_calendar": "없는 캘린더입니다."
+      "unknown_calendar": "없는 캘린더입니다.",
+      "booking_not_a_writer": "변경할 권한이 없습니다.",
+      "bookings_failed": "예약을 불러오지 못했습니다.",
+      "no_company": "소속 회사가 없습니다.",
+      "no_keepers": "승인이 필요한 자원은 담당자가 있어야 합니다.",
+      "no_kind": "종류를 입력해 주세요.",
+      "no_title": "제목을 입력해 주세요.",
+      "not_a_keeper": "이 자원의 담당자가 아닙니다.",
+      "not_an_occurrence": "반복에 없는 날짜입니다.",
+      "not_in_company": "담당자는 같은 회사 사람이어야 합니다.",
+      "not_requested": "이미 결정된 예약입니다.",
+      "overlap": "다른 예약과 시간이 겹칩니다.",
+      "resources_failed": "자원을 불러오지 못했습니다.",
+      "span_too_long": "기간이 너무 깁니다.",
+      "unknown_resource": "없는 자원입니다.",
+      "overlap_named": "{title} 예약과 시간이 겹칩니다."
     },
     "notice": {
       "alarm": {
         "told": {
           "title": "일정 알림",
+          "body": "{title}"
+        }
+      },
+      "booking": {
+        "decided": {
+          "title": "예약 결과",
           "body": "{title}"
         }
       }

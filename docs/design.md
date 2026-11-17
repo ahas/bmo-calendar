@@ -9,19 +9,66 @@ the marks of which alarms it has already told.
 
 ## Two realms, kept apart
 
-The owner's words: 「일정은 조직 공유가 가능했으면 함」 and 「내 일정과 조직 일정의 분리 필요」.
+The owner's words: 「일정은 조직 공유가 가능했으면 함」 and 「내 일정과 조직 일정의 분리 필요」. The company is
+the unit of isolation (`STRUCTURE.md`, 「Accounts, companies and units」): nothing of one company is read
+from another.
 
 - **Mine (`mine`):** each console account's own calendars. Only that account reads and writes them; its
   alarms reach that person.
-- **Organization (`organization`):** the organization's calendars. Every console account reads them;
-  who may write and who is told are settings of each calendar (by default the administrator and the
-  event's creator write; the creator is told).
+- **Organization (`organization`):** one for each company: its calendars, the schedules received for it,
+  its resources and their bookings. Every account standing in the company reads it, and an account of
+  another company reads nothing of it; who may write and who is told are settings of each calendar (by
+  default the administrator and the event's creator write; the creator is told).
+- **A reader's company** is the company of the unit the account service places the account in
+  (`GET /users/{user}/unit`), asked at every call that reaches the organization realm, so a person moved
+  to another company reads the new one at once. An account standing in no company reads no company's
+  realm and writes none.
+- **The platform's own organization realm** holds what belongs to no company: the sources, the schedules
+  received with no company, and what the move into companies found no company for (「The move into
+  companies」). The platform administrator alone reads it.
+- **The platform administrator reads every company's realm,** naming the company; a read that names none is
+  the administrator's own company's, as anyone's is.
 
-The realms are two kinds of brain in the brain service, never one: an account's realm is the brain keyed
-`accountKey = account:<Owner-Key>`, `agentKey = calendar`; the organization's realm is the brain keyed
-`accountKey = organization`, `agentKey = calendar`. The calendar unit makes a brain the first time a realm
-is written. A screen shows both realms on one grid and tells them apart by colour and a mark; a tool call
-names the realm it reads or writes.
+The realms are kinds of brain in the brain service, never one, each with `agentKey = calendar`: an
+account's realm is the brain keyed `accountKey = account:<Owner-Key>`; a company's organization realm the
+brain keyed `accountKey = company:<company id>`, the company's unit id as the account service names it; the
+platform's own the brain keyed `accountKey = organization`. The calendar unit makes a brain the first time a
+realm is written. A screen shows both realms on one grid and tells them apart by colour and a mark; a tool
+call names the realm it reads or writes.
+
+## The move into companies
+
+An organization calendar or event standing in the platform's own brain belongs in the brain of a company;
+the service moves every such one once, at start, before it answers as ready.
+
+```mermaid
+flowchart TD
+  S[Start: every brain read] --> R{The platform brain holds the move's record?}
+  R -->|yes| D[Ready]
+  R -->|no| E[Each live event: its creator's company asked]
+  E --> W[Written in that company's brain, its told marks with it, then done in the platform brain]
+  W --> C[Each calendar written in its creator's company and in every company one of its events moved to]
+  C --> X[A calendar nothing of which stays behind: done in the platform brain]
+  X --> M[The record written] --> D
+```
+
+- **Where each goes.** An event goes to the company of its creator; a calendar to the company of its
+  creator and to every company one of its events went to, with the same id, name, colour, `writers`,
+  `tell` and hidden marks, so every event stands under its calendar. A calendar leaves the platform brain
+  once none of its events stays there.
+- **What stays.** An event or a calendar whose creator stands in no company, or whose creator is empty,
+  stays in the platform's own realm, read by the administrator alone. The received schedules are not
+  moved: each unit's next whole set places its schedules in their companies (「Received schedules」).
+- **Nothing is lost or told twice.** A moved memory is a first version in the company's brain carrying
+  every label and the `validFrom` it had, then the platform's is moved to `done` naming the company it
+  went to. The told marks of a moved event are copied to its new brain before the old one closes, so a
+  moved alarm is not told again.
+- **Once, and recorded in the brain.** The record is a memory of type `migration` in the platform brain, key
+  `migration:company-realms`, its labels how many events and calendars moved and how many stayed; the platform
+  brain is made for it where none stands, so what the platform's own realm comes to hold later is never moved.
+  A start that finds it moves nothing. An account service that does not answer leaves the service not ready,
+  and the move is tried again two seconds later from where it stopped: whatever moved is no longer live in the
+  platform brain.
 
 ## What a calendar and an event are in the brain
 
@@ -39,14 +86,27 @@ names the realm it reads or writes.
   `createdAt` (epoch ms, the moment its first version was written) and `skip` (the occurrences of a repeating
   event that no longer stand in it, each its local start, joined by commas, empty where none: one cancelled,
   or one changed on its own and so made an event of its own).
-- **A source** is a memory of type `source` in the organization realm's brain: `key` `source:<id>`, `text`
-  its name, labels `color` (one of the six), `realm` (`organization`), `hiddenOrganization` and `hiddenMine`
-  (the accounts that hid its schedules in that realm, their Owner-Keys joined by commas, empty where none
-  did) and `createdAt`.
-- **A schedule** is a memory of type `schedule` in the organization realm's brain: `key`
-  `schedule:<source id>:<item id>`, `text` its title, `validFrom` its start; labels `source`, `item`,
-  `start`, `end` and `allDay` (as an event's), `link`, `assignee` (an account's Owner-Key, empty where
-  none), `realm` (`organization`) and `createdAt`. A removed schedule is moved to `done`.
+- **A source** is a memory of type `source` in the platform's own brain, since a source is a unit's and no
+  company's: `key` `source:<id>`, `text` its name, labels `color` (one of the six), `realm`
+  (`organization`), `hiddenOrganization` and `hiddenMine` (the accounts that hid its schedules in that
+  realm, their Owner-Keys joined by commas, empty where none did) and `createdAt`.
+- **A schedule** is a memory of type `schedule` in the brain of the company it names, else in the
+  platform's own: `key` `schedule:<source id>:<item id>`, `text` its title, `validFrom` its start; labels
+  `source`, `item`, `start`, `end` and `allDay` (as an event's), `link`, `assignee` (an account's
+  Owner-Key, empty where none), `realm` (`organization`) and `createdAt`. A removed schedule is moved to
+  `done`.
+- **A resource** is a memory of type `resource` in its company's brain: `key` `resource:<id>`, `text` its
+  name; labels `kind` (the word the company groups it under, such as a meeting room or a reception room),
+  `place` (where it stands, in the company's own words), `seats` (a whole number), `approval`
+  (`true`/`false`: whether a booking of it waits for a keeper), `keepers` (the accounts that keep it, their
+  Owner-Keys joined by commas), `creator` and `createdAt`.
+- **A booking** is a memory of type `booking` in its company's brain: `key` `booking:<id>`, `text` its
+  title, `validFrom` its start; labels `resource` (the resource's id), `start`, `end`, `allDay`, `repeat`
+  and `skip` (as an event's), `booker` (the account's Owner-Key), `state` (`requested`, `booked` or
+  `refused`), `decidedBy` and `decidedAt` (the keeper who approved or refused it and when, empty while none
+  did), `reason` (the keeper's words with a refusal, empty otherwise), `requestedAt` (when it last came to
+  stand requested, empty where it never did) and `createdAt`. A refused booking stands until its booker is
+  told, and is then moved to `done`; a cancelled one is moved to `done` with the reason.
 - **Local times** are the wall clock of the time zone the calendar unit's host keeps; `validFrom` is the
   start read in that zone. A daily or weekly event repeats on the same wall-clock time; a monthly or yearly
   one on the same day of the month, skipping a month that has no such day.
@@ -63,22 +123,62 @@ and knows nothing of those units; they use the calendar's API.
 ```mermaid
 flowchart TD
   U[A unit with dated items] -->|writes, deletes, sends its whole set| A[Calendar API under its source]
-  A --> B[Organization brain: source and schedule memories]
-  B --> O[Organization realm: every schedule]
-  B --> M[Mine realm: the schedules assigned to the account]
+  A --> P[Platform brain: the source]
+  A -->|names a company| B[That company's brain: the schedule]
+  A -->|names none| N[Platform brain: the schedule]
+  B --> O[The company's organization realm: every schedule of it]
+  B --> M[Mine realm: the schedules assigned to the account, of its own company]
+  N --> X[The administrator alone]
 ```
 
 - **A source is data.** A unit pushes its dated items under a source id of its own choosing, each item by
-  its own id, with a title, a start and an end, a link to where the item is opened and an assignee where it
-  has one. The calendar holds no list of units and no branch for any of them: every source is read,
-  written and shown the same way, and a new unit needs nothing of the calendar's but the API.
-- **Kept once.** A schedule is kept once, in the organization realm's brain; the brain is its master here as
-  for every event. The unit stays the master of the item itself, and the calendar never writes back.
-- **Where it stands.** Every schedule stands in the organization realm. One whose assignee is an account
-  also stands in that account's own realm, read from the same memory rather than copied into the
-  account's brain, so the two realms' brains stay apart.
+  its own id, with a title, a start and an end, a link to where the item is opened, an assignee where it
+  has one and the company it belongs to. The calendar holds no list of units and no branch for any of
+  them: every source is read, written and shown the same way, and a new unit needs nothing of the
+  calendar's but the API.
+- **Kept once.** A schedule is kept once, in the brain of the company it names; the brain is its master here
+  as for every event. The unit stays the master of the item itself, and the calendar never writes back. A
+  schedule written again naming another company leaves the old company's brain for the new one's.
+- **Where it stands.** A schedule stands in its company's organization realm. One whose assignee is an
+  account of that company also stands in that account's own realm, read from the same memory rather than
+  copied into the account's brain, so the realms' brains stay apart.
+- **No company, no reader but the administrator.** A schedule sent with no company stands in the platform's
+  own realm alone: no company reads it and no account's own realm shows it, until its unit sends it again
+  naming its company.
 - **Read-only.** A schedule is changed only by its unit: the screen never moves, stretches, edits or
   cancels one, and a schedule is never told as an alarm.
+
+## Resources and bookings
+
+A company books what it shares by the hour or the day: meeting rooms, reception rooms and the like, by day,
+week or month, all day or repeating, some of them only once a keeper approves.
+
+- **A resource is the company's.** It has a name, a kind, a place, its seats, whether a booking of it needs
+  approval, and its keepers, accounts of the company. The administrator and a head of the company make,
+  change and retire resources; retiring one cancels its standing bookings with it.
+- **A booking is an event on a resource:** a title, a start, an end, all day or not, a repeat as an event
+  repeats with its skipped occurrences, and its booker. Anyone of the company books, in that company alone;
+  the booker and a keeper of the resource change or cancel it, a whole booking or one occurrence of a
+  repeating one, which is then a booking of its own as an occurrence of an event is.
+- **Never two at once.** Two standing bookings of one resource never overlap: a requested or booked one
+  holds its span, a refused one holds none, and a span ends where the next may begin. A write that would
+  meet a standing booking is refused, naming the booking it meets. Every write that can make an overlap,
+  made by a route or by the tool, runs in this unit under one writer, which checks the cache and writes the
+  brain before the next write is checked, so two bookings made at once never both stand. A repeating
+  booking is checked occurrence by occurrence over 28 years from the later of the two starts, the span in
+  which the weekdays and the days of every month come round again, so a pair that would ever meet meets
+  within it.
+- **Approval.** On a resource that needs approval a booking made or moved by anyone but a keeper stands
+  `requested`; a keeper approves it, and it stands `booked`, or refuses it with a reason. A booking on any
+  other resource, or made by a keeper, stands `booked` at once. A change of a booked booking's span, repeat
+  or resource by anyone but a keeper makes it `requested` again; a change of its title alone does not.
+- **Who is told.** The keepers of the resource are told of a booking that comes to stand requested; the
+  booker is told of the approval or the refusal. Each is told as an alarm is told (「Alarms」), once, the
+  told mark kept in the store, a telling the receiver does not take tried again at the next beat; a
+  refused booking is moved to `done` once its booker has been told.
+- **On the calendar's grid.** A booking stands in its booker's own realm as an event of the booker, read
+  from the same memory rather than copied into the account's brain, marked with its resource; it is
+  opened in the booking's form, never in an event's.
 
 ## Alarms
 
@@ -95,15 +195,20 @@ marker `CALENDAR ALARM.` and carries the alarm's data alone — the event, its s
 how late it is and whom it is for — never an instruction; how a quiet instruction is answered stands in the
 receiving session's own rules, so the supervisor says it in its own words (「비모가 알려준다」). A
 repeating event's next occurrence is told when its moment comes; a cancelled event's pending alarm is told
-no more.
+no more. An organization calendar that tells everyone tells the accounts of its own company; one in the
+platform's own realm tells the owner.
 
 ## The tool
 
-The chat supervisor and the owner's tools reach the calendar through the tool host, namespace `bmo`,
+The chat supervisors and the owner's tools reach the calendar through the tool host, namespace `bmo`,
 capability `room.tools`: list the events of a span, show one, add, change, cancel, and list the calendars,
-each naming its realm. The supervisor sets an alarm when the owner asks to be reminded of an appointment.
-Every holder of the tool acts for the owner: its `mine` realm is the owner's account, the account the
-account service links to the owner's sender.
+each naming its realm; list the company's resources, find a free one for a span and a number of seats,
+book one and cancel a booking. A supervisor sets an alarm when its person asks to be reminded of an
+appointment, and books a room when its person asks for one. A holder of the tool acts for the account
+agency names as the owner of the agent holding the session, so a supervisor of a person's account reads and
+writes that person's own realm and books as that person; a holder agency names no account for acts for the
+owner, the account the account service links to the owner's sender. The organization realm and the bookings
+of a call are that account's company's.
 
 ## The console
 
@@ -111,6 +216,39 @@ The console screen follows the Nuxt UI calendar template (day, week, month and y
 and resize, a popover to edit, a quick natural-language entry, colour-coded calendars with visibility, a
 mini calendar), stood as a console bundle under the sidebar entry 캘린더 (bmo-ui's console plugin contract;
 `docs/api.md`, 「Console」). The sidebar lists 내 일정 and 조직 일정 calendars apart; one grid shows both.
+The 조직 일정 are the reader's company's. For the administrator the sidebar's 조직 일정 heading carries a
+choice of company, every company and the platform's own among them, the administrator's own company first
+chosen; the grid, the layers and the bookings then read the company chosen.
+
+Booking stands on its own screen in the same bundle, 예약, reached from the calendar screen's sidebar and
+back again:
+
+- **The resources by day, week and month.** One kind of resource at a time, chosen at the top, its resources
+  grouped by place. The day is a row for each resource across the hours, wide enough per hour that an hour's
+  booking names its title, scrolled sideways where the hours outrun the screen. The week is a row for each
+  resource across its seven days, each day's cell listing that day's bookings by start, each with its time and
+  title. The month is a grid of days, each naming how many bookings each resource holds; on a phone, where a
+  day's cell has no room for names, how many it holds in all.
+- **Booking by press or drag.** In the day view a press on a free span of a resource's row, or a drag across
+  one, opens the booking form on that span; in the week view a press on a day's cell opens it on that day's
+  first free hour: its title, its start and end, all day, its repeat, and the resource with its seats and
+  whether it waits for approval. A span that meets a standing booking is not offered; a refusal of the write
+  names the booking it met, by the title the service's refusal gives. On a phone a held finger stands for the
+  press, as on the grid. A booking is made in the reader's own company alone: with another company chosen, the
+  administrator reads its bookings and is offered no span to book.
+- **My bookings.** The reader's own bookings standing from today over the coming year, one row each, by its
+  next occurrence: a repeating booking stands once, naming how it repeats and its next date, so its
+  occurrences never bury the rest. Each row carries its resource, its state and the way to change or cancel it
+  whole; one occurrence is changed or cancelled where it stands on the day or week view or the calendar's
+  grid. The year is the reach of the list: the service answers at most 92 days a read, so the screen reads the
+  year as four spans, and a booking further ahead is listed once it comes within the year.
+- **Requests.** For a keeper, the bookings waiting on the resources they keep, oldest first, each with its
+  booker, its span and its resource, approved with one press or refused with a reason.
+- **Resources.** The administrator and the company's heads make, change and retire resources from the same
+  screen, the screen's one create button adding a resource while this part is shown, choosing the keepers
+  among the company's people through the console's people directory. The directory answers the reader's own
+  company alone, so the administrator keeping another company's resources names their keepers by their account
+  keys.
 
 Received schedules stand on the same grid as layers, one for each source in each realm:
 

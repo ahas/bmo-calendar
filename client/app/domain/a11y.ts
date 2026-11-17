@@ -1,6 +1,7 @@
 import { addDays, addMinutes, addMonths, differenceInMinutes, endOfWeek, isSameDay, startOfWeek, subMilliseconds } from "date-fns";
 
 import { WEEK_STARTS_ON, formatFullDate, formatMonthDay, formatTime, fromLocalISO } from "./dates";
+import { STATE_LABELS } from "./bookings";
 import { REPEAT_CHOICES } from "../../shared/choices";
 
 import type { CalendarEvent, CalendarView, DateRange } from "../../shared/types";
@@ -39,13 +40,14 @@ export function eventWhen(t: Translate, event: Pick<CalendarEvent, "start" | "en
   return `${formatMonthDay(start)} ${formatTime(start)}~${formatMonthDay(end)} ${formatTime(end)}`;
 }
 
-/** An event's name to a reader who does not see it: its title, when, its calendar or source, whether it was
- *  received, and its repeat. */
-export function eventName(t: Translate, event: Pick<CalendarEvent, "title" | "start" | "end" | "allDay" | "repeat" | "origin">, calendar: string | undefined): string {
+/** An event's name to a reader who does not see it: its title, when, its calendar, source or resource, whether
+ *  it was received or is a booking and the booking's state, and its repeat. */
+export function eventName(t: Translate, event: Pick<CalendarEvent, "title" | "start" | "end" | "allDay" | "repeat" | "origin" | "booking">, calendar: string | undefined): string {
   const parts = [event.title || t("calendar.label.untitled"), eventWhen(t, event)];
 
   if (calendar) parts.push(calendar);
   if (event.origin) parts.push(t("calendar.label.received"));
+  if (event.booking) parts.push(t("calendar.label.booking"), t(STATE_LABELS[event.booking.state]));
 
   const repeat = REPEAT_CHOICES.find((choice) => choice.value === event.repeat);
 

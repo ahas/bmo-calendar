@@ -164,9 +164,9 @@ async fn the_organizations_tell_reaches_everyone_it_names() {
   for account in ["2", "3"] {
     service.get(&format!("/mine/calendars?account={account}")).await;
   }
-  service.get("/organization/calendars").await;
+  service.get("/organization/calendars?account=1").await;
   service
-    .patch("/organization/calendars/organization", json!({ "tell": "everyone" }))
+    .patch("/organization/calendars/organization?account=1", json!({ "tell": "everyone" }))
     .await;
   let body = json!({ "calendarId": "organization", "title": "All hands", "start": local_in(2), "end": local_in(30), "alarm": "5" });
   let (status, _) = service.post("/organization/events?account=1", body).await;

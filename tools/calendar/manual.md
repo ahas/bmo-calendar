@@ -1,7 +1,9 @@
 # The calendar tool
 
-Every entry names a realm: `mine`, the owner's own calendars, or `organization`, the organization's. Times are
-local datetimes in the shape `YYYY-MM-DDTHH:mm:ss`, on the calendar host's clock.
+The calendar acts for the person this session serves: the account that owns the supervisor holding it, or the
+owner where none does. Every event entry names a realm: `mine`, that person's own calendars, or `organization`,
+the calendars of that person's company. The resource and booking entries stand in that company. Times are local
+datetimes in the shape `YYYY-MM-DDTHH:mm:ss`, on the calendar host's clock.
 
 - **`calendar_list`** answers the realm's calendars, one line each: its id, its name and its colour.
 - **`calendar_events`** answers the events overlapping a span (`start` and `end`, at most 92 days apart), or
@@ -15,6 +17,16 @@ local datetimes in the shape `YYYY-MM-DDTHH:mm:ss`, on the calendar host's clock
 - **`calendar_change`** changes the fields named. With `occurrence`, only that occurrence of a repeating event
   changes, and it becomes an event of its own.
 - **`calendar_cancel`** cancels an event, or with `occurrence` one occurrence of a repeating event.
+- **`calendar_resources`** answers the company's resources, one line each: its name, its kind, its seats, its
+  id, its place, and whether a booking of it waits for a keeper's approval. `kind` narrows them.
+- **`calendar_free_resources`** answers the resources free for a span (`start`, and `end`, an hour after the
+  start where none is given) with at least `seats`, fewest seats first; `repeat` asks for a span that repeats.
+- **`calendar_book`** books a resource for the person: `resourceId`, `title` and `start` are required; `end` is
+  an hour after the start where none is given, or the whole day where `allDay` is true. Two bookings of one
+  resource never meet: a span another booking holds is refused, naming that booking. On a resource that waits
+  for approval the booking stands `requested`; its keepers are told, and the person is told their answer.
+- **`calendar_cancel_booking`** cancels a booking by its `bookingId`, or with `occurrence` one occurrence of a
+  repeating booking.
 
 Examples:
 
@@ -23,3 +35,6 @@ Examples:
 - What stands this week: `calendar_events` with `{"realm": "mine", "start": "2026-11-02T00:00:00", "end":
   "2026-11-09T00:00:00"}`.
 - The next three of the organization's: `calendar_events` with `{"realm": "organization", "n": 3}`.
+- A room for eight tomorrow from ten to eleven: `calendar_free_resources` with `{"start": "2026-11-04T10:00:00",
+  "end": "2026-11-04T11:00:00", "seats": 8}`, then `calendar_book` with `{"resourceId": "<an id it answered>",
+  "title": "Planning", "start": "2026-11-04T10:00:00", "end": "2026-11-04T11:00:00"}`.

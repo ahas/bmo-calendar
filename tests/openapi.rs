@@ -8,7 +8,7 @@ use bmo_calendar::openapi::{openapi, openapi_json};
 const ROOT: &str = env!("CARGO_MANIFEST_DIR");
 
 /// The routes docs/api.md states, by method and path.
-const ROUTES: [&str; 22] = [
+const ROUTES: [&str; 35] = [
   "get /health",
   "put /sources/{sourceId}",
   "put /sources/{sourceId}/schedules",
@@ -26,6 +26,19 @@ const ROUTES: [&str; 22] = [
   "get /{realm}/events/{eventId}",
   "patch /{realm}/events/{eventId}",
   "delete /{realm}/events/{eventId}",
+  "get /{realm}/companies",
+  "get /{realm}/resources",
+  "post /{realm}/resources",
+  "get /{realm}/resources/free",
+  "patch /{realm}/resources/{resourceId}",
+  "delete /{realm}/resources/{resourceId}",
+  "get /{realm}/bookings",
+  "post /{realm}/bookings",
+  "get /{realm}/bookings/requests",
+  "get /{realm}/bookings/{bookingId}",
+  "patch /{realm}/bookings/{bookingId}",
+  "delete /{realm}/bookings/{bookingId}",
+  "post /{realm}/bookings/{bookingId}/decision",
   "get /{realm}/alarms",
   "post /beats",
   "get /events",
@@ -62,7 +75,10 @@ fn the_document_states_every_route_and_tool_and_nothing_else() {
       "event.changed",
       "alarm.told",
       "source.changed",
-      "schedule.changed"
+      "schedule.changed",
+      "resource.changed",
+      "booking.changed",
+      "booking.decided"
     ])
   );
 

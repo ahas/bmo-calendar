@@ -71,3 +71,43 @@ manual = "manual.md"
 input = "calendar_cancel.json"
 hints = { idempotent = true, destructive = true }
 capabilities = ["room.tools"]
+
+[[entry]]
+namespace = "bmo"
+name = "calendar_resources"
+title = "List resources"
+description = "The resources of the company of the person this session serves: its meeting rooms and whatever else it books, with their seats and places."
+manual = "manual.md"
+input = "calendar_resources.json"
+hints = { read_only = true }
+capabilities = ["room.tools"]
+
+[[entry]]
+namespace = "bmo"
+name = "calendar_free_resources"
+title = "Find a free resource"
+description = "The company's resources free for a span of local datetimes, with at least the seats asked, fewest seats first."
+manual = "manual.md"
+input = "calendar_free_resources.json"
+hints = { read_only = true }
+capabilities = ["room.tools"]
+
+[[entry]]
+namespace = "bmo"
+name = "calendar_book"
+title = "Book a resource"
+description = "Book a resource for the person this session serves; on a resource that waits for approval the booking stands requested until a keeper answers."
+manual = "manual.md"
+input = "calendar_book.json"
+hints = { idempotent = false }
+capabilities = ["room.tools"]
+
+[[entry]]
+namespace = "bmo"
+name = "calendar_cancel_booking"
+title = "Cancel a booking"
+description = "Cancel a booking, or one occurrence of a repeating booking."
+manual = "manual.md"
+input = "calendar_cancel_booking.json"
+hints = { idempotent = true, destructive = true }
+capabilities = ["room.tools"]

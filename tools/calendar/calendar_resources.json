@@ -1,0 +1,14 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [],
+  "properties": {
+    "kind": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Only the resources of this kind, the word the company groups them under, as a listing names it."
+    }
+  }
+}

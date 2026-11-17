@@ -5,13 +5,14 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-/// One of the two realms, never one for both (`docs/design.md`, 「Two realms, kept apart」).
+/// One of the two realms, never one for both (`docs/design.md`, 「Two realms, kept apart」); the organization
+/// realm is one company's.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum Realm {
   /// The account's own calendars.
   Mine,
-  /// The organization's calendars.
+  /// A company's calendars, schedules, resources and bookings.
   Organization,
 }
 
@@ -64,7 +65,7 @@ pub enum Writers {
 pub enum Tell {
   /// The event's creator.
   Creator,
-  /// The owner and every account holding a `mine` realm.
+  /// Every account of the calendar's company holding a `mine` realm; the owner in the platform's own realm.
   Everyone,
   /// Nobody.
   Nobody,
@@ -121,6 +122,8 @@ pub enum Repeat {
 pub struct Calendar {
   pub id: String,
   pub realm: Realm,
+  /// The company's id, or `platform`; null in the `mine` realm.
+  pub company: Option<String>,
   pub name: String,
   pub color: Color,
   /// Who writes its events; null in the `mine` realm.
@@ -171,6 +174,8 @@ pub struct CalendarChange {
 pub struct Event {
   pub id: String,
   pub realm: Realm,
+  /// The company's id, or `platform`; null in the `mine` realm.
+  pub company: Option<String>,
   pub calendar_id: String,
   pub title: String,
   /// May be empty.
@@ -255,9 +260,12 @@ pub struct AccountQuery {
   /// The account, by its key.
   #[serde(default)]
   pub account: Option<String>,
-  /// The holder of a tool session, which acts for the owner.
+  /// The holder of a tool session, which acts for the account agency names as its owner.
   #[serde(default)]
   pub holder_name: Option<String>,
+  /// The company an organization call reads: a company's id, or `platform`; the caller's own where none.
+  #[serde(default)]
+  pub company: Option<String>,
 }
 
 /// A span of events.
@@ -272,6 +280,8 @@ pub struct SpanQuery {
   pub account: Option<String>,
   #[serde(default)]
   pub holder_name: Option<String>,
+  #[serde(default)]
+  pub company: Option<String>,
 }
 
 /// A cancellation of an event or one occurrence.
@@ -285,6 +295,8 @@ pub struct CancelQuery {
   pub account: Option<String>,
   #[serde(default)]
   pub holder_name: Option<String>,
+  #[serde(default)]
+  pub company: Option<String>,
 }
 
 /// A span of alarm moments.
@@ -299,6 +311,8 @@ pub struct AlarmsQuery {
   pub account: Option<String>,
   #[serde(default)]
   pub holder_name: Option<String>,
+  #[serde(default)]
+  pub company: Option<String>,
 }
 
 /// One alarm moment.
@@ -319,6 +333,8 @@ pub struct AlarmMoment {
 #[serde(rename_all = "camelCase")]
 pub struct ToldAlarm {
   pub realm: Realm,
+  /// Null in the `mine` realm.
+  pub company: Option<String>,
   pub event_id: String,
   pub occurrence: String,
   /// The alarm's moment, epoch ms.
@@ -329,10 +345,24 @@ pub struct ToldAlarm {
   pub rooms: Vec<i64>,
 }
 
+/// One booking telling a beat made (`docs/api.md`, 「Resources and bookings」).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ToldBooking {
+  pub company: String,
+  pub booking_id: String,
+  /// The instruction's kind: `booking:<bookingId>:requested:<requestedAt>` or
+  /// `booking:<bookingId>:decided:<decidedAt>`.
+  pub kind: String,
+  /// The rooms it was told in.
+  pub rooms: Vec<i64>,
+}
+
 /// What a beat told.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct Beat {
   pub told: Vec<ToldAlarm>,
+  pub bookings: Vec<ToldBooking>,
 }
 
 /// `GET /health`.
@@ -382,6 +412,7 @@ pub struct EventsQuery {
 #[serde(rename_all = "camelCase")]
 pub struct CalendarChanged {
   pub realm: Realm,
+  pub company: Option<String>,
   pub calendar_id: String,
 }
 
@@ -390,6 +421,7 @@ pub struct CalendarChanged {
 #[serde(rename_all = "camelCase")]
 pub struct EventChanged {
   pub realm: Realm,
+  pub company: Option<String>,
   pub event_id: String,
   /// Null where the change is the whole event's.
   pub occurrence: Option<String>,
@@ -400,6 +432,7 @@ pub struct EventChanged {
 #[serde(rename_all = "camelCase")]
 pub struct AlarmTold {
   pub realm: Realm,
+  pub company: Option<String>,
   pub event_id: String,
   pub occurrence: String,
   pub at: i64,
@@ -416,6 +449,7 @@ pub struct SourceChanged {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ScheduleChanged {
+  pub company: String,
   pub source_id: String,
   pub item_id: String,
 }
@@ -469,6 +503,10 @@ pub struct ScheduleWrite {
   /// The account key of the person the item is assigned to; null, empty or absent where none.
   #[serde(default)]
   pub assignee: Option<String>,
+  /// The id of the company the item belongs to, as the account service names its unit; null, empty or absent
+  /// where it belongs to none, which the platform administrator alone reads.
+  #[serde(default)]
+  pub company: Option<String>,
 }
 
 /// One item of a source's whole set.
@@ -508,6 +546,8 @@ pub struct Schedule {
   pub item_id: String,
   /// The realm it is read in.
   pub realm: Realm,
+  /// The company it belongs to, or `platform` where it was sent with none.
+  pub company: String,
   pub title: String,
   /// Local ISO datetime.
   pub start: String,
@@ -519,4 +559,257 @@ pub struct Schedule {
   pub assignee: Option<String>,
   pub created_at: i64,
   pub changed_at: i64,
+}
+
+/// `resource.changed`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ResourceChanged {
+  pub company: String,
+  pub resource_id: String,
+}
+
+/// `booking.changed`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct BookingChanged {
+  pub company: String,
+  pub booking_id: String,
+  pub booker: String,
+}
+
+/// `booking.decided`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct BookingDecided {
+  pub company: String,
+  pub booking_id: String,
+  pub state: BookingState,
+  pub title: String,
+}
+
+/// A company the caller reads (`docs/api.md`, 「Companies」).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct Company {
+  /// The company's unit id, or `platform`.
+  pub id: String,
+  pub name: String,
+  /// Whether it is the caller's own.
+  pub own: bool,
+  /// Whether the caller makes, changes and retires its resources: the administrator, and a head of the company.
+  pub manages: bool,
+}
+
+/// A company's resource: a room or anything else it books (`docs/api.md`, 「Resources and bookings」).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct Resource {
+  pub id: String,
+  pub company: String,
+  pub name: String,
+  /// The word the company groups it under.
+  pub kind: String,
+  /// Where it stands, in the company's own words.
+  pub place: String,
+  pub seats: u32,
+  /// Whether a booking of it waits for a keeper.
+  pub approval: bool,
+  /// The account keys of the people who keep it.
+  pub keepers: Vec<String>,
+  pub creator: String,
+  pub created_at: i64,
+  pub changed_at: i64,
+}
+
+/// A resource to make.
+#[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct NewResource {
+  /// 1 to 64 letters, digits, `-` and `_`; one is made where none is given.
+  #[serde(default)]
+  pub id: Option<String>,
+  /// One line, not blank.
+  pub name: String,
+  /// One line, not blank.
+  pub kind: String,
+  /// One line.
+  #[serde(default)]
+  pub place: String,
+  /// 1 to 10000.
+  pub seats: u32,
+  #[serde(default)]
+  pub approval: bool,
+  /// At least one where `approval` is true.
+  #[serde(default)]
+  pub keepers: Vec<String>,
+}
+
+/// A change of a resource: the fields named.
+#[derive(Clone, Debug, Default, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ResourceChange {
+  #[serde(default)]
+  pub name: Option<String>,
+  #[serde(default)]
+  pub kind: Option<String>,
+  #[serde(default)]
+  pub place: Option<String>,
+  #[serde(default)]
+  pub seats: Option<u32>,
+  #[serde(default)]
+  pub approval: Option<bool>,
+  #[serde(default)]
+  pub keepers: Option<Vec<String>>,
+}
+
+/// Where a booking stands.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum BookingState {
+  /// It waits for a keeper; it holds its span.
+  Requested,
+  /// It stands; it holds its span.
+  Booked,
+  /// A keeper refused it; it holds no span and leaves once its booker is told.
+  Refused,
+}
+
+/// A booking, or one occurrence of a repeating booking in a span's rows.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct Booking {
+  pub id: String,
+  /// The realm it is read in.
+  pub realm: Realm,
+  pub company: String,
+  pub resource_id: String,
+  pub title: String,
+  /// Local ISO datetime, `YYYY-MM-DDTHH:mm:ss`.
+  pub start: String,
+  /// Local ISO datetime, after the start.
+  pub end: String,
+  pub all_day: bool,
+  pub repeat: Repeat,
+  /// In a span's rows, the start of the occurrence a repeating booking's row stands for; null otherwise.
+  pub occurrence: Option<String>,
+  /// The account that booked it.
+  pub booker: String,
+  pub state: BookingState,
+  /// The keeper who approved or refused it, or null.
+  pub decided_by: Option<String>,
+  /// When it was approved or refused, epoch ms, or null.
+  pub decided_at: Option<i64>,
+  /// The keeper's words with a refusal, or null.
+  pub reason: Option<String>,
+  pub created_at: i64,
+  pub changed_at: i64,
+}
+
+/// A booking to make.
+#[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct NewBooking {
+  /// 1 to 64 letters, digits, `-` and `_`; one is made where none is given. A POST naming an id the company
+  /// already holds writes over that booking and answers 200.
+  #[serde(default)]
+  pub id: Option<String>,
+  pub resource_id: String,
+  /// One line, not blank.
+  pub title: String,
+  pub start: String,
+  pub end: String,
+  #[serde(default)]
+  pub all_day: Option<bool>,
+  #[serde(default)]
+  pub repeat: Option<Repeat>,
+}
+
+/// A change of a booking: the fields named.
+#[derive(Clone, Debug, Default, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct BookingChange {
+  #[serde(default)]
+  pub resource_id: Option<String>,
+  #[serde(default)]
+  pub title: Option<String>,
+  #[serde(default)]
+  pub start: Option<String>,
+  #[serde(default)]
+  pub end: Option<String>,
+  #[serde(default)]
+  pub all_day: Option<bool>,
+  #[serde(default)]
+  pub repeat: Option<Repeat>,
+  /// Limits the change to this occurrence of a repeating booking, which becomes a booking of its own.
+  #[serde(default)]
+  pub occurrence: Option<String>,
+}
+
+/// A keeper's answer to a requested booking.
+#[derive(Clone, Debug, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct Decision {
+  pub approve: bool,
+  /// The keeper's words, with a refusal.
+  #[serde(default)]
+  pub reason: Option<String>,
+}
+
+/// The resources asked for.
+#[derive(Clone, Debug, Default, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ResourcesQuery {
+  /// Only the resources of this kind.
+  #[serde(default)]
+  pub kind: Option<String>,
+  #[serde(default)]
+  pub account: Option<String>,
+  #[serde(default)]
+  pub holder_name: Option<String>,
+  #[serde(default)]
+  pub company: Option<String>,
+}
+
+/// The resources free for a span.
+#[derive(Clone, Debug, Default, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct FreeQuery {
+  /// Local ISO datetime.
+  pub start: String,
+  /// Local ISO datetime, after the start.
+  pub end: String,
+  /// The fewest seats; 1 where none is given.
+  #[serde(default)]
+  pub seats: Option<u32>,
+  /// How the span repeats; `none` where none is given.
+  #[serde(default)]
+  pub repeat: Option<Repeat>,
+  #[serde(default)]
+  pub kind: Option<String>,
+  #[serde(default)]
+  pub account: Option<String>,
+  #[serde(default)]
+  pub holder_name: Option<String>,
+  #[serde(default)]
+  pub company: Option<String>,
+}
+
+/// A span of bookings.
+#[derive(Clone, Debug, Default, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct BookingsQuery {
+  /// Local ISO datetime.
+  pub start: String,
+  /// Local ISO datetime, at most 92 days after the start.
+  pub end: String,
+  /// Only the bookings of this resource, in the `organization` realm.
+  #[serde(default)]
+  pub resource_id: Option<String>,
+  #[serde(default)]
+  pub account: Option<String>,
+  #[serde(default)]
+  pub holder_name: Option<String>,
+  #[serde(default)]
+  pub company: Option<String>,
 }

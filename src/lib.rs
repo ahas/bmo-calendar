@@ -5,13 +5,17 @@
 pub mod alarms;
 pub mod api;
 pub mod app;
+pub mod booking;
+pub mod bookings;
 pub mod cache;
+pub mod companies;
 pub mod console;
 pub mod error;
 pub mod events;
 pub mod model;
 pub mod openapi;
 pub mod peers;
+pub mod realm;
 pub mod schedules;
 pub mod settings;
 pub mod store;

@@ -162,7 +162,7 @@ async fn a_write_is_refused_as_documented() {
 #[tokio::test]
 async fn the_organizations_writers_are_held_to_its_calendar() {
   let service = Service::fresh().await;
-  service.get("/organization/calendars").await;
+  service.get("/organization/calendars?account=1").await;
   let (_, closed) = service
     .console(
       Method::POST,
@@ -220,7 +220,7 @@ async fn the_realms_are_kept_apart() {
   let (status, _) = service.console(Method::GET, &path, "3", "member", None).await;
   assert_eq!(status, 404);
   let (_, organization) = service
-    .get("/organization/events?start=2026-03-01T00:00:00&end=2026-03-03T00:00:00")
+    .get("/organization/events?account=1&start=2026-03-01T00:00:00&end=2026-03-03T00:00:00")
     .await;
   assert!(organization["items"].as_array().unwrap().is_empty());
 }

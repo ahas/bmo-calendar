@@ -92,6 +92,19 @@ impl Store {
     })
   }
 
+  /// Every told mark of an event kept for one brain kept for another as well, as the event moves there.
+  pub fn copy_told(&self, from: i64, to: i64, event: &str) -> Result<(), String> {
+    self.with(|connection| {
+      connection
+        .execute(
+          "INSERT OR IGNORE INTO told (brain_id, event_id, occurrence, at, told_at) \
+           SELECT ?2, event_id, occurrence, at, told_at FROM told WHERE brain_id = ?1 AND event_id = ?3",
+          params![from, to, event],
+        )
+        .map(drop)
+    })
+  }
+
   /// The moment of the last beat, where one ran.
   pub fn last_beat(&self) -> Result<Option<i64>, String> {
     self.with(|connection| {

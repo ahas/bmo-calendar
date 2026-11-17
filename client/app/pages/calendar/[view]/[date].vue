@@ -136,10 +136,13 @@ import CalendarNewEvent from "../../../components/calendar/CalendarNewEvent.vue"
 import CalendarWeekView from "../../../components/calendar/CalendarWeekView.vue";
 import CalendarYearView from "../../../components/calendar/CalendarYearView.vue";
 import { rangeWords } from "../../../domain/a11y";
+import { BOOKING_ICON } from "../../../domain/bookings";
 import { WEEK_STARTS_ON, formatFullDate, fromLocalISO, rangeFor, toDate, todayDate } from "../../../domain/dates";
 import { CALENDAR_CHANGED, useCalendarStream } from "../../../domain/stream";
-import { SERVICE, useCalendarEvents } from "../../../composables/useCalendarEvents";
+import { SERVICE } from "../../../composables/useCalendarApi";
+import { useCalendarEvents } from "../../../composables/useCalendarEvents";
 import { useCalendar } from "../../../composables/useCalendar";
+import { useCompanies } from "../../../composables/useCompanies";
 import { useEventDraft } from "../../../composables/useEventDraft";
 import { useEventEditor } from "../../../composables/useEventEditor";
 
@@ -179,7 +182,8 @@ const narrow = useNarrow();
 const consoleBar = inject<object | null>("bmo-console-title-bar", null) !== null;
 
 const { view, date, range, title, visibleMonth, prevDate, nextDate, pathFor, go, isSidebarOpen } = useCalendar();
-const { online, queue, loadCalendars, loadSpan, showSpans, refreshVisible, failedSpans, readEvent } = useCalendarEvents();
+const { online, queue, loadCalendars, loadResourceNames, loadSpan, showSpans, refreshVisible, failedSpans, readEvent, allEvents } = useCalendarEvents();
+const { loadCompanies } = useCompanies();
 const { draft } = useEventDraft();
 const { editingKey } = useEventEditor();
 
@@ -235,7 +239,11 @@ watch(
   { immediate: true }
 );
 
-onMounted(() => void loadCalendars());
+onMounted(() => {
+  void loadCalendars();
+  void loadResourceNames();
+  void loadCompanies();
+});
 
 const refreshing = ref(false);
 
@@ -243,7 +251,7 @@ async function refresh(): Promise<void> {
   refreshing.value = true;
 
   try {
-    await Promise.all([loadCalendars(), refreshVisible()]);
+    await Promise.all([loadCalendars(), loadResourceNames(), refreshVisible()]);
   } finally {
     refreshing.value = false;
   }
@@ -267,7 +275,7 @@ async function ring(data: Extract<CalendarStreamEvent, { kind: "alarm.told" }>["
   let description: string | null = null;
 
   try {
-    const event = await readEvent(data.realm, data.eventId);
+    const event = await readEvent(data.realm, data.eventId, data.company);
 
     description = `${event.title} · ${formatFullDate(fromLocalISO(data.occurrence ?? event.start))}`;
   } catch {
@@ -277,13 +285,37 @@ async function ring(data: Extract<CalendarStreamEvent, { kind: "alarm.told" }>["
   island.say({ key: `calendar-alarm-${data.eventId}-${data.occurrence}`, tone: "info", icon: "i-material-symbols-alarm-outline", title: t("calendar.notice.alarm.told.title"), description });
 }
 
+// A keeper's decision on one of the reader's bookings, said while the reader stands on the screen; the
+// console says it to a reader elsewhere.
+function ringDecision(data: Extract<CalendarStreamEvent, { kind: "booking.decided" }>["data"]): void {
+  const approved = data.state === "booked";
+
+  island.say({
+    key: `calendar-booking-${data.bookingId}`,
+    tone: approved ? "success" : "warning",
+    icon: BOOKING_ICON,
+    title: t(approved ? "calendar.message.booking_approved" : "calendar.message.booking_refused"),
+    description: data.title
+  });
+}
+
 useCalendarStream(
   SERVICE,
   (event) => {
-    if (event.kind === "alarm.told") void ring(event.data);
-    else gatherRefresh(event.kind === CALENDAR_CHANGED || event.kind === "source.changed");
+    if (event.kind === "alarm.told") {
+      void ring(event.data);
+      return;
+    }
+
+    if (event.kind === "booking.decided") ringDecision(event.data);
+    if (event.kind === "resource.changed") void loadResourceNames();
+
+    gatherRefresh(event.kind === CALENDAR_CHANGED || event.kind === "source.changed");
   },
-  () => gatherRefresh(true)
+  () => {
+    void loadResourceNames();
+    gatherRefresh(true);
+  }
 );
 
 onBeforeUnmount(() => {

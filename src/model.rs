@@ -22,6 +22,12 @@ pub const EVENT_TYPE: &str = "event";
 pub const SOURCE_TYPE: &str = "source";
 /// The memory type a received schedule is kept as.
 pub const SCHEDULE_TYPE: &str = "schedule";
+/// The memory type a company's resource is kept as.
+pub const RESOURCE_TYPE: &str = "resource";
+/// The memory type a booking of a resource is kept as.
+pub const BOOKING_TYPE: &str = "booking";
+/// The memory type the record of the move into companies is kept as.
+pub const MIGRATION_TYPE: &str = "migration";
 
 /// The longest assignee a schedule names, in characters: the longest Owner-Key a call carries.
 const ASSIGNEE_CHARS: usize = 200;
@@ -54,8 +60,8 @@ impl Memory {
     matches!(self.status.as_str(), "active" | "pending")
   }
 
-  /// The calendar's, event's, source's or schedule's own id, the key less its type's prefix; a schedule's is
-  /// its source's id and its item's, joined by a colon.
+  /// The calendar's, event's, source's, schedule's, resource's or booking's own id, the key less its type's
+  /// prefix; a schedule's is its source's id and its item's, joined by a colon.
   pub fn own_id(&self) -> Option<&str> {
     let key = self.key.as_deref()?;
     match self.kind.as_str() {
@@ -63,6 +69,8 @@ impl Memory {
       EVENT_TYPE => key.strip_prefix("event:"),
       SOURCE_TYPE => key.strip_prefix("source:"),
       SCHEDULE_TYPE => key.strip_prefix("schedule:"),
+      RESOURCE_TYPE => key.strip_prefix("resource:"),
+      BOOKING_TYPE => key.strip_prefix("booking:"),
       _ => None,
     }
   }
@@ -202,17 +210,23 @@ pub fn skipped(memory: &Memory) -> Vec<String> {
 }
 
 /// A label's number, 0 where it holds none.
-fn number(memory: &Memory, name: &str) -> i64 {
+pub fn number(memory: &Memory, name: &str) -> i64 {
   memory.label(name).parse().unwrap_or(0)
 }
 
-/// A calendar read from its memory, `hidden` for the account named.
-pub fn calendar_of(memory: &Memory, realm: Realm, account: Option<&str>) -> Option<Calendar> {
+/// A calendar read from its memory in a realm and company, `hidden` for the account named.
+pub fn calendar_of(
+  memory: &Memory,
+  realm: Realm,
+  company: Option<String>,
+  account: Option<&str>,
+) -> Option<Calendar> {
   let id = memory.own_id()?.to_owned();
   let organization = realm == Realm::Organization;
   Some(Calendar {
     id,
     realm,
+    company,
     name: memory.text.clone(),
     color: word(memory.label("color")).unwrap_or(Color::Primary),
     writers: organization.then(|| word(memory.label("writers")).unwrap_or(Writers::Creator)),
@@ -240,8 +254,13 @@ pub fn calendar_labels(calendar: &Calendar, hidden: &[String]) -> Labels {
   labels
 }
 
-/// An event read from its memory, whole: no occurrence.
-pub fn event_of(memory: &Memory, realm: Realm, told: Option<String>) -> Option<Event> {
+/// An event read from its memory in a realm and company, whole: no occurrence.
+pub fn event_of(
+  memory: &Memory,
+  realm: Realm,
+  company: Option<String>,
+  told: Option<String>,
+) -> Option<Event> {
   let id = memory.own_id()?.to_owned();
   let (title, description) = match memory.text.split_once("\n\n") {
     Some((title, description)) => (title.to_owned(), description.to_owned()),
@@ -250,6 +269,7 @@ pub fn event_of(memory: &Memory, realm: Realm, told: Option<String>) -> Option<E
   Some(Event {
     id,
     realm,
+    company,
     calendar_id: memory.label("calendar").to_owned(),
     title,
     description,
@@ -356,6 +376,23 @@ pub fn starts_between(
   starts
 }
 
+/// The occurrences of a series of this start, end, repeat and skips that overlap `[low, high)`, each its start
+/// and end; a series that does not repeat is its one span.
+pub fn spans_between(
+  (start, end): (NaiveDateTime, NaiveDateTime),
+  repeat: Repeat,
+  skip: &[String],
+  low: NaiveDateTime,
+  high: NaiveDateTime,
+) -> Vec<(NaiveDateTime, NaiveDateTime)> {
+  let length = end - start;
+  starts_between(start, repeat, skip, low - length, high)
+    .into_iter()
+    .map(|at| (at, at + length))
+    .filter(|(at, until)| *until > low && *at < high)
+    .collect()
+}
+
 /// Whether a local start is one of a series' occurrences.
 pub fn is_occurrence(
   start: NaiveDateTime,
@@ -409,7 +446,7 @@ pub enum ScheduleFault {
 }
 
 /// Whether a schedule written stands: its title one line and not blank, its end after its start, its link a
-/// console path or an `http` or `https` address, its assignee no longer than an Owner-Key.
+/// console path or an `http` or `https` address, its assignee no longer than an Owner-Key, its company an id.
 pub fn check_schedule(write: &ScheduleWrite) -> Result<(), ScheduleFault> {
   let shape = |why: &str| Err(ScheduleFault::Shape(why.to_owned()));
   if write.title.trim().is_empty() || write.title.contains('\n') {
@@ -427,6 +464,9 @@ pub fn check_schedule(write: &ScheduleWrite) -> Result<(), ScheduleFault> {
     .is_some_and(|assignee| assignee.chars().count() > ASSIGNEE_CHARS)
   {
     return shape("An assignee is at most 200 characters.");
+  }
+  if schedule_company(write).is_some_and(|company| !valid_id(company)) {
+    return shape("A company is 1 to 64 letters, digits, '-' and '_'.");
   }
   if end <= start {
     return Err(ScheduleFault::EndBeforeStart);
@@ -452,6 +492,15 @@ fn assignee_of(write: &ScheduleWrite) -> Option<&str> {
   write.assignee.as_deref().map(str::trim).filter(|assignee| !assignee.is_empty())
 }
 
+/// The company a schedule written names, none where it names none or the platform's own word.
+pub fn schedule_company(write: &ScheduleWrite) -> Option<&str> {
+  write
+    .company
+    .as_deref()
+    .map(str::trim)
+    .filter(|company| !company.is_empty() && *company != crate::realm::PLATFORM)
+}
+
 /// The memory text of a schedule: its title.
 pub fn schedule_text(write: &ScheduleWrite) -> String {
   write.title.trim().to_owned()
@@ -472,13 +521,14 @@ pub fn schedule_labels(source: &str, item: &str, write: &ScheduleWrite, created_
   labels
 }
 
-/// A schedule read from its memory, as it is read in a realm.
-pub fn schedule_of(memory: &Memory, realm: Realm) -> Schedule {
+/// A schedule read from its memory, as it is read in a realm, kept in a company's brain or the platform's.
+pub fn schedule_of(memory: &Memory, realm: Realm, company: String) -> Schedule {
   let assignee = memory.label("assignee");
   Schedule {
     source_id: memory.label("source").to_owned(),
     item_id: memory.label("item").to_owned(),
     realm,
+    company,
     title: memory.text.clone(),
     start: memory.label("start").to_owned(),
     end: memory.label("end").to_owned(),

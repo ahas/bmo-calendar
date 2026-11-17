@@ -3,7 +3,8 @@
        or a held finger (the grid's hold menu) offers the same form and the cancellation as a menu. Where a
        mouse points, neither is made until the event is first pointed at, since the month view puts hundreds
        of events up at once; on a touch screen they stand from the first. A received schedule opens neither:
-       it is a link to the item it stands for. -->
+       it is a link to the item it stands for. The reader's own booking opens its booking's form, and its menu
+       offers its cancellation. -->
   <div ref="root" class="contents" @pointerover="arm" @focusin="arm" @contextmenu="arm">
     <slot v-if="!active" :open="false" />
 
@@ -13,7 +14,8 @@
           <slot :open="open" />
 
           <template #content>
-            <CalendarEventForm v-model:dirty="dirty" :event="event" @done="closeEvent(event.key)" @escape="leave" />
+            <BookingForm v-if="event.booking" v-model:dirty="dirty" :booking="event.booking" :resources="resourcesFor(event.booking.company)" @done="closeEvent(event.key)" @escape="leave" />
+            <CalendarEventForm v-else v-model:dirty="dirty" :event="event" @done="closeEvent(event.key)" @escape="leave" />
           </template>
         </CalendarFormFloat>
       </div>
@@ -26,9 +28,14 @@ import { useMediaQuery } from "@vueuse/core";
 import { computed, nextTick, ref, useTemplateRef } from "vue";
 import { useI18n } from "vue-i18n";
 import { askDiscard } from "bmo-ui/app/domain/form-save";
+import { useIsland } from "bmo-ui/app/domain/island";
 
+import BookingForm from "../bookings/BookingForm.vue";
 import CalendarEventForm from "./CalendarEventForm.vue";
 import CalendarFormFloat from "./CalendarFormFloat.vue";
+import { refusalText } from "../../domain/store";
+import { useBookingChange } from "../../composables/useBookingChange";
+import { useBookings } from "../../composables/useBookings";
 import { useCalendar } from "../../composables/useCalendar";
 import { useEventChange } from "../../composables/useEventChange";
 import { useEventEditor } from "../../composables/useEventEditor";
@@ -42,6 +49,9 @@ const { t } = useI18n();
 const { formSide } = useCalendar();
 const { editingKey, openEvent, closeEvent } = useEventEditor();
 const { cancelEvent } = useEventChange();
+const { resourcesFor } = useBookings();
+const bookingChange = useBookingChange();
+const island = useIsland(t);
 
 // A touch screen's events stand armed from the first: the hold that asks for the menu is timed from the
 // finger landing, and arming then would put a new event in place of the one the finger is on.
@@ -80,8 +90,23 @@ async function leave(): Promise<void> {
   }
 }
 
+// A booking is cancelled rather than deleted, and a refusal of it is told where the reader is.
+async function cancelBooking(): Promise<void> {
+  const booking = props.event.booking;
+
+  if (!booking) return;
+
+  try {
+    await bookingChange.cancel(booking);
+  } catch (error) {
+    island.say({ tone: "error", title: refusalText(t, error) });
+  }
+}
+
 const items = computed<ContextMenuItem[]>(() => [
   { label: t("calendar.action.edit"), icon: "i-material-symbols-edit-outline", onSelect: () => openEvent(props.event.key) },
-  { label: t("calendar.action.delete"), icon: "i-material-symbols-delete-outline", color: "error", onSelect: () => void cancelEvent(props.event) }
+  props.event.booking
+    ? { label: t("calendar.action.cancel_booking"), icon: "i-material-symbols-event-busy-outline", color: "error", onSelect: () => void cancelBooking() }
+    : { label: t("calendar.action.delete"), icon: "i-material-symbols-delete-outline", color: "error", onSelect: () => void cancelEvent(props.event) }
 ]);
 </script>

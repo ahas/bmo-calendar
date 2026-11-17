@@ -1,7 +1,8 @@
 //! The calendar tool (`docs/api.md`, 「The tool」): what the tool host hands a call and what it answers
 //! (bmo-pocket's `docs/mcp-host.md`, 「A call」), and each entry as one call of a calendar route, made with the
-//! service token the deployment writes into the data root's `env/calendar.env`. The `mine` realm is named by the
-//! session's holder, which the service answers with the owner's account.
+//! service token the deployment writes into the data root's `env/calendar.env`. Every call names the session's
+//! holder, which the service answers with the account agency names as its owner, else the owner's: that
+//! account's own realm, its company's organization realm and its bookings.
 
 use std::collections::BTreeMap;
 use std::io::{Read, Write};
@@ -15,13 +16,17 @@ use serde_json::{Map, Value, json};
 pub const PROTOCOL: u32 = 1;
 
 /// The entries this executable answers, as its manifest declares them.
-pub const ENTRIES: [&str; 6] = [
+pub const ENTRIES: [&str; 10] = [
   "calendar_list",
   "calendar_events",
   "calendar_show",
   "calendar_add",
   "calendar_change",
   "calendar_cancel",
+  "calendar_resources",
+  "calendar_free_resources",
+  "calendar_book",
+  "calendar_cancel_booking",
 ];
 
 /// The data root handed in the record's variables.
@@ -232,6 +237,48 @@ fn event_lines(event: &Value) -> Vec<String> {
   lines
 }
 
+/// One resource as one line.
+pub fn resource_line(resource: &Value) -> String {
+  let mut line = format!(
+    "{} · {} · {} seats · id {}",
+    resource["name"].as_str().unwrap_or(""),
+    resource["kind"].as_str().unwrap_or(""),
+    resource["seats"].as_u64().unwrap_or(0),
+    resource["id"].as_str().unwrap_or(""),
+  );
+  if let Some(place) = resource["place"].as_str().filter(|place| !place.is_empty()) {
+    line.push_str(&format!(" · at {place}"));
+  }
+  if resource["approval"].as_bool() == Some(true) {
+    line.push_str(" · a booking waits for a keeper's approval");
+  }
+  line
+}
+
+/// One booking as one line.
+pub fn booking_line(booking: &Value) -> String {
+  let mut line = format!(
+    "{} to {} · {} · resource {} · {} · id {}",
+    booking["start"].as_str().unwrap_or(""),
+    booking["end"].as_str().unwrap_or(""),
+    booking["title"].as_str().unwrap_or(""),
+    booking["resourceId"].as_str().unwrap_or(""),
+    booking["state"].as_str().unwrap_or(""),
+    booking["id"].as_str().unwrap_or(""),
+  );
+  if booking["repeat"].as_str().is_some_and(|repeat| repeat != "none") {
+    line.push_str(&format!(" · repeats {}", booking["repeat"].as_str().unwrap_or("")));
+  }
+  line
+}
+
+fn resource_lines(page: &Value) -> Vec<String> {
+  page["items"]
+    .as_array()
+    .map(|items| items.iter().map(resource_line).collect())
+    .unwrap_or_default()
+}
+
 /// The end an added event takes where none is given: an hour after the start, or the next day's start where
 /// it takes the whole day.
 pub fn default_end(start: &str, all_day: bool) -> Option<String> {
@@ -269,19 +316,106 @@ pub async fn answer(handed: &Handed, service: &Service) -> Answer {
 }
 
 async fn answered(handed: &Handed, service: &Service) -> Result<Answer, String> {
-  use reqwest::Method;
-
   let arguments = &handed.arguments;
-  let realm = text(arguments, "realm").ok_or("realm is mine or organization")?;
-  if !matches!(realm, "mine" | "organization") {
-    return Err("realm is mine or organization".into());
-  }
   let mut who: Vec<(&str, String)> = Vec::new();
   if !handed.session.holder_name.is_empty() {
     who.push(("holderName", handed.session.holder_name.clone()));
   }
-  let id = || text(arguments, "id").ok_or_else(|| "id names the event".to_owned());
   match entry_name(&handed.entry) {
+    "calendar_resources" | "calendar_free_resources" | "calendar_book" | "calendar_cancel_booking" => {
+      booking_entry(entry_name(&handed.entry), arguments, &who, service).await
+    }
+    entry => event_entry(entry, arguments, &who, service).await,
+  }
+}
+
+/// The entries of a company's resources and bookings, each in the organization realm of the account the holder
+/// acts for.
+async fn booking_entry(
+  entry: &str,
+  arguments: &Value,
+  who: &[(&str, String)],
+  service: &Service,
+) -> Result<Answer, String> {
+  use reqwest::Method;
+
+  match entry {
+    "calendar_resources" => {
+      let mut query = who.to_vec();
+      if let Some(kind) = text(arguments, "kind") {
+        query.push(("kind", kind.to_owned()));
+      }
+      let page = call(service, Method::GET, "/organization/resources", &query, None).await?;
+      Ok(Answer::reading(resource_lines(&page), page))
+    }
+    "calendar_free_resources" => {
+      let start = text(arguments, "start").ok_or("start is the span's local start")?;
+      let end = match text(arguments, "end") {
+        Some(end) => end.to_owned(),
+        None => {
+          default_end(start, false).ok_or("start is no local datetime of the shape YYYY-MM-DDTHH:mm:ss")?
+        }
+      };
+      let mut query = who.to_vec();
+      query.push(("start", start.to_owned()));
+      query.push(("end", end));
+      if let Some(seats) = arguments["seats"].as_u64() {
+        query.push(("seats", seats.to_string()));
+      }
+      for name in ["repeat", "kind"] {
+        if let Some(value) = text(arguments, name) {
+          query.push((name, value.to_owned()));
+        }
+      }
+      let page = call(service, Method::GET, "/organization/resources/free", &query, None).await?;
+      Ok(Answer::reading(resource_lines(&page), page))
+    }
+    "calendar_book" => {
+      let mut body = fields(arguments);
+      if text(arguments, "end").is_none() {
+        let start = text(arguments, "start").ok_or("start is the booking's local start")?;
+        let end = default_end(start, arguments["allDay"].as_bool().unwrap_or(false))
+          .ok_or("start is no local datetime of the shape YYYY-MM-DDTHH:mm:ss")?;
+        body.insert("end".into(), json!(end));
+      }
+      let booking =
+        call(service, Method::POST, "/organization/bookings", who, Some(&Value::Object(body))).await?;
+      let said = match booking["state"].as_str() {
+        Some("requested") => {
+          "Requested: it waits for a keeper's approval, and the booker is told the answer."
+        }
+        _ => "Booked.",
+      };
+      Ok(Answer::reading(vec![said.to_owned(), booking_line(&booking)], booking))
+    }
+    _ => {
+      let id = text(arguments, "bookingId").ok_or("bookingId names the booking")?;
+      let mut query = who.to_vec();
+      if let Some(occurrence) = text(arguments, "occurrence") {
+        query.push(("occurrence", occurrence.to_owned()));
+      }
+      call(service, Method::DELETE, &format!("/organization/bookings/{id}"), &query, None).await?;
+      Ok(Answer::reading(vec!["Cancelled.".to_owned()], json!({ "cancelled": true })))
+    }
+  }
+}
+
+/// The entries of a realm's calendars and events.
+async fn event_entry(
+  entry: &str,
+  arguments: &Value,
+  who: &[(&str, String)],
+  service: &Service,
+) -> Result<Answer, String> {
+  use reqwest::Method;
+
+  let realm = text(arguments, "realm").ok_or("realm is mine or organization")?;
+  if !matches!(realm, "mine" | "organization") {
+    return Err("realm is mine or organization".into());
+  }
+  let who = who.to_vec();
+  let id = || text(arguments, "id").ok_or_else(|| "id names the event".to_owned());
+  match entry {
     "calendar_list" => {
       let page = call(service, Method::GET, &format!("/{realm}/calendars"), &who, None).await?;
       let lines = page["items"]

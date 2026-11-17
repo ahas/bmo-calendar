@@ -7,3 +7,4 @@
 /client/dist
 .graph/*
 !.graph/settings.toml
+/node_modules

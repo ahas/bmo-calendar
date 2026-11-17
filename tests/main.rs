@@ -4,10 +4,14 @@
 mod support;
 
 mod alarms;
+mod bookings;
 mod calendars;
+mod companies;
 mod console;
 mod events;
 mod openapi;
+mod overlap;
+mod preview;
 mod repeats;
 mod repository;
 mod schedules;

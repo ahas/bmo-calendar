@@ -11,24 +11,27 @@ use serde_json::{Map, Value, json};
 use crate::error::CODES;
 use crate::events::KINDS;
 use crate::wire::{
-  AccountQuery, AlarmMoment, AlarmTold, AlarmsQuery, Beat, Calendar, CalendarChange, CalendarChanged,
-  CancelQuery, Event, EventChange, EventChanged, EventsQuery, Health, NewCalendar, NewEvent, Page,
-  Reconciled, Schedule, ScheduleChanged, ScheduleSet, ScheduleWrite, Source, SourceChange, SourceChanged,
-  SourceWrite, SpanQuery, StreamEvent, WireError,
+  AccountQuery, AlarmMoment, AlarmTold, AlarmsQuery, Beat, Booking, BookingChange, BookingChanged,
+  BookingDecided, BookingsQuery, Calendar, CalendarChange, CalendarChanged, CancelQuery, Company, Decision,
+  Event, EventChange, EventChanged, EventsQuery, FreeQuery, Health, NewBooking, NewCalendar, NewEvent,
+  NewResource, Page, Reconciled, Resource, ResourceChange, ResourceChanged, ResourcesQuery, Schedule,
+  ScheduleChanged, ScheduleSet, ScheduleWrite, Source, SourceChange, SourceChanged, SourceWrite, SpanQuery,
+  StreamEvent, WireError,
 };
 
 const SCHEMAS: &str = "/components/schemas";
 
 const DESCRIPTION: &str = "The platform's dated events, kept as memories in the brain service (the brain the \
-  master, this unit the subordinate), in two realms kept apart: each account's own (mine) and the organization's. \
-  Calendars and events are read and written by realm; a repeating event answers one row per occurrence in a span; \
-  an alarm is told once to the supervisor through the receiver when it comes due. Bodies are JSON with camelCase \
+  master, this unit the subordinate), in two realms kept apart: each account's own (mine) and the organization's, \
+  one for each company. Calendars and events are read and written by realm; a repeating event answers one row per \
+  occurrence in a span; an alarm is told once to the supervisor through the receiver when it comes due. A company's \
+  resources are booked, two bookings of one resource never meeting, some only once a keeper approves. Bodies are JSON with camelCase \
   keys, times are epoch milliseconds unless a field says it is a local ISO datetime, lists are pages of items and \
   more, and every failure is the error shape with its status. The tool's entries, placed on the tool host, are \
   stated under x-tools.";
 
 /// The tool's entries: name, description, the route it calls, its input file and the answer it carries.
-pub const TOOLS: [(&str, &str, &str, &str); 6] = [
+pub const TOOLS: [(&str, &str, &str, &str); 10] = [
   ("calendar_list", "The calendars of a realm.", "GET /{realm}/calendars", "calendars"),
   (
     "calendar_events",
@@ -55,6 +58,30 @@ pub const TOOLS: [(&str, &str, &str, &str); 6] = [
     "DELETE /{realm}/events/{eventId}",
     "none",
   ),
+  (
+    "calendar_resources",
+    "The resources of the company: its rooms and whatever else it books.",
+    "GET /{realm}/resources",
+    "resources",
+  ),
+  (
+    "calendar_free_resources",
+    "The company's resources free for a span, with at least the seats asked.",
+    "GET /{realm}/resources/free",
+    "resources",
+  ),
+  (
+    "calendar_book",
+    "Books a resource for a span; on a resource that waits for approval the booking stands requested.",
+    "POST /{realm}/bookings",
+    "booking",
+  ),
+  (
+    "calendar_cancel_booking",
+    "Cancels a booking or one occurrence.",
+    "DELETE /{realm}/bookings/{bookingId}",
+    "none",
+  ),
 ];
 
 /// The input schema of a tool entry, as the tool's folder holds it.
@@ -66,6 +93,10 @@ pub fn tool_input(name: &str) -> Value {
     "calendar_add" => include_str!("../tools/calendar/calendar_add.json"),
     "calendar_change" => include_str!("../tools/calendar/calendar_change.json"),
     "calendar_cancel" => include_str!("../tools/calendar/calendar_cancel.json"),
+    "calendar_resources" => include_str!("../tools/calendar/calendar_resources.json"),
+    "calendar_free_resources" => include_str!("../tools/calendar/calendar_free_resources.json"),
+    "calendar_book" => include_str!("../tools/calendar/calendar_book.json"),
+    "calendar_cancel_booking" => include_str!("../tools/calendar/calendar_cancel_booking.json"),
     _ => "null",
   };
   serde_json::from_str(text).unwrap_or(Value::Null)
@@ -232,7 +263,15 @@ fn routes(g: &mut SchemaGenerator) -> Vec<Route> {
       parameters: with(vec![realm(g)], query::<AccountQuery>(g)),
       body: Some(g.subschema_for::<NewCalendar>()),
       answers: vec![(201, content::<Calendar>(g))],
-      codes: vec!["bad-request", "not-a-writer", "not-found", "no-account", "upstream-failed", "not-ready"],
+      codes: vec![
+        "bad-request",
+        "not-a-writer",
+        "not-found",
+        "no-account",
+        "no-company",
+        "upstream-failed",
+        "not-ready",
+      ],
     },
     Route {
       method: "patch",
@@ -243,7 +282,15 @@ fn routes(g: &mut SchemaGenerator) -> Vec<Route> {
       parameters: with(realm_and(g, "calendarId", "The calendar's id."), query::<AccountQuery>(g)),
       body: Some(g.subschema_for::<CalendarChange>()),
       answers: vec![(200, content::<Calendar>(g))],
-      codes: vec!["bad-request", "not-a-writer", "not-found", "no-account", "upstream-failed", "not-ready"],
+      codes: vec![
+        "bad-request",
+        "not-a-writer",
+        "not-found",
+        "no-account",
+        "no-company",
+        "upstream-failed",
+        "not-ready",
+      ],
     },
     Route {
       method: "delete",
@@ -254,7 +301,15 @@ fn routes(g: &mut SchemaGenerator) -> Vec<Route> {
       parameters: with(realm_and(g, "calendarId", "The calendar's id."), query::<AccountQuery>(g)),
       body: None,
       answers: vec![(204, None)],
-      codes: vec!["bad-request", "not-a-writer", "not-found", "no-account", "upstream-failed", "not-ready"],
+      codes: vec![
+        "bad-request",
+        "not-a-writer",
+        "not-found",
+        "no-account",
+        "no-company",
+        "upstream-failed",
+        "not-ready",
+      ],
     },
     Route {
       method: "get",
@@ -288,6 +343,7 @@ fn routes(g: &mut SchemaGenerator) -> Vec<Route> {
         "not-a-writer",
         "not-found",
         "no-account",
+        "no-company",
         "end-before-start",
         "unknown-calendar",
         "upstream-failed",
@@ -437,6 +493,227 @@ fn routes(g: &mut SchemaGenerator) -> Vec<Route> {
     },
     Route {
       method: "get",
+      path: "/{realm}/companies",
+      id: "listCompanies",
+      tag: "companies",
+      summary: "The companies the caller reads, its own first; for the administrator every company and the platform's own last. The organization realm alone.",
+      parameters: with(vec![realm(g)], query::<AccountQuery>(g)),
+      body: None,
+      answers: vec![(200, content::<Page<Company>>(g))],
+      codes: vec!["bad-request", "not-found", "no-account", "upstream-failed", "not-ready"],
+    },
+    Route {
+      method: "get",
+      path: "/{realm}/resources",
+      id: "listResources",
+      tag: "bookings",
+      summary: "The company's live resources, by kind, place and name. The organization realm alone.",
+      parameters: with(vec![realm(g)], query::<ResourcesQuery>(g)),
+      body: None,
+      answers: vec![(200, content::<Page<Resource>>(g))],
+      codes: vec!["bad-request", "not-found", "no-account", "upstream-failed", "not-ready"],
+    },
+    Route {
+      method: "post",
+      path: "/{realm}/resources",
+      id: "createResource",
+      tag: "bookings",
+      summary: "Make a resource: the administrator's and a head of the company's.",
+      parameters: with(vec![realm(g)], query::<AccountQuery>(g)),
+      body: Some(g.subschema_for::<NewResource>()),
+      answers: vec![(201, content::<Resource>(g)), (200, content::<Resource>(g))],
+      codes: vec![
+        "bad-request",
+        "not-a-writer",
+        "not-found",
+        "no-account",
+        "no-company",
+        "not-in-company",
+        "upstream-failed",
+        "not-ready",
+      ],
+    },
+    Route {
+      method: "get",
+      path: "/{realm}/resources/free",
+      id: "listFreeResources",
+      tag: "bookings",
+      summary: "The resources with at least the seats asked that no standing booking meets over the span and its repeat, fewest seats first.",
+      parameters: with(vec![realm(g)], query::<FreeQuery>(g)),
+      body: None,
+      answers: vec![(200, content::<Page<Resource>>(g))],
+      codes: vec![
+        "bad-request",
+        "not-found",
+        "no-account",
+        "end-before-start",
+        "upstream-failed",
+        "not-ready",
+      ],
+    },
+    Route {
+      method: "patch",
+      path: "/{realm}/resources/{resourceId}",
+      id: "changeResource",
+      tag: "bookings",
+      summary: "Change the fields named of a resource.",
+      parameters: with(realm_and(g, "resourceId", "The resource's id."), query::<AccountQuery>(g)),
+      body: Some(g.subschema_for::<ResourceChange>()),
+      answers: vec![(200, content::<Resource>(g))],
+      codes: vec![
+        "bad-request",
+        "not-a-writer",
+        "not-found",
+        "no-account",
+        "no-company",
+        "not-in-company",
+        "upstream-failed",
+        "not-ready",
+      ],
+    },
+    Route {
+      method: "delete",
+      path: "/{realm}/resources/{resourceId}",
+      id: "retireResource",
+      tag: "bookings",
+      summary: "Retire a resource and cancel its standing bookings.",
+      parameters: with(realm_and(g, "resourceId", "The resource's id."), query::<AccountQuery>(g)),
+      body: None,
+      answers: vec![(204, None)],
+      codes: vec![
+        "bad-request",
+        "not-a-writer",
+        "not-found",
+        "no-account",
+        "no-company",
+        "upstream-failed",
+        "not-ready",
+      ],
+    },
+    Route {
+      method: "get",
+      path: "/{realm}/bookings",
+      id: "listBookings",
+      tag: "bookings",
+      summary: "The bookings overlapping a span of at most 92 days, one row per occurrence: the company's standing ones in the organization realm, the account's own in the mine realm.",
+      parameters: with(vec![realm(g)], query::<BookingsQuery>(g)),
+      body: None,
+      answers: vec![(200, content::<Page<Booking>>(g))],
+      codes: vec![
+        "bad-request",
+        "not-found",
+        "no-account",
+        "span-too-long",
+        "upstream-failed",
+        "not-ready",
+      ],
+    },
+    Route {
+      method: "post",
+      path: "/{realm}/bookings",
+      id: "createBooking",
+      tag: "bookings",
+      summary: "Book a resource; a POST naming an id the company holds writes over it and answers 200.",
+      parameters: with(vec![realm(g)], query::<AccountQuery>(g)),
+      body: Some(g.subschema_for::<NewBooking>()),
+      answers: vec![(201, content::<Booking>(g)), (200, content::<Booking>(g))],
+      codes: vec![
+        "bad-request",
+        "not-a-writer",
+        "not-found",
+        "overlap",
+        "no-account",
+        "no-company",
+        "unknown-resource",
+        "end-before-start",
+        "upstream-failed",
+        "not-ready",
+      ],
+    },
+    Route {
+      method: "get",
+      path: "/{realm}/bookings/requests",
+      id: "listBookingRequests",
+      tag: "bookings",
+      summary: "The requested bookings of the resources the caller keeps, oldest request first.",
+      parameters: with(vec![realm(g)], query::<AccountQuery>(g)),
+      body: None,
+      answers: vec![(200, content::<Page<Booking>>(g))],
+      codes: vec!["bad-request", "not-found", "no-account", "upstream-failed", "not-ready"],
+    },
+    Route {
+      method: "get",
+      path: "/{realm}/bookings/{bookingId}",
+      id: "readBooking",
+      tag: "bookings",
+      summary: "One booking.",
+      parameters: with(realm_and(g, "bookingId", "The booking's id."), query::<AccountQuery>(g)),
+      body: None,
+      answers: vec![(200, content::<Booking>(g))],
+      codes: vec!["bad-request", "not-found", "no-account", "upstream-failed", "not-ready"],
+    },
+    Route {
+      method: "patch",
+      path: "/{realm}/bookings/{bookingId}",
+      id: "changeBooking",
+      tag: "bookings",
+      summary: "Change the fields named; with an occurrence, that occurrence alone, which becomes a booking of its own.",
+      parameters: with(realm_and(g, "bookingId", "The booking's id."), query::<AccountQuery>(g)),
+      body: Some(g.subschema_for::<BookingChange>()),
+      answers: vec![(200, content::<Booking>(g))],
+      codes: vec![
+        "bad-request",
+        "not-a-writer",
+        "not-found",
+        "overlap",
+        "no-account",
+        "unknown-resource",
+        "end-before-start",
+        "not-an-occurrence",
+        "upstream-failed",
+        "not-ready",
+      ],
+    },
+    Route {
+      method: "delete",
+      path: "/{realm}/bookings/{bookingId}",
+      id: "cancelBooking",
+      tag: "bookings",
+      summary: "Cancel a booking, or one occurrence of a repeating booking.",
+      parameters: with(realm_and(g, "bookingId", "The booking's id."), query::<CancelQuery>(g)),
+      body: None,
+      answers: vec![(204, None)],
+      codes: vec![
+        "bad-request",
+        "not-a-writer",
+        "not-found",
+        "no-account",
+        "not-an-occurrence",
+        "upstream-failed",
+        "not-ready",
+      ],
+    },
+    Route {
+      method: "post",
+      path: "/{realm}/bookings/{bookingId}/decision",
+      id: "decideBooking",
+      tag: "bookings",
+      summary: "A keeper approves or refuses a requested booking; its booker is told.",
+      parameters: with(realm_and(g, "bookingId", "The booking's id."), query::<AccountQuery>(g)),
+      body: Some(g.subschema_for::<Decision>()),
+      answers: vec![(200, content::<Booking>(g))],
+      codes: vec![
+        "bad-request",
+        "not-a-keeper",
+        "not-found",
+        "not-requested",
+        "no-account",
+        "upstream-failed",
+        "not-ready",
+      ],
+    },
+    Route {
+      method: "get",
       path: "/{realm}/alarms",
       id: "listAlarms",
       tag: "alarms",
@@ -458,7 +735,7 @@ fn routes(g: &mut SchemaGenerator) -> Vec<Route> {
       path: "/beats",
       id: "runBeat",
       tag: "alarms",
-      summary: "Run one beat now: tell every alarm due, once each. The service token alone.",
+      summary: "Run one beat now: tell every alarm due and every booking telling not yet made, once each. The service token alone.",
       parameters: vec![],
       body: None,
       answers: vec![(200, content::<Beat>(g))],
@@ -541,10 +818,15 @@ pub fn openapi() -> Value {
     "alarm.told": g.subschema_for::<AlarmTold>(),
     "source.changed": g.subschema_for::<SourceChanged>(),
     "schedule.changed": g.subschema_for::<ScheduleChanged>(),
+    "resource.changed": g.subschema_for::<ResourceChanged>(),
+    "booking.changed": g.subschema_for::<BookingChanged>(),
+    "booking.decided": g.subschema_for::<BookingDecided>(),
   });
   let calendars = g.subschema_for::<Page<Calendar>>();
   let event_page = g.subschema_for::<Page<Event>>();
   let event = g.subschema_for::<Event>();
+  let resources = g.subschema_for::<Page<Resource>>();
+  let booking = g.subschema_for::<Booking>();
   let tools: Vec<Value> = TOOLS
     .iter()
     .map(|(name, description, route, answer)| {
@@ -552,6 +834,8 @@ pub fn openapi() -> Value {
         "calendars" => json!(calendars),
         "events" => json!(event_page),
         "event" => json!(event),
+        "resources" => json!(resources),
+        "booking" => json!(booking),
         _ => json!({ "type": "object", "properties": { "cancelled": { "type": "boolean" } } }),
       };
       json!({
@@ -571,7 +855,7 @@ pub fn openapi() -> Value {
     "servers": [{ "url": "/", "description": "the calendar service" }],
     "security": [{ "bearer": [] }],
     "x-layer": "downstream",
-    "x-calls": ["bmo-brain", "bmo-receiver", "the account service"],
+    "x-calls": ["bmo-brain", "bmo-receiver", "the account service", "bmo-agency"],
     "x-events": KINDS,
     "x-event-data": events,
     "tags": tags.iter().map(|tag| json!({ "name": tag })).collect::<Vec<_>>(),

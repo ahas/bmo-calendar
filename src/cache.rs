@@ -1,65 +1,13 @@
 //! What the calendar last read of the brain (`docs/design.md`, 「What a calendar and an event are in the
-//! brain」): each realm's brain and its live calendars and events, and the organization's sources and
-//! received schedules, by their own ids. It is rebuilt from the
-//! brain at start and kept by the brain's event stream and the calendar's own writes.
+//! brain」): each realm's brain and what it holds live, by their own ids. It is rebuilt from the brain at start
+//! and kept by the brain's event stream and the calendar's own writes.
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 
-use crate::model::{CALENDAR_TYPE, EVENT_TYPE, Memory, SCHEDULE_TYPE, SOURCE_TYPE};
-use crate::wire::Realm;
-
-/// A realm as a brain is keyed: the organization's, or one account's.
-#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
-pub enum RealmKey {
-  Mine(String),
-  Organization,
-}
-
-impl RealmKey {
-  /// The realm's word.
-  pub fn realm(&self) -> Realm {
-    match self {
-      Self::Mine(_) => Realm::Mine,
-      Self::Organization => Realm::Organization,
-    }
-  }
-
-  /// The account whose realm it is, for a `mine` realm.
-  pub fn account(&self) -> Option<&str> {
-    match self {
-      Self::Mine(account) => Some(account),
-      Self::Organization => None,
-    }
-  }
-
-  /// The brain's `accountKey`.
-  pub fn account_key(&self) -> String {
-    match self {
-      Self::Mine(account) => format!("account:{account}"),
-      Self::Organization => "organization".to_owned(),
-    }
-  }
-
-  /// The memory types its brain holds: every realm its calendars and events; the organization's also the
-  /// sources and the schedules received (`docs/design.md`, 「Received schedules」).
-  pub fn kinds(&self) -> &'static [&'static str] {
-    match self {
-      Self::Mine(_) => &[CALENDAR_TYPE, EVENT_TYPE],
-      Self::Organization => &[CALENDAR_TYPE, EVENT_TYPE, SOURCE_TYPE, SCHEDULE_TYPE],
-    }
-  }
-
-  /// The realm a brain's `accountKey` names, where it names one.
-  pub fn of_account_key(key: &str) -> Option<Self> {
-    if key == "organization" {
-      return Some(Self::Organization);
-    }
-    key
-      .strip_prefix("account:")
-      .filter(|account| !account.is_empty())
-      .map(|account| Self::Mine(account.into()))
-  }
-}
+use crate::model::{
+  BOOKING_TYPE, CALENDAR_TYPE, EVENT_TYPE, Memory, RESOURCE_TYPE, SCHEDULE_TYPE, SOURCE_TYPE,
+};
+pub use crate::realm::RealmKey;
 
 /// One realm's brain and what it holds live.
 #[derive(Clone, Debug)]
@@ -70,6 +18,8 @@ pub struct Held {
   pub sources: BTreeMap<String, Memory>,
   /// By their own ids, the source's and the item's joined by a colon.
   pub schedules: BTreeMap<String, Memory>,
+  pub resources: BTreeMap<String, Memory>,
+  pub bookings: BTreeMap<String, Memory>,
   /// The ids of the memories seen closed, so a late read of them does not bring them back.
   closed: HashSet<i64>,
 }
@@ -82,6 +32,8 @@ impl Held {
       events: BTreeMap::new(),
       sources: BTreeMap::new(),
       schedules: BTreeMap::new(),
+      resources: BTreeMap::new(),
+      bookings: BTreeMap::new(),
       closed: HashSet::new(),
     }
   }
@@ -95,6 +47,9 @@ pub enum Changed {
   Source(String),
   /// A schedule: its source's id and its item's.
   Schedule(String, String),
+  Resource(String),
+  /// A booking: its id and its booker.
+  Booking(String, String),
 }
 
 /// Every realm held.
@@ -122,6 +77,8 @@ impl Cache {
         &mut held.schedules,
         Changed::Schedule(memory.label("source").to_owned(), memory.label("item").to_owned()),
       ),
+      RESOURCE_TYPE => (&mut held.resources, Changed::Resource(id.clone())),
+      BOOKING_TYPE => (&mut held.bookings, Changed::Booking(id.clone(), memory.label("booker").to_owned())),
       _ => return None,
     };
     if memory.live() {

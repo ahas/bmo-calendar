@@ -1,5 +1,6 @@
 //! The alarms (`docs/design.md`, 「Alarms」; `docs/api.md`, 「Alarms」): the moments of each event's alarm, and
-//! the beat that tells the due ones through the receiver once each, keeping the told marks.
+//! the beat that tells the due ones through the receiver once each, keeping the told marks; the beat also makes
+//! the bookings' tellings (`docs/api.md`, 「Resources and bookings」).
 
 use std::collections::BTreeMap;
 use std::sync::Arc;
@@ -7,14 +8,14 @@ use std::sync::Arc;
 use chrono::{Duration, NaiveDateTime};
 use serde_json::json;
 
-use crate::app::App;
+use crate::app::{App, scope_of};
 use crate::cache::RealmKey;
 use crate::error::ApiError;
 use crate::model::{
   Memory, epoch_of, event_of, local_of, local_text, now_ms, parse_local, skipped, starts_between,
 };
 use crate::peers;
-use crate::wire::{AlarmTold, Beat, Event, Realm, Tell, ToldAlarm};
+use crate::wire::{AlarmTold, Beat, Event, Realm, Tell, ToldAlarm, ToldBooking};
 
 /// How late an alarm is before it is named late: past the minute a beat stands for.
 const LATE_FROM_MS: i64 = 60_000;
@@ -30,7 +31,7 @@ pub struct Moment {
 
 /// The alarm moments of an event whose occurrences start in `[low, high)` (epoch ms of the start).
 fn moments_by_start(memory: &Memory, low: i64, high: i64) -> Vec<Moment> {
-  let Some(event) = event_of(memory, Realm::Mine, None) else {
+  let Some(event) = event_of(memory, Realm::Mine, None, None) else {
     return Vec::new();
   };
   let (Some(minutes), Some(start)) = (event.alarm.minutes(), parse_local(&event.start)) else {
@@ -55,7 +56,7 @@ fn moments_by_start(memory: &Memory, low: i64, high: i64) -> Vec<Moment> {
 
 /// The alarm moments of an event in `[from, to)` (epoch ms of the moment).
 pub fn moments(memory: &Memory, from: i64, to: i64) -> Vec<Moment> {
-  let Some(event) = event_of(memory, Realm::Mine, None) else {
+  let Some(event) = event_of(memory, Realm::Mine, None, None) else {
     return Vec::new();
   };
   let Some(minutes) = event.alarm.minutes() else {
@@ -89,7 +90,7 @@ pub async fn beat(app: &Arc<App>) -> Result<Beat, ApiError> {
     let cache = app.cache.lock().map_err(|_| ApiError::failed("the cache's lock is poisoned"))?;
     for (realm, held) in &cache.realms {
       for memory in held.events.values() {
-        let Some(event) = event_of(memory, realm.realm(), None) else {
+        let Some(event) = event_of(memory, realm.realm(), realm.company(), None) else {
           continue;
         };
         let Some(minutes) = event.alarm.minutes() else {
@@ -98,8 +99,8 @@ pub async fn beat(app: &Arc<App>) -> Result<Beat, ApiError> {
         let calendar = held.calendars.get(&event.calendar_id);
         let tell = match realm {
           RealmKey::Mine(_) => Tell::Creator,
-          RealmKey::Organization => calendar
-            .and_then(|calendar| crate::model::calendar_of(calendar, Realm::Organization, None))
+          _ => calendar
+            .and_then(|calendar| crate::model::calendar_of(calendar, Realm::Organization, None, None))
             .and_then(|calendar| calendar.tell)
             .unwrap_or(Tell::Creator),
         };
@@ -134,7 +135,7 @@ pub async fn beat(app: &Arc<App>) -> Result<Beat, ApiError> {
     if app.store.is_told(one.brain, &one.event.id, &occurrence).map_err(ApiError::failed)? {
       continue;
     }
-    match tell(app, &one, &occurrence).await {
+    match tell_alarm(app, &one, &occurrence).await {
       Ok(rooms) => {
         app
           .store
@@ -144,14 +145,16 @@ pub async fn beat(app: &Arc<App>) -> Result<Beat, ApiError> {
           "alarm.told",
           AlarmTold {
             realm: one.realm.realm(),
+            company: one.realm.company(),
             event_id: one.event.id.clone(),
             occurrence: occurrence.clone(),
             at: one.moment.at,
           },
-          one.realm.account().map(str::to_owned),
+          scope_of(&one.realm),
         );
         told.push(ToldAlarm {
           realm: one.realm.realm(),
+          company: one.realm.company(),
           event_id: one.event.id.clone(),
           occurrence,
           at: one.moment.at,
@@ -167,38 +170,89 @@ pub async fn beat(app: &Arc<App>) -> Result<Beat, ApiError> {
   }
   let looked_to = untold.map_or(now, |at| (at - 1).min(now)).max(since.min(now));
   app.store.set_last_beat(looked_to).map_err(ApiError::failed)?;
-  Ok(Beat { told })
+  let bookings = crate::bookings::tell_due(app).await?;
+  Ok(Beat { told, bookings })
 }
 
-/// Whom one alarm is told: the accounts, by key.
-fn recipients(app: &App, one: &Due) -> Vec<String> {
-  match &one.realm {
-    RealmKey::Mine(account) => vec![account.clone()],
-    RealmKey::Organization => match one.tell {
-      Tell::Nobody => Vec::new(),
-      Tell::Creator => vec![one.event.creator.clone()],
-      Tell::Everyone => {
-        let mut accounts = vec![String::new()];
-        if let Ok(cache) = app.cache.lock() {
-          accounts.extend(cache.realms.keys().filter_map(|realm| realm.account().map(str::to_owned)));
+/// The bookings' tellings not yet made, made now, one beat at a time.
+pub async fn tell_bookings(app: &Arc<App>) -> Result<Vec<ToldBooking>, ApiError> {
+  let _one = app.beat_lock.lock().await;
+  crate::bookings::tell_due(app).await
+}
+
+/// Whom one alarm is told: the accounts, by key, the owner as the empty key. An organization calendar that
+/// tells everyone tells the accounts of its company holding a `mine` realm; one of the platform's own realm
+/// the owner.
+async fn recipients(app: &App, one: &Due) -> Result<Vec<String>, String> {
+  let company = match &one.realm {
+    RealmKey::Mine(account) => return Ok(vec![account.clone()]),
+    RealmKey::Company(company) => Some(company),
+    RealmKey::Platform | RealmKey::NoCompany => None,
+  };
+  match (one.tell, company) {
+    (Tell::Nobody, _) => Ok(Vec::new()),
+    (Tell::Creator, _) => Ok(vec![one.event.creator.clone()]),
+    (Tell::Everyone, None) => Ok(vec![String::new()]),
+    (Tell::Everyone, Some(company)) => {
+      let holders: Vec<String> = match app.cache.lock() {
+        Ok(cache) => cache.realms.keys().filter_map(|realm| realm.account().map(str::to_owned)).collect(),
+        Err(_) => Vec::new(),
+      };
+      let mut accounts = Vec::new();
+      for account in holders {
+        let own = peers::company_of(&app.http, &app.settings, &account)
+          .await
+          .map_err(|why| why.to_string())?;
+        if own.is_some_and(|own| own.id == *company) {
+          accounts.push(account);
         }
-        accounts
       }
-    },
+      Ok(accounts)
+    }
   }
 }
 
 /// Whom a room is told an alarm for: an account, its name where known, and whether it has a room of its own.
-struct Listener {
+pub struct Listener {
   account: String,
   name: Option<String>,
   owner: bool,
   own_room: bool,
 }
 
+impl Listener {
+  /// Whom it is for, as an order names it.
+  pub fn named(&self) -> String {
+    let who = match (&self.name, self.owner) {
+      (_, true) => "the owner".to_owned(),
+      (Some(name), false) => format!("{name} (account {})", self.account),
+      (None, false) => format!("the member with account {}", self.account),
+    };
+    if self.owner || self.own_room {
+      format!(" It is for {who}.")
+    } else {
+      format!(" It is for {who}, who has no room of their own here.")
+    }
+  }
+}
+
 /// One alarm told in every room it reaches; answers the rooms.
-async fn tell(app: &App, one: &Due, occurrence: &str) -> Result<Vec<i64>, String> {
-  let accounts = recipients(app, one);
+async fn tell_alarm(app: &App, one: &Due, occurrence: &str) -> Result<Vec<i64>, String> {
+  let accounts = recipients(app, one).await?;
+  let kind = format!("calendar:{}:{occurrence}", one.event.id);
+  tell(app, &accounts, &one.event.title, &kind, |listeners| order(one, listeners)).await
+}
+
+/// A telling for these accounts, the owner as the empty key, in every room it reaches, each room's order made
+/// for the listeners in it: an instruction on the receiver of sort `calendar`. Answers the rooms.
+pub async fn tell(
+  app: &App,
+  accounts: &[String],
+  summary: &str,
+  kind: &str,
+  order: impl Fn(&[Listener]) -> String,
+) -> Result<Vec<i64>, String> {
+  let accounts = accounts.to_vec();
   if accounts.is_empty() {
     return Ok(Vec::new());
   }
@@ -245,10 +299,10 @@ async fn tell(app: &App, one: &Due, occurrence: &str) -> Result<Vec<i64>, String
     let body = json!({
       "agentName": null,
       "room": room,
-      "said": { "fact": null, "order": order(one, &listeners) },
+      "said": { "fact": null, "order": order(&listeners) },
       "sort": "calendar",
-      "summary": one.event.title,
-      "kind": format!("calendar:{}:{occurrence}", one.event.id),
+      "summary": summary,
+      "kind": kind,
       "cause": "reply",
       "events": [],
       "agentOnly": false,
@@ -271,7 +325,7 @@ fn order(one: &Due, listeners: &[Listener]) -> String {
   let when = if event.all_day { format!("on {}", &start[..10]) } else { format!("at {start}") };
   let realm = match one.realm {
     RealmKey::Mine(_) => "a personal calendar",
-    RealmKey::Organization => "the organization's calendar",
+    _ => "the organization's calendar",
   };
   let calendar = if one.calendar_name.is_empty() {
     String::new()
@@ -289,16 +343,7 @@ fn order(one: &Due, listeners: &[Listener]) -> String {
     ));
   }
   for listener in listeners {
-    let who = match (&listener.name, listener.owner) {
-      (_, true) => "the owner".to_owned(),
-      (Some(name), false) => format!("{name} (account {})", listener.account),
-      (None, false) => format!("the member with account {}", listener.account),
-    };
-    if listener.owner || listener.own_room {
-      text.push_str(&format!(" It is for {who}."));
-    } else {
-      text.push_str(&format!(" It is for {who}, who has no room of their own here."));
-    }
+    text.push_str(&listener.named());
   }
   text
 }

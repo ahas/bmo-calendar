@@ -8,12 +8,14 @@ use serde_json::Value;
 
 use crate::cache::{Cache, Changed, Held, RealmKey};
 use crate::error::ApiError;
-use crate::events::Events;
+use crate::events::{Events, Scope};
 use crate::model::Memory;
 use crate::peers::{self, AGAIN, BrainCalls, BrainRow, CallFault};
 use crate::settings::Settings;
 use crate::store::Store;
-use crate::wire::{CalendarChanged, EventChanged, ScheduleChanged, SourceChanged};
+use crate::wire::{
+  BookingChanged, CalendarChanged, EventChanged, ResourceChanged, ScheduleChanged, SourceChanged,
+};
 
 /// The service's state, shared by every route and task.
 pub struct App {
@@ -30,6 +32,9 @@ pub struct App {
   pub beat_lock: tokio::sync::Mutex<()>,
   /// One write of sources and schedules at a time, so two sets of a source never interleave.
   pub schedule_lock: tokio::sync::Mutex<()>,
+  /// The one writer of bookings: each write is checked against the cache and written to the brain before the
+  /// next is checked, so two bookings that meet never both stand.
+  pub booking_lock: tokio::sync::Mutex<()>,
 }
 
 impl App {
@@ -44,6 +49,7 @@ impl App {
       realm_lock: tokio::sync::Mutex::new(()),
       beat_lock: tokio::sync::Mutex::new(()),
       schedule_lock: tokio::sync::Mutex::new(()),
+      booking_lock: tokio::sync::Mutex::new(()),
     })
   }
 
@@ -66,10 +72,15 @@ impl App {
     }
   }
 
-  /// Reads every realm's brain until it has read them all once, asking again two seconds after a failure.
+  /// Reads every realm's brain until it has read them all once and moved the organization's calendars and
+  /// events into their companies, asking again two seconds after a failure.
   pub async fn read_brain(self: &Arc<Self>) {
     loop {
-      match self.read_all().await {
+      let done = match self.read_all().await {
+        Ok(()) => crate::companies::migrate(self).await.map_err(|why| why.error),
+        Err(fault) => Err(fault.to_string()),
+      };
+      match done {
         Ok(()) => {
           self.set_unready(None);
           return;
@@ -103,11 +114,25 @@ impl App {
   }
 
   /// A realm's brain: the one held, else the one the brain service holds, else, where `make` is set, one made.
-  /// Answers none where the realm has no brain and none is to be made.
+  /// Answers none where the realm has no brain and none is to be made; a call with no company has none, and
+  /// is refused `no-company` where one would be made.
   pub async fn realm(self: &Arc<Self>, realm: &RealmKey, make: bool) -> Result<Option<i64>, ApiError> {
     if let Some(reason) = self.unready() {
       return Err(ApiError::not_ready(reason));
     }
+    self.realm_brain(realm, make).await
+  }
+
+  /// [`App::realm`], whether or not the service is ready: the move into companies reads and makes brains
+  /// before it is.
+  pub async fn realm_brain(
+    self: &Arc<Self>,
+    realm: &RealmKey,
+    make: bool,
+  ) -> Result<Option<i64>, ApiError> {
+    let Some(account_key) = realm.account_key() else {
+      return if make { Err(ApiError::no_company()) } else { Ok(None) };
+    };
     if let Some(brain) = self.held(realm) {
       return Ok(Some(brain));
     }
@@ -116,7 +141,6 @@ impl App {
       return Ok(Some(brain));
     }
     let calls = self.brain()?;
-    let account_key = realm.account_key();
     let found = if make {
       Some(calls.find_or_make(&account_key).await?)
     } else {
@@ -162,37 +186,64 @@ impl App {
     Ok(())
   }
 
-  /// A memory taken into the cache, and what changed published.
+  /// A memory taken into the cache, and what changed published to those who read it.
   pub fn take_in(&self, realm: &RealmKey, memory: &Memory) {
     let changed = match self.cache.lock() {
       Ok(mut cache) => cache.apply(realm, memory),
       Err(_) => None,
     };
-    let account = realm.account().map(str::to_owned);
+    let scope = scope_of(realm);
+    let company = realm.company();
+    let company_word = company.clone().unwrap_or_default();
     match changed {
       Some(Changed::Calendar(calendar_id)) => self.events.publish(
         "calendar.changed",
         CalendarChanged {
           realm: realm.realm(),
+          company,
           calendar_id,
         },
-        account,
+        scope,
       ),
       Some(Changed::Event(event_id)) => self.events.publish(
         "event.changed",
         EventChanged {
           realm: realm.realm(),
+          company,
           event_id,
           occurrence: None,
         },
-        account,
+        scope,
       ),
       Some(Changed::Source(source_id)) => {
-        self.events.publish("source.changed", SourceChanged { source_id }, None)
+        self.events.publish("source.changed", SourceChanged { source_id }, Scope::Everyone)
       }
-      Some(Changed::Schedule(source_id, item_id)) => {
-        self.events.publish("schedule.changed", ScheduleChanged { source_id, item_id }, None)
-      }
+      Some(Changed::Schedule(source_id, item_id)) => self.events.publish(
+        "schedule.changed",
+        ScheduleChanged {
+          company: company_word,
+          source_id,
+          item_id,
+        },
+        scope,
+      ),
+      Some(Changed::Resource(resource_id)) => self.events.publish(
+        "resource.changed",
+        ResourceChanged {
+          company: company_word,
+          resource_id,
+        },
+        scope,
+      ),
+      Some(Changed::Booking(booking_id, booker)) => self.events.publish(
+        "booking.changed",
+        BookingChanged {
+          company: company_word,
+          booking_id,
+          booker,
+        },
+        scope,
+      ),
       None => {}
     }
   }
@@ -276,5 +327,13 @@ impl App {
         }
       }
     }
+  }
+}
+
+/// Who a realm's events are given to: an account's own, or a company's readers.
+pub fn scope_of(realm: &RealmKey) -> Scope {
+  match realm {
+    RealmKey::Mine(account) => Scope::Account(account.clone()),
+    _ => Scope::Company(realm.company().unwrap_or_default()),
   }
 }

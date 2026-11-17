@@ -15,14 +15,33 @@ use crate::wire::StreamEvent;
 pub const KEPT: usize = 1000;
 
 /// The kinds the calendar publishes.
-pub const KINDS: [&str; 5] =
-  ["calendar.changed", "event.changed", "alarm.told", "source.changed", "schedule.changed"];
+pub const KINDS: [&str; 8] = [
+  "calendar.changed",
+  "event.changed",
+  "alarm.told",
+  "source.changed",
+  "schedule.changed",
+  "resource.changed",
+  "booking.changed",
+  "booking.decided",
+];
 
-/// One event, and the account whose `mine` realm it belongs to, where it is one's.
+/// Who an event is given to (`docs/api.md`, 「Events the calendar publishes」).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Scope {
+  /// Every reader.
+  Everyone,
+  /// One account alone: its `mine` realm's events, and the decisions of its bookings.
+  Account(String),
+  /// The readers of one company, by its id or `platform`, and the administrator.
+  Company(String),
+}
+
+/// One event, and who it is given to.
 #[derive(Clone, Debug)]
 pub struct Record {
   pub event: StreamEvent,
-  pub account: Option<String>,
+  pub scope: Scope,
 }
 
 /// The kept events and the live readers.
@@ -58,7 +77,7 @@ impl Events {
   }
 
   /// One event published.
-  pub fn publish(&self, kind: &str, data: impl Serialize, account: Option<String>) {
+  pub fn publish(&self, kind: &str, data: impl Serialize, scope: Scope) {
     let Ok(mut kept) = self.kept.lock() else {
       return;
     };
@@ -70,7 +89,7 @@ impl Events {
         at: now_ms(),
         data: serde_json::to_value(data).unwrap_or_default(),
       },
-      account,
+      scope,
     };
     kept.1.push_back(record.clone());
     while kept.1.len() > KEPT {

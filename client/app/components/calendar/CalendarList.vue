@@ -2,7 +2,8 @@
   <!-- The calendars, the account's own and the organization's apart: each with its colour, shown or hidden on the grid for
        this account, and its settings a press away; a mark spins beside one while its change is sent. Under each
        realm's calendars stand the sources other units push schedules under, one layer each, shown or hidden
-       the same way and marked as received. -->
+       the same way and marked as received. Under the organization's heading the administrator chooses the
+       company it reads; at the foot stands the way to the booking screen. -->
   <div class="flex flex-col gap-4">
     <section v-for="group in groups" :key="group.realm" class="flex flex-col gap-1">
       <div class="flex h-8 items-center justify-between gap-2 ps-2">
@@ -11,6 +12,10 @@
           {{ $t(group.realm === "mine" ? "calendar.label.mine" : "calendar.label.organization") }}
         </h2>
         <CalendarSettingsPopover :realm="group.realm" />
+      </div>
+
+      <div v-if="group.realm === 'organization' && administrator" class="flex ps-2 pb-1">
+        <CompanySelect class="w-full" />
       </div>
 
       <template v-if="calendarsRead">
@@ -52,13 +57,20 @@
     <p v-if="calendarsFailed" role="alert" class="badge-ink flex items-center gap-2 ps-2 text-sm text-error">
       {{ $t("calendar.error.calendars_failed") }}
     </p>
+
+    <UButton :to="BOOKINGS_PATH" :icon="BOOKING_ICON" :label="$t('calendar.label.bookings')" color="neutral" variant="ghost" block class="justify-start pointer-coarse:min-h-11" />
   </div>
 </template>
 
 <script setup lang="ts">
 import CalendarSettingsPopover from "./CalendarSettingsPopover.vue";
+import CompanySelect from "../bookings/CompanySelect.vue";
+import { BOOKING_ICON } from "../../domain/bookings";
 import { RECEIVED_ICON, REALM_ICON, SENDING_ICON } from "../../domain/colors";
+import { BOOKINGS_PATH } from "../../composables/useBookingScreen";
 import { useCalendarEvents } from "../../composables/useCalendarEvents";
+import { useCompanies } from "../../composables/useCompanies";
 
 const { groups, calendarsRead, calendarsFailed, setHidden, setSourceHidden, sendingLayers } = useCalendarEvents();
+const { administrator } = useCompanies();
 </script>

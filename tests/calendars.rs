@@ -18,16 +18,21 @@ async fn each_realm_is_given_its_calendar_on_first_read_in_a_brain_of_its_own() 
   assert_eq!(mine["items"][0]["color"], "primary");
   assert_eq!(mine["items"][0]["writers"], json!(null));
 
-  let (status, organization) = service.get("/organization/calendars").await;
+  let (status, organization) = service.get("/organization/calendars?account=1").await;
   assert_eq!(status, 200);
   assert_eq!(organization["items"][0]["id"], "organization");
   assert_eq!(organization["items"][0]["color"], "info");
   assert_eq!(organization["items"][0]["writers"], "creator");
   assert_eq!(organization["items"][0]["tell"], "creator");
+  assert_eq!(organization["items"][0]["company"], "10");
 
   let brains = service.stand.peers.lock().unwrap().brains.clone();
   let keys: Vec<&str> = brains.iter().map(|brain| brain["accountKey"].as_str().unwrap()).collect();
-  assert_eq!(keys, ["account:2", "organization"]);
+  assert_eq!(
+    keys,
+    ["organization", "account:2", "company:10"],
+    "the platform's own brain keeps the move's record; the organization realm is the company's"
+  );
   assert!(brains.iter().all(|brain| brain["agentKey"] == "calendar"));
 
   let memory = &service.stand.live("calendar:mine")[0];
@@ -70,7 +75,7 @@ async fn a_mine_call_names_its_account() {
 #[tokio::test]
 async fn hidden_is_each_accounts_own() {
   let service = Service::fresh().await;
-  service.get("/organization/calendars").await;
+  service.get("/organization/calendars?account=1").await;
 
   let (status, hidden) = service
     .console(

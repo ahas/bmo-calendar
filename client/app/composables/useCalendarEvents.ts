@@ -2,24 +2,18 @@ import { addDays, startOfDay } from "date-fns";
 import { useOnline } from "@vueuse/core";
 import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
-import { relayCall } from "bmo-ui/app/domain/relay";
 import { useIsland } from "bmo-ui/app/domain/island";
 
-import { createCalendarApi } from "../domain/api";
 import { dayKey, fromLocalISO } from "../domain/dates";
 import { createCalendarStore } from "../domain/store";
 import { createAppComposable } from "./shared";
+import { useCalendarApi } from "./useCalendarApi";
+import { useCompanies } from "./useCompanies";
 
-import type { RelayOptions } from "bmo-ui/app/domain/relay";
-import type { Call } from "../domain/api";
 import type { Calendar, CalendarEvent, Realm } from "../../shared/types";
 
 // The calendars and events the screen draws, read and written through the console's relay to the
 // calendar service, with the words the store has for the reader put on the console's message pill.
-
-export const SERVICE = "calendar";
-
-const relay: Call = <T>(path: string, options?: Parameters<Call>[1]) => relayCall<T>(SERVICE, path, options as RelayOptions);
 
 // The calendar a new event was last put in, kept in this browser alone: a convenience of the reader's,
 // not a setting of the account.
@@ -40,14 +34,19 @@ export function calendarKey(calendar: Pick<Calendar, "realm" | "id">): string {
 const _useCalendarEvents = () => {
   const { t } = useI18n();
   const island = useIsland(t);
+  const calendarApi = useCalendarApi();
   const store = createCalendarStore({
-    api: createCalendarApi(relay),
+    api: calendarApi.api,
+    company: () => calendarApi.company.value,
     tell: (notice) => island.say({ tone: notice.tone, title: t(notice.title, notice.params ?? {}) })
   });
 
   const browserOnline = useOnline();
 
   watch(browserOnline, (isOnline) => (store.browserOnline.value = isOnline), { immediate: true });
+
+  // Another company chosen, on whichever screen: the grid lets go of the last one's rows and reads the new one's.
+  watch(useCompanies().switches, () => void store.companyChanged());
 
   function calendarFor(event: Pick<CalendarEvent, "realm" | "calendarId">): Calendar | undefined {
     return store.calendarOf(event.realm, event.calendarId);

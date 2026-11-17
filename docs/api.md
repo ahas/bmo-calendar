@@ -21,11 +21,41 @@ service-token call acts as the administrator.
 
 A realm is `mine` or `organization`; any other word in its place is 404 `not-found`. A route that takes a
 realm reads it from the path. In the `mine` realm the account is the caller's `Owner-Key`; a service-token
-call names it with `account=<key>`, or with `holderName=<name>`, the holder of a tool session, which acts for
-the owner: the account the account service links to the owner's sender (the receiver's `GET /owner`). A
-service-token call in the `mine` realm that names neither, or whose holder's account cannot be found, is 422
-`no-account`. In the `organization` realm the same query names the account a write records as its creator
-and whose `hidden` mark a read answers.
+call names it with `account=<key>`, or with `holderName=<name>`, the holder of a tool session, the agent the
+session's record is held by. A holder acts for the account agency names as its owner: a supervisor's
+`ownerAccount` on agency's `GET /supervisors/{supervisorName}`, else a role agent's `ownerAccount` among
+agency's `GET /role-agents`, so a supervisor of a person's account acts for that person. A holder agency names
+no account for, a supervisor of no account or a name agency does not hold, acts for the owner: the account the
+account service links to the owner's sender (the receiver's `GET /owner`). A service-token call in the `mine`
+realm that names neither, or whose holder acts for the owner and the owner's sender is linked to no account,
+is 422 `no-account`; an agency that does not answer, or answers something that does not read, is 502
+`upstream-failed`, never read as the owner. In the `organization` realm the same query names the account a
+write records as its creator and whose `hidden` mark a read answers.
+
+### Companies
+
+The `organization` realm is one company's (`docs/design.md`, 「Two realms, kept apart」). A route in it reads
+the company from the query's `company`: a company's unit id as the account service names it, or the word
+`platform` for the platform's own realm.
+
+- **Where none is named,** the company is the caller's own: the company of the account the call acts for,
+  asked of the account service (`GET /users/{user}/unit`) at every call. A service-token call that names no
+  account and no holder has no company of its own.
+- **Who reads which.** An account reads its own company alone; the platform administrator (a console
+  reader whose role is `administrator`, and every service-token call) reads every company and `platform`.
+  A `company` the caller does not read is answered as if nothing stood there: 404 `not-found`.
+- **No company.** A call with no company, named or its own, reads nothing: its lists are empty; its writes
+  are 422 `no-company`.
+- **Every organization row names its company:** a calendar, an event, a schedule, a resource and a booking
+  read carry `company`, the company's id or `platform`.
+
+| Method | Path | Does |
+|---|---|---|
+| GET | `/organization/companies` | The companies the caller reads, each `id`, `name`, `own` (the caller's own) and `manages` (whether the caller makes, changes and retires its resources: the administrator for every company but `platform`, a head of the company for its own), the caller's own first, then by name, `platform` (named by the setting `[calendars] platform_name`) last for the administrator — `{items, more}` |
+
+The administrator's companies are the account service's every company (`GET /units`, asked with the
+caller's owner key and role) and every company whose brain the calendar holds; an id the account service
+no longer names is listed by its id.
 
 ## Health
 
@@ -42,16 +72,16 @@ and whose `hidden` mark a read answers.
 | PATCH | `/{realm}/calendars/{calendarId}` | `name`, `color`, `writers`, `tell`, `hidden` — 200 |
 | DELETE | `/{realm}/calendars/{calendarId}` | Retires it (its memory `done`); its events are retired with it — 204 |
 
-A calendar is `id`, `realm`, `name`, `color`, `writers`, `tell`, `hidden`, `creator`, `createdAt`;
-`writers` and `tell` are null in the `mine` realm. A realm whose brain holds no live calendar answers one
-made on the read: `mine` → 「내 일정」 `primary`, id `mine`; `organization` → 「조직 일정」 `info`, id
-`organization` (the names are settings, 「Settings」, which the deployment sets to these words; the
-repository's defaults are English). `hidden` is the caller's own: a PATCH of it hides or
-shows the calendar for the caller's account alone and is open to every account that reads the realm. In
-the `organization` realm, making a calendar is the administrator's, and changing its `name`, `color`,
-`writers` or `tell` or retiring it the administrator's and its creator's; anyone else is 403
-`not-a-writer`. A `color`, `writers` or `tell` outside its words, or a blank name, is 400 `bad-request`; a
-calendar the realm does not hold live is 404 `not-found`.
+A calendar is `id`, `realm`, `company` (null in the `mine` realm), `name`, `color`, `writers`, `tell`,
+`hidden`, `creator`, `createdAt`; `writers` and `tell` are null in the `mine` realm. A realm whose brain holds
+no live calendar answers one made on the read: `mine` → 「내 일정」 `primary`, id `mine`; `organization` → 「조직 일정」
+`info`, id `organization`, in each company (the names are settings, 「Settings」, which the deployment sets to
+these words; the repository's defaults are English). `hidden` is the caller's own: a PATCH of it hides or
+shows the calendar for the caller's account alone and is open to every account that reads the realm. In the
+`organization` realm, making a calendar is the administrator's, and changing its `name`, `color`, `writers` or
+`tell` or retiring it the administrator's and its creator's; anyone else is 403 `not-a-writer`. A `color`,
+`writers` or `tell` outside its words, or a blank name, is 400 `bad-request`; a calendar the realm does not
+hold live is 404 `not-found`.
 
 ## Events
 
@@ -63,21 +93,21 @@ calendar the realm does not hold live is 404 `not-found`.
 | PATCH | `/{realm}/events/{eventId}` | Changes the fields named; `occurrence` limits a repeating event's change to that one (which becomes an event of its own) — 200 |
 | DELETE | `/{realm}/events/{eventId}` | Cancels it (`done`); `occurrence` cancels one occurrence — 204 |
 
-An event is `id`, `realm`, `calendarId`, `title`, `description` (may be empty), `start`, `end` (local
-ISO datetimes, `YYYY-MM-DDTHH:mm:ss`, `end` after `start`), `allDay`, `alarm` (`none` or minutes before
-start: `0`, `5`, `15`, `30`, `60`, `1440`, each a string), `repeat` (`none`, `daily`, `weekly`, `monthly`,
-`yearly`), `occurrence` (in a span's rows, the start of the occurrence a repeating event's row stands for,
-whose `start` and `end` the row carries; null otherwise), `creator`, `createdAt`, `changedAt`, `told` (the
-occurrence last told, or null). A write names `calendarId`, `title`, `start`, `end` and may name the rest
-and an `id` (1 to 64 letters, digits, `-` and `_`; one is made where none is given); a title is one line.
-A write under a calendar the caller may not write is 403 `not-a-writer`; an end not after the start is 422
-`end-before-start`; an unknown calendar is 422 `unknown-calendar`; a span over 92 days or ending before it
-starts is 422 `span-too-long`; an `occurrence` that is not one of the event's is 422 `not-an-occurrence`;
-an event the realm does not hold live is 404 `not-found`; a field outside its shape or its words is 400
-`bad-request`. In the `organization` realm a calendar whose `writers` is `administrator` is written by the
-administrator alone, one whose `writers` is `creator` takes new events from every account and a change or
-a cancellation from the administrator and the event's creator, and one whose `writers` is `everyone` from
-every account.
+An event is `id`, `realm`, `company` (null in the `mine` realm), `calendarId`, `title`, `description` (may be
+empty), `start`, `end` (local ISO datetimes, `YYYY-MM-DDTHH:mm:ss`, `end` after `start`), `allDay`, `alarm`
+(`none` or minutes before start: `0`, `5`, `15`, `30`, `60`, `1440`, each a string), `repeat` (`none`,
+`daily`, `weekly`, `monthly`, `yearly`), `occurrence` (in a span's rows, the start of the occurrence a
+repeating event's row stands for, whose `start` and `end` the row carries; null otherwise), `creator`,
+`createdAt`, `changedAt`, `told` (the occurrence last told, or null). A write names `calendarId`, `title`,
+`start`, `end` and may name the rest and an `id` (1 to 64 letters, digits, `-` and `_`; one is made where none
+is given); a title is one line. A write under a calendar the caller may not write is 403 `not-a-writer`; an
+end not after the start is 422 `end-before-start`; an unknown calendar is 422 `unknown-calendar`; a span over
+92 days or ending before it starts is 422 `span-too-long`; an `occurrence` that is not one of the event's is
+422 `not-an-occurrence`; an event the realm does not hold live is 404 `not-found`; a field outside its shape
+or its words is 400 `bad-request`. In the `organization` realm a calendar whose `writers` is `administrator`
+is written by the administrator alone, one whose `writers` is `creator` takes new events from every account
+and a change or a cancellation from the administrator and the event's creator, and one whose `writers` is
+`everyone` from every account.
 
 Every write is idempotent on `id`: a POST that names an `id` the realm already holds answers 200 with the
 event as it stands after the write (the console's offline replay sends the same write twice).
@@ -102,61 +132,133 @@ calendar's code names no unit, and treats every source alike.
   source the calendar does not hold yet makes the source, named by its id, its colour `secondary`; a
   `PUT /sources/{sourceId}` names it and colours it at any time, and keeps every account's `hidden` mark.
 - **A schedule written** is `title` (one line, not blank), `start` and `end` (local ISO datetimes, `end`
-  after `start`), `allDay` (default `false`, read as an event's), `link` and `assignee`. `link` is the
-  place the item it stands for is opened at: a console path (one `/` and then the path) or an `http` or
-  `https` address. `assignee` is the account key of the person the item is assigned to, at most 200
-  characters; null, empty or absent where it has none.
-- **A schedule read** is `sourceId`, `itemId`, `realm` (the realm it is read in), `title`, `start`, `end`,
-  `allDay`, `link`, `assignee` (null where none), `createdAt`, `changedAt`.
+  after `start`), `allDay` (default `false`, read as an event's), `link`, `assignee` and `company`. `link`
+  is the place the item it stands for is opened at: a console path (one `/` and then the path) or an `http`
+  or `https` address. `assignee` is the account key of the person the item is assigned to, at most 200
+  characters; null, empty or absent where it has none. `company` is the id of the company the item belongs
+  to, as the account service names its unit (1 to 64 letters, digits, `-` and `_`); null, empty or absent
+  where it belongs to none. A unit sends the company of every item it has one for: a schedule with none is
+  read by the platform administrator alone, in the `platform` company. The calendar does not ask whether a
+  company stands.
+- **A schedule read** is `sourceId`, `itemId`, `realm` (the realm it is read in), `company` (`platform`
+  where it was sent with none), `title`, `start`, `end`, `allDay`, `link`, `assignee` (null where none),
+  `createdAt`, `changedAt`.
 - **The ids.** A `sourceId` and an `itemId` are each 1 to 64 letters, digits, `-` and `_`; a unit writes
   under its own source and keeps its own item ids, so a schedule is known by the pair alone.
 - **Writes are idempotent.** A write that names what already stands keeps it and answers 200; a delete of a
-  schedule that does not stand answers 204, so a unit sends a write again without asking first.
+  schedule that does not stand answers 204, so a unit sends a write again without asking first. A write
+  naming another company than the one the schedule stands in moves it: it is written in the new company and
+  removed from the old.
 - **The whole set.** `PUT /sources/{sourceId}/schedules` takes `items`, each a schedule written with its
-  `itemId`. Every item is checked before anything is written; then each one that differs from what stands
-  is written, each standing schedule of the source the set does not name is removed, and the rest is left
-  as it is. An empty set removes every schedule of the source. One source's writes are made one at a time,
-  so two sets never interleave. A set the brain fails part way through answers 502 and keeps what was
-  written; the same set sent again finishes it.
+  `itemId`, of every company. Every item is checked before anything is written; then each one that differs
+  from what stands is written, each standing schedule of the source in any company that the set does not
+  name is removed, and the rest is left as it is. An empty set removes every schedule of the source. One
+  source's writes are made one at a time, so two sets never interleave. A set the brain fails part way
+  through answers 502 and keeps what was written; the same set sent again finishes it.
 - **Who writes.** The writes are the service token's, the units' own credential (`env/calendar.env`,
   「The tool」); a console call to one is 403 `forbidden`.
-- **Who reads.** Every console reader reads every source and every schedule. In the `organization` realm a
-  read answers every schedule; in the `mine` realm only the schedules whose `assignee` is the account
-  (「Realms」). `hidden` is the caller's own for the realm in the path, as a calendar's is: a PATCH of it
-  hides or shows the source's schedules in that realm for the caller's account alone. A read answers the
-  hidden ones as well; the screen leaves them off the grid.
-- **Refusals.** An id, a title, a link, an assignee or a colour outside its shape, or an `itemId` named
-  twice in one set, is 400 `bad-request`; an end not after the start is 422 `end-before-start`; a span
+- **Who reads.** Every console reader reads every source. In the `organization` realm a read answers every
+  schedule of the company (「Companies」); in the `mine` realm only the schedules of the account's own company
+  whose `assignee` is the account (「Realms」). `hidden` is the caller's own for the realm in the path, as a
+  calendar's is: a PATCH of it hides or shows the source's schedules in that realm for the caller's account
+  alone. A read answers the hidden ones as well; the screen leaves them off the grid.
+- **Refusals.** An id, a title, a link, an assignee, a company or a colour outside its shape, or an `itemId`
+  named twice in one set, is 400 `bad-request`; an end not after the start is 422 `end-before-start`; a span
   over 92 days or ending before it starts is 422 `span-too-long`; a source the calendar does not hold in a
   PATCH is 404 `not-found`.
 - **No alarms.** A schedule is never told: its unit tells of its own items.
+
+## Resources and bookings
+
+A company's resources and their bookings (`docs/design.md`, 「Resources and bookings」), in its
+`organization` realm and read by its company alone (「Companies」); a booking also stands in its booker's
+`mine` realm.
+
+| Method | Path | Does |
+|---|---|---|
+| GET | `/organization/resources` | The company's live resources, by kind, place and name — `{items, more}`; `kind` narrows them |
+| GET | `/organization/resources/free?start=&end=&seats=&repeat=&kind=` | The resources with at least `seats` (1 where none) that no standing booking meets over the span and its repeat (`none` where none), fewest seats first, then by name — `{items, more}` |
+| POST | `/organization/resources` | `name`, `kind`, `place`, `seats`, `approval`, `keepers`, `id?` — 201 |
+| PATCH | `/organization/resources/{resourceId}` | Changes the fields named — 200 |
+| DELETE | `/organization/resources/{resourceId}` | Retires it (`done`) and cancels its standing bookings — 204 |
+| GET | `/{realm}/bookings?start=&end=` | The bookings overlapping the span (local ISO datetimes, at most 92 days), by start, one row per occurrence as events answer — `{items, more}`; in the `organization` realm every requested and booked one of the company, `resourceId` narrowing them; in the `mine` realm the account's own, requested, booked and refused |
+| GET | `/organization/bookings/requests` | The requested bookings of the resources the caller keeps, oldest request first, a booking a row — `{items, more}` |
+| GET | `/organization/bookings/{bookingId}` | One booking |
+| POST | `/organization/bookings` | `resourceId`, `title`, `start`, `end`, `allDay?`, `repeat?`, `id?` — 201 |
+| PATCH | `/organization/bookings/{bookingId}` | Changes the fields named, `resourceId` among them; `occurrence` limits a repeating booking's change to that one (which becomes a booking of its own) — 200 |
+| DELETE | `/organization/bookings/{bookingId}` | Cancels it (`done`); `occurrence` cancels one occurrence — 204 |
+| POST | `/organization/bookings/{bookingId}/decision` | A keeper's answer to a requested booking: `approve` (`true`/`false`) and, refusing, `reason` — 200 |
+
+- **A resource** is `id`, `company`, `name`, `kind`, `place`, `seats`, `approval`, `keepers`, `creator`,
+  `createdAt`, `changedAt`. `name`, `kind` and `place` are one line each, `name` and `kind` not blank;
+  `seats` a whole number from 1 to 10000; `keepers` the account keys of people of the company, at least one
+  where `approval` is `true`. Making, changing and retiring a resource is the administrator's and a head of
+  the company's (the account service's `POST /checks/unit` on the company); anyone else is 403
+  `not-a-writer`. A keeper of another company, or standing in none, is 422 `not-in-company`.
+- **A booking** is `id`, `realm`, `company`, `resourceId`, `title`, `start`, `end` (local ISO datetimes,
+  `end` after `start`), `allDay`, `repeat` (as an event's), `occurrence` (as an event's), `booker`,
+  `state` (`requested`, `booked` or `refused`), `decidedBy`, `decidedAt`, `reason` (each null where none),
+  `createdAt`, `changedAt`. A write's title is one line, not blank; its `id` as an event's. An all-day
+  booking holds its days whole.
+- **Who books.** Any account of the company books, as the booker; the booker and a keeper of the resource
+  change and cancel; a keeper alone decides. Anyone else is 403 `not-a-writer`, and a decision by one who
+  keeps no such resource 403 `not-a-keeper`. A booking is made in its booker's own company: one written in
+  another is 403 `not-a-writer`, the administrator's as anyone's. The administrator reads every company's
+  bookings.
+- **The state a write leaves.** On a resource whose `approval` is `true`, a booking made by anyone but a
+  keeper stands `requested`, and a change of its `start`, `end`, `allDay`, `repeat` or `resourceId` by
+  anyone but a keeper makes it `requested` again; otherwise it stands `booked`. A decision approving makes
+  it `booked`; one refusing makes it `refused`, holding no span, until its booker is told, when it is moved
+  to `done`.
+- **No overlap.** A write that would make a standing (`requested` or `booked`) booking of the resource overlap
+  another standing one is 409 `overlap`, its `error` naming the booking it meets in the words `the booking
+  "<title>" (<id>) of the same resource`, which the screen reads the met booking's title from, and its first
+  occurrence that meets. Spans are half-open: one may start where another ends. Repeating bookings are checked
+  occurrence by occurrence over 28 years from the later of the two starts. The check and the write run under
+  one writer for every booking of the unit, so of two writes made at once one is refused.
+- **Idempotent on `id`,** as an event's write is: a POST naming an `id` the company already holds answers 200
+  with the booking as it stands after the write.
+- **Refusals.** An end not after its start is 422 `end-before-start`; a span over 92 days or ending before it
+  starts 422 `span-too-long`; a resource the company does not hold live 422 `unknown-resource`; an
+  `occurrence` that is not one of the booking's 422 `not-an-occurrence`; a decision on a booking that is not
+  `requested` 409 `not-requested`; a resource or a booking the company does not hold live 404 `not-found`;
+  a field outside its shape or its words 400 `bad-request`.
+- **Who is told** (「Alarms」 for how): the keepers of the resource, once each time a booking comes to stand
+  `requested`, the instruction's kind `booking:<bookingId>:requested:<requestedAt>` and its order opening
+  on the marker `CALENDAR BOOKING REQUEST.`; the booker, once a keeper decides, the kind
+  `booking:<bookingId>:decided:<decidedAt>` and the marker `CALENDAR BOOKING DECISION.`. Each order carries
+  the booking's data alone: its title, its resource and place, its span and repeat, its booker, the
+  decision and its reason where there is one. A telling is marked told in the store
+  (`told:<bookingId>:<the kind's last two parts>`) and one the receiver does not take is tried again at the
+  next beat.
 
 ## Alarms
 
 | Method | Path | Does |
 |---|---|---|
 | GET | `/{realm}/alarms?from=&to=` | The alarm moments in the span (epoch ms, at most 92 days), by moment — `{items, more}`, each `realm`, `eventId`, `occurrence`, `at`, `told` |
-| POST | `/beats` | Service token only (403 `forbidden` to the console): runs one beat now (the minute's work: tell what is due) — 200, `told`, each alarm told: `realm`, `eventId`, `occurrence`, `at`, `lateMs`, `rooms` |
+| POST | `/beats` | Service token only (403 `forbidden` to the console): runs one beat now (the minute's work: tell what is due) — 200, `told`, each alarm told: `realm`, `company` (null in the `mine` realm), `eventId`, `occurrence`, `at`, `lateMs`, `rooms`; and `bookings`, each booking telling made: `company`, `bookingId`, `kind`, `rooms` |
 
-The beat runs every minute on the service's own clock and once at start. It tells each due alarm once:
+The beat runs every minute on the service's own clock and once at start. It tells each due alarm once, and
+each booking telling not yet told (「Resources and bookings」):
 the mark `told:<eventId>:<occurrence>` is kept per realm in the unit's own store, and the event's `told` is
 read from it. An alarm is due when its moment has come and it came after the last beat the store
 remembers, or when its event was written after its moment and has not started yet. A due alarm found at
 start after the service was down is told with how late it is (`lateMs`, 0 where it is on time).
 
-How an alarm is told (「Calls the calendar makes」): one `POST /instructions` on the receiver for each room
-it reaches, sort `calendar`, kind `calendar:<eventId>:<occurrence>`, `cause` `reply`, `summary` the event's
+How an alarm is told (「Calls the calendar makes」): one `POST /instructions` on the receiver for each room it
+reaches, sort `calendar`, kind `calendar:<eventId>:<occurrence>`, `cause` `reply`, `summary` the event's
 title, `said.order` opening on the marker `CALENDAR ALARM.` and then the data alone, in English: the event's
 title, its start, its calendar and realm, how late it is where it is late, that a reminder of it was asked
 for, and whom it is for. The turn carries no instruction; how a quiet instruction is answered stands in the
 receiving session's own rules. Who is told: in the `mine` realm the account; in the `organization` realm the
-calendar's `tell`: `creator` the event's creator, `everyone` the owner and every account holding a `mine`
-realm, `nobody` none. Where each is told: the owner's private room
-(the receiver's `GET /owner`) for the owner's account (the account the account service links to the owner's
-sender); for a member, the room numbered as one of the senders the account service links to the member's
-account (`GET /users/{user}`) that the receiver holds registered (`GET /rooms/{roomId}`), else the owner's
-private room naming the member. One room is told once, naming every account it is told for. A telling the
-receiver refuses or does not answer keeps no mark, and the next beat tells it again.
+calendar's `tell`: `creator` the event's creator, `everyone` every account holding a `mine` realm that stands
+in the calendar's company (the owner alone in the `platform` company), `nobody` none. Where each is told: the
+owner's private room (the receiver's `GET /owner`) for the owner's account (the account the account service
+links to the owner's sender); for a member, the room numbered as one of the senders the account service links
+to the member's account (`GET /users/{user}`) that the receiver holds registered (`GET /rooms/{roomId}`), else
+the owner's private room naming the member. One room is told once, naming every account it is told for. A
+telling the receiver refuses or does not answer keeps no mark, and the next beat tells it again.
 
 ## Console
 
@@ -171,30 +273,34 @@ the calendar chooses within it.
   `/calendar`, relayed as the service `calendar` with the whole API under the prefix `/`.
 - **Its readers.** Every member and administrator, each with an owner key: the `mine` realm is the reader's
   own account (「Realms」).
-- **What it reads.** The event stream (「Events the calendar publishes」), whose `alarm.told` a console raises
-  as a notice. No WebSocket, no share page, no sidebar count, no other service called and no route relayed
-  outside the prefix.
+- **What it reads.** The event stream (「Events the calendar publishes」), whose `alarm.told` and
+  `booking.decided` a console raises as a notice, and the console's people directory, where a resource's
+  keepers are chosen. No WebSocket, no share page, no sidebar count, no other service called and no route
+  relayed outside the prefix.
 - **Its files.** The folder `bun run bundle` builds in `client/` with bmo-ui's bundle build (`[console]
   folder`), read once at start: the module `bundle.js`, the stylesheet `bundle.css` and the words
   `words.json`, beside the layer that build wrote. A folder the face cannot be built from leaves the service
   with no console face, and the console's routes answer 404.
-- **The screens' routes.** The calendars, the events, the sources, the schedules, the alarms and the event
-  stream, held to the
-  manifest's role and owner key for a call carrying the console credential, and then to this document's own
-  terms.
+- **The screens' routes.** The companies, the calendars, the events, the sources, the schedules, the
+  resources, the bookings, the alarms and the event stream, held to the manifest's role and owner key for a
+  call carrying the console credential, and then to this document's own terms.
 
 ## Events the calendar publishes
 
 `GET /events` is a server-sent stream in the platform's shape (`after` or `Last-Event-ID`, `kinds`; the
 same events as a page to `Accept: application/json`, with `after` and `limit`): `calendar.changed`
-(`realm`, `calendarId`), `event.changed` (`realm`, `eventId`, `occurrence`, null where the change is the
-whole event's), `alarm.told` (`realm`, `eventId`, `occurrence`, `at`), `source.changed` (`sourceId`),
-`schedule.changed` (`sourceId`, `itemId`). A console reader is given the `organization` realm's events,
-every source's and schedule's, and its own account's `mine` events; the service token reads every one. The
-service keeps the events since it started, at most the last 1000, numbered upward from its start's moment
-in milliseconds times 1000; a resume from before them is 410 `gone`. The console refreshes the visible span
-on `event.changed` and `schedule.changed`, reads the calendars and sources again on `calendar.changed` and
-`source.changed`, and rings `alarm.told`.
+(`realm`, `company`, `calendarId`), `event.changed` (`realm`, `company`, `eventId`, `occurrence`, null where
+the change is the whole event's), `alarm.told` (`realm`, `company`, `eventId`, `occurrence`, `at`),
+`source.changed` (`sourceId`), `schedule.changed` (`company`, `sourceId`, `itemId`), `resource.changed`
+(`company`, `resourceId`), `booking.changed` (`company`, `bookingId`, `booker`) and `booking.decided`
+(`company`, `bookingId`, `state`, `title`), `company` null in the `mine` realm. A console reader is given every
+source's events, its own account's `mine` events, its own company's `organization` events and the
+`booking.decided` of its own bookings; the administrator every company's; the service token reads every
+one. The service keeps the events since it started, at most the last 1000, numbered upward from its start's
+moment in milliseconds times 1000; a resume from before them is 410 `gone`. The console refreshes the
+visible span on `event.changed`, `schedule.changed` and `booking.changed`, reads the calendars, sources and
+resources again on `calendar.changed`, `source.changed` and `resource.changed`, and rings `alarm.told` and
+`booking.decided`.
 
 ## The tool
 
@@ -210,27 +316,39 @@ output schema in `docs/openapi.json` under `x-tools`:
 | `calendar_add` | Adds an event: `realm`, `calendarId?` (the realm's first where none), `title`, `start`, `end?` (an hour where none, the day where `allDay`), `description?`, `allDay?`, `alarm?`, `repeat?` |
 | `calendar_change` | Changes the fields named |
 | `calendar_cancel` | Cancels an event or one occurrence |
+| `calendar_resources` | The resources of the company, `kind?` narrowing them |
+| `calendar_free_resources` | The resources free for a span: `start`, `end?` (an hour where none), `seats?`, `repeat?`, `kind?` |
+| `calendar_book` | Books a resource: `resourceId`, `title`, `start`, `end?` (an hour where none, the day where `allDay`), `allDay?`, `repeat?`; answers the booking with its `state` |
+| `calendar_cancel_booking` | Cancels a booking or one occurrence: `bookingId`, `occurrence?` |
 
-The `mine` realm of a tool call is the account the turn's holder acts for: the tool hands the session's
-`holderName` to the service, which answers it with the owner's account (「Realms」); a call that cannot
-name an account is refused `no-account`. `calendar_events` with `n` and no span reads from now to 92 days
-ahead and answers the first `n`. The tool reaches the service with the service token from
-`env/calendar.env` under the data root (`CALENDAR_ADDRESS`, `CALENDAR_TOKEN`; the same names in the call's
-environment come first), which the deployment writes before the flip with `bmo-calendar tool-env`.
+The `mine` realm of a tool call is the account the session's holder acts for: the tool hands the session's
+`holderName` to the service, which answers it with the account agency names as the holder's owner, else the
+owner's account (「Realms」); a call that cannot name an account is refused `no-account`. The organization
+realm, the resources and the bookings of a tool call are that account's company's, and the bookings it makes
+are that account's. `calendar_events` with `n` and no span reads from now to 92 days ahead and answers the
+first `n`. The tool reaches the service with the service token from `env/calendar.env` under the data root
+(`CALENDAR_ADDRESS`, `CALENDAR_TOKEN`; the same names in the call's environment come first), which the
+deployment writes before the flip with `bmo-calendar tool-env`.
 
 ## Calls the calendar makes
 
 | What | Route |
 |---|---|
 | the realm's brain, made on first write | brain `GET /brains?accountKey=&agentKey=`, `POST /brains` |
-| calendars, events, sources and schedules read, written, versioned, retired | brain `GET /memories`, `POST /memories`, `POST /memories/{id}/versions`, `PATCH /memories/{id}` |
+| calendars, events, sources, schedules, resources, bookings and the move's record read, written, versioned, retired | brain `GET /memories`, `POST /memories`, `POST /memories/{id}/versions`, `PATCH /memories/{id}` |
 | the brain's changes followed | brain `GET /events` (`memory.written`, `memory.moved`, `scope=brain:<id>`) |
 | an alarm told | receiver `POST /instructions`; the owner's sender and room from `GET /owner`; a member's room by `GET /rooms/{roomId}` |
+| whose account a tool session's holder acts for | agency `GET /supervisors/{supervisorName}`, then `GET /role-agents` (each `ownerAccount`) |
 | whose account is whose | the account service `GET /senders/{sender}/user` (the owner's account), `GET /users/{user}` (a member's name and senders) |
+| an account's company | the account service `GET /users/{user}/unit` (its `company`; a 404 is no company) |
+| the companies the administrator reads | the account service `GET /units`, with the caller's owner key and role |
+| whether an account heads its company | the account service `POST /checks/unit` (`unit` the company, `user` the account) |
 
 The brain's address and token are `BRAIN_ADDRESS` and `BRAIN_TOKEN` from `env/brain.env`; the receiver's
 `listen` from `env/receiver.toml` and its token from `env/receiver.token`; the account service's `[server]
-listen` and `token` from `env/web.toml`; each under the data root, read afresh for every call, and each
+listen` and `token` from `env/web.toml`; agency's control port from `env/agency.env` (`AGENCY_CONTROL_PORT`,
+3220 where it names none, on the loopback) and its token from the same file (`AGENCY_CONTROL_TOKEN`, or the
+file `AGENCY_CONTROL_TOKEN_FILE` names); each under the data root, read afresh for every call, and each
 overridden by the settings where they name one (「Settings」). Every call waits for its answer; no clock cuts
 one. A brain or receiver that refuses the connection is asked again two seconds later; the brain's event
 stream, once broken, is opened again from its last event two seconds later, and a resume the brain answers
@@ -244,14 +362,21 @@ Beside the common codes of bmo-chat's `docs/conventions.md` (`bad-request`, `una
 | Code | When |
 |---|---|
 | `no-account` | a `mine` call names no account, or its holder's account cannot be found |
+| `no-company` | an `organization` write with no company, named or its own |
+| `not-a-keeper` | a decision by one who keeps no such resource (answered 403) |
+| `not-in-company` | a resource's keeper who stands in another company or none |
+| `unknown-resource` | a booking written on a resource the company does not hold live |
+| `overlap` | a booking that would meet another standing booking of its resource (answered 409) |
+| `not-requested` | a decision on a booking that is not `requested` (answered 409) |
 | `not-a-writer` | a write the caller may not make (answered 403) |
 | `end-before-start` | an end not after its start |
 | `unknown-calendar` | an event written under a calendar the realm does not hold live |
 | `span-too-long` | a span over 92 days, or one ending before it starts |
 | `not-an-occurrence` | an `occurrence` that is not one of the event's |
 
-`upstream-failed` (502) is the brain, the receiver or the account service answering a failure;
-`not-ready` (503) is a realm asked for before the service has read the brain once.
+`upstream-failed` (502) is the brain, the receiver, the account service or agency answering a failure;
+`not-ready` (503) is a realm asked for before the service has read the brain once and finished the move
+into companies (`docs/design.md`, 「The move into companies」).
 
 ## Settings
 
@@ -270,4 +395,5 @@ root, where `settings.local.toml` links to the data root's `env/calendar.toml`);
 | `console` | `folder` | the console bundle's built folder (`client/dist` where none is set; a relative one read from where the process starts) |
 | `store` | `path` | the SQLite file of the told marks |
 | `calendars` | `mine_name`, `organization_name` | the names of the calendar a realm is given when it holds none |
-| `brain`, `receiver`, `accounts` | `address`, `token` | a peer's base address and token where the data root's files are not to be read; empty, the files are read |
+| `calendars` | `platform_name` | the name the platform's own organization realm is listed by among the companies |
+| `brain`, `receiver`, `accounts`, `agency` | `address`, `token` | a peer's base address and token where the data root's files are not to be read; empty, the files are read |

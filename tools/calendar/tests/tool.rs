@@ -75,6 +75,19 @@ async fn answer_for(
       Json(changed).into_response()
     }
     ("DELETE", [_, "events", _]) => StatusCode::NO_CONTENT.into_response(),
+    ("GET", ["organization", "resources"]) | ("GET", ["organization", "resources", "free"]) => Json(json!({
+      "items": [{ "id": "room-a", "name": "Room A", "kind": "meeting room", "place": "Floor 2", "seats": 8, "approval": true }],
+      "more": false,
+    }))
+    .into_response(),
+    ("POST", ["organization", "bookings"]) => {
+      let mut made = body.clone();
+      made["id"] = json!("booked");
+      made["state"] = json!("requested");
+      made["repeat"] = json!("none");
+      (StatusCode::CREATED, Json(made)).into_response()
+    }
+    ("DELETE", ["organization", "bookings", _]) => StatusCode::NO_CONTENT.into_response(),
     _ => (StatusCode::NOT_FOUND, Json(json!({ "code": "no-route", "error": "No route." }))).into_response(),
   }
 }
@@ -132,7 +145,13 @@ fn the_manifest_declares_every_entry_the_executable_answers() {
     let schema: Value =
       serde_json::from_str(&std::fs::read_to_string(Path::new(DIR).join(file)).unwrap()).unwrap();
     assert_eq!(schema["type"], "object", "{file}");
-    assert!(schema["required"].as_array().unwrap().contains(&json!("realm")), "{file} names a realm");
+    let realmed = !entry["name"].as_str().unwrap().contains("resource")
+      && !entry["name"].as_str().unwrap().contains("book");
+    assert_eq!(
+      schema["required"].as_array().unwrap().contains(&json!("realm")),
+      realmed,
+      "{file}: an event entry names a realm, a booking entry stands in the company"
+    );
     assert!(Path::new(DIR).join(entry["manual"].as_str().unwrap()).is_file());
   }
 }
@@ -246,4 +265,55 @@ fn the_service_is_found_in_the_data_roots_env_file() {
     })
   );
   std::fs::remove_dir_all(root).unwrap();
+}
+
+#[tokio::test]
+async fn a_free_room_is_found_and_booked_for_the_holder() {
+  let (stand, service) = stand().await;
+  let free = answer(
+    &handed("calendar_free_resources", json!({ "start": "2026-03-04T10:00:00", "seats": 8 })),
+    &service,
+  )
+  .await;
+  assert!(!free.is_error, "{}", free.text());
+  assert_eq!(
+    free.text(),
+    "Room A · meeting room · 8 seats · id room-a · at Floor 2 · a booking waits for a keeper's approval"
+  );
+  let booked = answer(
+    &handed(
+      "calendar_book",
+      json!({ "resourceId": "room-a", "title": "Planning", "start": "2026-03-04T10:00:00" }),
+    ),
+    &service,
+  )
+  .await;
+  assert!(
+    booked.text().starts_with("Requested: it waits for a keeper's approval"),
+    "{}",
+    booked.text()
+  );
+  let cancelled = answer(
+    &handed(
+      "calendar_cancel_booking",
+      json!({ "bookingId": "booked", "occurrence": "2026-03-11T10:00:00" }),
+    ),
+    &service,
+  )
+  .await;
+  assert_eq!(cancelled.text(), "Cancelled.");
+
+  let asked = stand.asked.lock().unwrap().clone();
+  assert_eq!((asked[0].0.as_str(), asked[0].1.as_str()), ("GET", "/organization/resources/free"));
+  let query = query_of(&asked[0].2);
+  assert_eq!(query["end"], "2026-03-04T11:00:00", "an hour where no end is given");
+  assert_eq!((query["seats"].as_str(), query["holderName"].as_str()), ("8", "agent-a"));
+  assert_eq!((asked[1].0.as_str(), asked[1].1.as_str()), ("POST", "/organization/bookings"));
+  assert_eq!(
+    asked[1].3,
+    json!({ "resourceId": "room-a", "title": "Planning", "start": "2026-03-04T10:00:00", "end": "2026-03-04T11:00:00" })
+  );
+  assert_eq!(query_of(&asked[1].2)["holderName"], "agent-a");
+  assert_eq!((asked[2].0.as_str(), asked[2].1.as_str()), ("DELETE", "/organization/bookings/booked"));
+  assert_eq!(query_of(&asked[2].2)["occurrence"], "2026-03-11T10:00:00");
 }

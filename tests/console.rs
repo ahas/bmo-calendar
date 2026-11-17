@@ -171,7 +171,7 @@ async fn a_reader_is_given_the_organizations_events_and_its_own() {
   for account in ["2", "3"] {
     service.console(Method::GET, "/mine/calendars", account, "member", None).await;
   }
-  service.get("/organization/calendars").await;
+  service.get("/organization/calendars?account=1").await;
   let read = async |key: &str| {
     let headers = [("Owner-Key", key), ("Owner-Role", "member"), ("accept", "application/json")];
     let (status, page) = service

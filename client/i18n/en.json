@@ -51,7 +51,34 @@
       "writers": "Who writes",
       "writers_administrator": "Administrator only",
       "writers_creator": "Administrator and creator",
-      "writers_everyone": "Everyone"
+      "writers_everyone": "Everyone",
+      "approval": "Needs approval",
+      "approval_needed": "Needs approval",
+      "booker": "Booked by",
+      "booking": "Booking",
+      "bookings": "Bookings",
+      "bookings_all": "All",
+      "bookings_mine": "My bookings",
+      "company": "Company",
+      "keepers": "Keepers",
+      "keepers_named": "Keepers {names}",
+      "kind": "Kind",
+      "no_place": "No place",
+      "own_company": "{name} (mine)",
+      "place": "Place",
+      "reason": "Reason (optional)",
+      "refusal_reason": "Refused: {reason}",
+      "requests": "Requests",
+      "resource": "Resource",
+      "resources": "Resources",
+      "seats": "Seats",
+      "seats_count": "{n} seats",
+      "seats_unit": "seats",
+      "state": "State",
+      "state_booked": "Booked",
+      "state_refused": "Refused",
+      "state_requested": "Awaiting approval",
+      "next_occurrence": "Next {when}"
     },
     "action": {
       "add_calendar": "Add calendar",
@@ -65,7 +92,15 @@
       "refresh": "Refresh",
       "scope_all": "All repeats",
       "scope_one": "This event only",
-      "today": "Today"
+      "today": "Today",
+      "add_resource": "Add resource",
+      "back": "Back",
+      "book": "Book",
+      "booking_scope_one": "This booking only",
+      "cancel_booking": "Cancel booking",
+      "new_booking": "New booking",
+      "refuse": "Refuse",
+      "retire": "Delete"
     },
     "aria": {
       "end_time": "End time",
@@ -77,10 +112,24 @@
       "start_time": "Start time",
       "today": "Today",
       "toolbar": "Calendar toolbar",
-      "view_named": "{view} view"
+      "view_named": "{view} view",
+      "approve_named": "Approve {name}",
+      "bookings_none": "No bookings",
+      "bookings_toolbar": "Booking toolbar",
+      "cancel_named": "Cancel booking {name}",
+      "edit_named": "Edit {name}",
+      "kind_named": "{kind} kind",
+      "refuse_named": "Refuse {name}",
+      "remove_named": "Remove {name}",
+      "resource_bookings": "{name}: {n} bookings",
+      "retire_named": "Delete {name}",
+      "bookings_count": "{n} bookings"
     },
     "placeholder": {
-      "quick_entry": "Dentist tomorrow at 3pm"
+      "quick_entry": "Dentist tomorrow at 3pm",
+      "keeper_keys": "Account keys",
+      "keeper_search": "Search by name",
+      "kind": "Meeting room"
     },
     "status": {
       "loading": "Loading…"
@@ -90,7 +139,20 @@
       "delete_calendar_effect": "Its events are deleted with it.",
       "scope_cancel": "Delete a repeating event?",
       "scope_change": "Change a repeating event?",
-      "synced": "Offline changes were sent."
+      "synced": "Offline changes were sent.",
+      "booking_approved": "Your booking was approved.",
+      "booking_cancel": "Cancel the booking?",
+      "booking_meets": "Another booking stands at this time.",
+      "booking_refused": "Your booking was refused.",
+      "booking_scope_cancel": "Cancel a repeating booking?",
+      "booking_scope_change": "Change a repeating booking?",
+      "no_bookings": "No bookings.",
+      "no_requests": "No requests are waiting.",
+      "no_resources": "No resources.",
+      "refuse_booking": "Refuse the booking?",
+      "retire_resource": "Delete the resource?",
+      "retire_resource_effect": "Its bookings are cancelled with it.",
+      "booking_repeat_whole": "A change of the repeat reaches every repeat."
     },
     "error": {
       "calendars_failed": "The calendars could not be read.",
@@ -101,12 +163,33 @@
       "no_time": "Enter a start and an end.",
       "not_a_writer": "You may not write this calendar.",
       "sync_failed": "One offline change did not go through.",
-      "unknown_calendar": "That calendar does not exist."
+      "unknown_calendar": "That calendar does not exist.",
+      "booking_not_a_writer": "You may not change this.",
+      "bookings_failed": "Bookings could not be loaded.",
+      "no_company": "You stand in no company.",
+      "no_keepers": "A resource that needs approval needs a keeper.",
+      "no_kind": "Enter a kind.",
+      "no_title": "Enter a title.",
+      "not_a_keeper": "You do not keep this resource.",
+      "not_an_occurrence": "That date is not one of its repeats.",
+      "not_in_company": "A keeper must stand in the same company.",
+      "not_requested": "This booking was already decided.",
+      "overlap": "It meets another booking.",
+      "resources_failed": "Resources could not be loaded.",
+      "span_too_long": "The span is too long.",
+      "unknown_resource": "No such resource.",
+      "overlap_named": "It meets the booking {title}."
     },
     "notice": {
       "alarm": {
         "told": {
           "title": "Event alert",
+          "body": "{title}"
+        }
+      },
+      "booking": {
+        "decided": {
+          "title": "Booking decided",
           "body": "{title}"
         }
       }

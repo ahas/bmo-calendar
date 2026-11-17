@@ -10,7 +10,7 @@
     <template #footer>
       <div class="flex w-full flex-wrap items-center justify-end gap-2">
         <UButton :label="$t('common.action.cancel')" color="neutral" variant="ghost" @click="emit('close', null)" />
-        <UButton :label="$t('calendar.action.scope_one')" color="neutral" variant="outline" @click="emit('close', 'one')" />
+        <UButton v-if="!props.wholeOnly" :label="props.oneLabel ?? $t('calendar.action.scope_one')" color="neutral" variant="outline" @click="emit('close', 'one')" />
         <UButton :label="$t('calendar.action.scope_all')" :color="props.cancelling ? 'error' : 'primary'" @click="emit('close', 'all')" />
       </div>
     </template>
@@ -22,7 +22,9 @@ import ShellClose from "bmo-ui/app/components/ShellClose.vue";
 
 import type { RepeatScope } from "../../../shared/types";
 
-const props = defineProps<{ title: string; cancelling?: boolean }>();
+// A booking's occurrence is named as a booking rather than as an event (`oneLabel`); a change one occurrence
+// cannot take offers the whole series alone (`wholeOnly`).
+const props = defineProps<{ title: string; cancelling?: boolean; oneLabel?: string; wholeOnly?: boolean }>();
 const open = defineModel<boolean>("open", { default: false });
 
 const emit = defineEmits<{ close: [scope: RepeatScope | null] }>();

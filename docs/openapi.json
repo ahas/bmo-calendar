@@ -52,6 +52,12 @@
             "format": "int64",
             "type": "integer"
           },
+          "company": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "eventId": {
             "type": "string"
           },
@@ -64,6 +70,7 @@
         },
         "required": [
           "realm",
+          "company",
           "eventId",
           "occurrence",
           "at"
@@ -73,6 +80,12 @@
       "Beat": {
         "description": "What a beat told.",
         "properties": {
+          "bookings": {
+            "items": {
+              "$ref": "#/components/schemas/ToldBooking"
+            },
+            "type": "array"
+          },
           "told": {
             "items": {
               "$ref": "#/components/schemas/ToldAlarm"
@@ -81,15 +94,255 @@
           }
         },
         "required": [
-          "told"
+          "told",
+          "bookings"
         ],
         "type": "object"
+      },
+      "Booking": {
+        "description": "A booking, or one occurrence of a repeating booking in a span's rows.",
+        "properties": {
+          "allDay": {
+            "type": "boolean"
+          },
+          "booker": {
+            "description": "The account that booked it.",
+            "type": "string"
+          },
+          "changedAt": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "company": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "decidedAt": {
+            "description": "When it was approved or refused, epoch ms, or null.",
+            "format": "int64",
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "decidedBy": {
+            "description": "The keeper who approved or refused it, or null.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "end": {
+            "description": "Local ISO datetime, after the start.",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "occurrence": {
+            "description": "In a span's rows, the start of the occurrence a repeating booking's row stands for; null otherwise.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "realm": {
+            "$ref": "#/components/schemas/Realm",
+            "description": "The realm it is read in."
+          },
+          "reason": {
+            "description": "The keeper's words with a refusal, or null.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "repeat": {
+            "$ref": "#/components/schemas/Repeat"
+          },
+          "resourceId": {
+            "type": "string"
+          },
+          "start": {
+            "description": "Local ISO datetime, `YYYY-MM-DDTHH:mm:ss`.",
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/components/schemas/BookingState"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "realm",
+          "company",
+          "resourceId",
+          "title",
+          "start",
+          "end",
+          "allDay",
+          "repeat",
+          "occurrence",
+          "booker",
+          "state",
+          "decidedBy",
+          "decidedAt",
+          "reason",
+          "createdAt",
+          "changedAt"
+        ],
+        "type": "object"
+      },
+      "BookingChange": {
+        "description": "A change of a booking: the fields named.",
+        "properties": {
+          "allDay": {
+            "default": null,
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "end": {
+            "default": null,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "occurrence": {
+            "default": null,
+            "description": "Limits the change to this occurrence of a repeating booking, which becomes a booking of its own.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "repeat": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Repeat"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "resourceId": {
+            "default": null,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "start": {
+            "default": null,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "title": {
+            "default": null,
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "resourceId",
+          "title",
+          "start",
+          "end",
+          "allDay",
+          "repeat",
+          "occurrence"
+        ],
+        "type": "object"
+      },
+      "BookingChanged": {
+        "description": "`booking.changed`.",
+        "properties": {
+          "booker": {
+            "type": "string"
+          },
+          "bookingId": {
+            "type": "string"
+          },
+          "company": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "company",
+          "bookingId",
+          "booker"
+        ],
+        "type": "object"
+      },
+      "BookingDecided": {
+        "description": "`booking.decided`.",
+        "properties": {
+          "bookingId": {
+            "type": "string"
+          },
+          "company": {
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/components/schemas/BookingState"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "company",
+          "bookingId",
+          "state",
+          "title"
+        ],
+        "type": "object"
+      },
+      "BookingState": {
+        "description": "Where a booking stands.",
+        "oneOf": [
+          {
+            "const": "requested",
+            "description": "It waits for a keeper; it holds its span.",
+            "type": "string"
+          },
+          {
+            "const": "booked",
+            "description": "It stands; it holds its span.",
+            "type": "string"
+          },
+          {
+            "const": "refused",
+            "description": "A keeper refused it; it holds no span and leaves once its booker is told.",
+            "type": "string"
+          }
+        ]
       },
       "Calendar": {
         "description": "A calendar.",
         "properties": {
           "color": {
             "$ref": "#/components/schemas/Color"
+          },
+          "company": {
+            "description": "The company's id, or `platform`; null in the `mine` realm.",
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "createdAt": {
             "format": "int64",
@@ -138,6 +391,7 @@
         "required": [
           "id",
           "realm",
+          "company",
           "name",
           "color",
           "writers",
@@ -215,12 +469,19 @@
           "calendarId": {
             "type": "string"
           },
+          "company": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "realm": {
             "$ref": "#/components/schemas/Realm"
           }
         },
         "required": [
           "realm",
+          "company",
           "calendarId"
         ],
         "type": "object"
@@ -237,6 +498,54 @@
         ],
         "type": "string"
       },
+      "Company": {
+        "description": "A company the caller reads (`docs/api.md`, 「Companies」).",
+        "properties": {
+          "id": {
+            "description": "The company's unit id, or `platform`.",
+            "type": "string"
+          },
+          "manages": {
+            "description": "Whether the caller makes, changes and retires its resources: the administrator, and a head of the company.",
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "own": {
+            "description": "Whether it is the caller's own.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "own",
+          "manages"
+        ],
+        "type": "object"
+      },
+      "Decision": {
+        "description": "A keeper's answer to a requested booking.",
+        "properties": {
+          "approve": {
+            "type": "boolean"
+          },
+          "reason": {
+            "default": null,
+            "description": "The keeper's words, with a refusal.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "approve",
+          "reason"
+        ],
+        "type": "object"
+      },
       "Event": {
         "description": "An event, or one occurrence of a repeating event in a span's rows.",
         "properties": {
@@ -252,6 +561,13 @@
           "changedAt": {
             "format": "int64",
             "type": "integer"
+          },
+          "company": {
+            "description": "The company's id, or `platform`; null in the `mine` realm.",
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "createdAt": {
             "format": "int64",
@@ -303,6 +619,7 @@
         "required": [
           "id",
           "realm",
+          "company",
           "calendarId",
           "title",
           "description",
@@ -411,6 +728,12 @@
       "EventChanged": {
         "description": "`event.changed`.",
         "properties": {
+          "company": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "eventId": {
             "type": "string"
           },
@@ -427,6 +750,7 @@
         },
         "required": [
           "realm",
+          "company",
           "eventId",
           "occurrence"
         ],
@@ -453,6 +777,60 @@
           "ready",
           "reason",
           "version"
+        ],
+        "type": "object"
+      },
+      "NewBooking": {
+        "description": "A booking to make.",
+        "properties": {
+          "allDay": {
+            "default": null,
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "end": {
+            "type": "string"
+          },
+          "id": {
+            "default": null,
+            "description": "1 to 64 letters, digits, `-` and `_`; one is made where none is given. A POST naming an id the company\nalready holds writes over that booking and answers 200.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "repeat": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Repeat"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "resourceId": {
+            "type": "string"
+          },
+          "start": {
+            "type": "string"
+          },
+          "title": {
+            "description": "One line, not blank.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "resourceId",
+          "title",
+          "start",
+          "end",
+          "allDay",
+          "repeat"
         ],
         "type": "object"
       },
@@ -572,6 +950,60 @@
         ],
         "type": "object"
       },
+      "NewResource": {
+        "description": "A resource to make.",
+        "properties": {
+          "approval": {
+            "default": false,
+            "type": "boolean"
+          },
+          "id": {
+            "default": null,
+            "description": "1 to 64 letters, digits, `-` and `_`; one is made where none is given.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "keepers": {
+            "default": [],
+            "description": "At least one where `approval` is true.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "kind": {
+            "description": "One line, not blank.",
+            "type": "string"
+          },
+          "name": {
+            "description": "One line, not blank.",
+            "type": "string"
+          },
+          "place": {
+            "default": "",
+            "description": "One line.",
+            "type": "string"
+          },
+          "seats": {
+            "description": "1 to 10000.",
+            "format": "uint32",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "place",
+          "seats",
+          "approval",
+          "keepers"
+        ],
+        "type": "object"
+      },
       "Page": {
         "description": "A page of members.",
         "properties": {
@@ -657,7 +1089,7 @@
         "properties": {
           "items": {
             "items": {
-              "$ref": "#/components/schemas/AlarmMoment"
+              "$ref": "#/components/schemas/Company"
             },
             "type": "array"
           },
@@ -673,6 +1105,66 @@
         "type": "object"
       },
       "Page6": {
+        "description": "A page of members.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Resource"
+            },
+            "type": "array"
+          },
+          "more": {
+            "description": "Whether anything stands past the last item.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "more"
+        ],
+        "type": "object"
+      },
+      "Page7": {
+        "description": "A page of members.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Booking"
+            },
+            "type": "array"
+          },
+          "more": {
+            "description": "Whether anything stands past the last item.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "more"
+        ],
+        "type": "object"
+      },
+      "Page8": {
+        "description": "A page of members.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AlarmMoment"
+            },
+            "type": "array"
+          },
+          "more": {
+            "description": "Whether anything stands past the last item.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "more"
+        ],
+        "type": "object"
+      },
+      "Page9": {
         "description": "A page of members.",
         "properties": {
           "items": {
@@ -693,7 +1185,7 @@
         "type": "object"
       },
       "Realm": {
-        "description": "One of the two realms, never one for both (`docs/design.md`, 「Two realms, kept apart」).",
+        "description": "One of the two realms, never one for both (`docs/design.md`, 「Two realms, kept apart」); the organization\nrealm is one company's.",
         "oneOf": [
           {
             "const": "mine",
@@ -702,7 +1194,7 @@
           },
           {
             "const": "organization",
-            "description": "The organization's calendars.",
+            "description": "A company's calendars, schedules, resources and bookings.",
             "type": "string"
           }
         ]
@@ -747,6 +1239,146 @@
         ],
         "type": "string"
       },
+      "Resource": {
+        "description": "A company's resource: a room or anything else it books (`docs/api.md`, 「Resources and bookings」).",
+        "properties": {
+          "approval": {
+            "description": "Whether a booking of it waits for a keeper.",
+            "type": "boolean"
+          },
+          "changedAt": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "company": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "creator": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "keepers": {
+            "description": "The account keys of the people who keep it.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "kind": {
+            "description": "The word the company groups it under.",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "place": {
+            "description": "Where it stands, in the company's own words.",
+            "type": "string"
+          },
+          "seats": {
+            "format": "uint32",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "company",
+          "name",
+          "kind",
+          "place",
+          "seats",
+          "approval",
+          "keepers",
+          "creator",
+          "createdAt",
+          "changedAt"
+        ],
+        "type": "object"
+      },
+      "ResourceChange": {
+        "description": "A change of a resource: the fields named.",
+        "properties": {
+          "approval": {
+            "default": null,
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "keepers": {
+            "default": null,
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "kind": {
+            "default": null,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "default": null,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "place": {
+            "default": null,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "seats": {
+            "default": null,
+            "format": "uint32",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "name",
+          "kind",
+          "place",
+          "seats",
+          "approval",
+          "keepers"
+        ],
+        "type": "object"
+      },
+      "ResourceChanged": {
+        "description": "`resource.changed`.",
+        "properties": {
+          "company": {
+            "type": "string"
+          },
+          "resourceId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "company",
+          "resourceId"
+        ],
+        "type": "object"
+      },
       "Schedule": {
         "description": "A schedule as a read answers it.",
         "properties": {
@@ -763,6 +1395,10 @@
           "changedAt": {
             "format": "int64",
             "type": "integer"
+          },
+          "company": {
+            "description": "The company it belongs to, or `platform` where it was sent with none.",
+            "type": "string"
           },
           "createdAt": {
             "format": "int64",
@@ -797,6 +1433,7 @@
           "sourceId",
           "itemId",
           "realm",
+          "company",
           "title",
           "start",
           "end",
@@ -811,6 +1448,9 @@
       "ScheduleChanged": {
         "description": "`schedule.changed`.",
         "properties": {
+          "company": {
+            "type": "string"
+          },
           "itemId": {
             "type": "string"
           },
@@ -819,6 +1459,7 @@
           }
         },
         "required": [
+          "company",
           "sourceId",
           "itemId"
         ],
@@ -837,6 +1478,14 @@
           "assignee": {
             "default": null,
             "description": "The account key of the person the item is assigned to; null, empty or absent where none.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "company": {
+            "default": null,
+            "description": "The id of the company the item belongs to, as the account service names its unit; null, empty or absent\nwhere it belongs to none, which the platform administrator alone reads.",
             "type": [
               "string",
               "null"
@@ -870,7 +1519,8 @@
           "end",
           "allDay",
           "link",
-          "assignee"
+          "assignee",
+          "company"
         ],
         "type": "object"
       },
@@ -907,6 +1557,14 @@
               "null"
             ]
           },
+          "company": {
+            "default": null,
+            "description": "The id of the company the item belongs to, as the account service names its unit; null, empty or absent\nwhere it belongs to none, which the platform administrator alone reads.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "end": {
             "description": "Local ISO datetime, after the start.",
             "type": "string"
@@ -930,7 +1588,8 @@
           "end",
           "allDay",
           "link",
-          "assignee"
+          "assignee",
+          "company"
         ],
         "type": "object"
       },
@@ -1053,7 +1712,7 @@
           },
           {
             "const": "everyone",
-            "description": "The owner and every account holding a `mine` realm.",
+            "description": "Every account of the calendar's company holding a `mine` realm; the owner in the platform's own realm.",
             "type": "string"
           },
           {
@@ -1070,6 +1729,13 @@
             "description": "The alarm's moment, epoch ms.",
             "format": "int64",
             "type": "integer"
+          },
+          "company": {
+            "description": "Null in the `mine` realm.",
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "eventId": {
             "type": "string"
@@ -1096,10 +1762,41 @@
         },
         "required": [
           "realm",
+          "company",
           "eventId",
           "occurrence",
           "at",
           "lateMs",
+          "rooms"
+        ],
+        "type": "object"
+      },
+      "ToldBooking": {
+        "description": "One booking telling a beat made (`docs/api.md`, 「Resources and bookings」).",
+        "properties": {
+          "bookingId": {
+            "type": "string"
+          },
+          "company": {
+            "type": "string"
+          },
+          "kind": {
+            "description": "The instruction's kind: `booking:<bookingId>:requested:<requestedAt>` or\n`booking:<bookingId>:decided:<decidedAt>`.",
+            "type": "string"
+          },
+          "rooms": {
+            "description": "The rooms it was told in.",
+            "items": {
+              "format": "int64",
+              "type": "integer"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "company",
+          "bookingId",
+          "kind",
           "rooms"
         ],
         "type": "object"
@@ -1152,7 +1849,7 @@
     }
   },
   "info": {
-    "description": "The platform's dated events, kept as memories in the brain service (the brain the master, this unit the subordinate), in two realms kept apart: each account's own (mine) and the organization's. Calendars and events are read and written by realm; a repeating event answers one row per occurrence in a span; an alarm is told once to the supervisor through the receiver when it comes due. Bodies are JSON with camelCase keys, times are epoch milliseconds unless a field says it is a local ISO datetime, lists are pages of items and more, and every failure is the error shape with its status. The tool's entries, placed on the tool host, are stated under x-tools.",
+    "description": "The platform's dated events, kept as memories in the brain service (the brain the master, this unit the subordinate), in two realms kept apart: each account's own (mine) and the organization's, one for each company. Calendars and events are read and written by realm; a repeating event answers one row per occurrence in a span; an alarm is told once to the supervisor through the receiver when it comes due. A company's resources are booked, two bookings of one resource never meeting, some only once a keeper approves. Bodies are JSON with camelCase keys, times are epoch milliseconds unless a field says it is a local ISO datetime, lists are pages of items and more, and every failure is the error shape with its status. The tool's entries, placed on the tool host, are stated under x-tools.",
     "title": "bmo-calendar",
     "version": "0.1.0-rev.1"
   },
@@ -1210,10 +1907,10 @@
                 }
               }
             },
-            "description": "`not-ready`: the service has not read the brain yet"
+            "description": "`not-ready`: the service has not read the brain and moved it into companies yet"
           }
         },
-        "summary": "Run one beat now: tell every alarm due, once each. The service token alone.",
+        "summary": "Run one beat now: tell every alarm due and every booking telling not yet made, once each. The service token alone.",
         "tags": [
           "alarms"
         ],
@@ -1401,7 +2098,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Page6"
+                  "$ref": "#/components/schemas/Page9"
                 }
               },
               "text/event-stream": {
@@ -1594,7 +2291,7 @@
                 }
               }
             },
-            "description": "`upstream-failed`: the brain, the receiver or the account service answered a failure"
+            "description": "`upstream-failed`: the brain, the receiver, the account service or agency answered a failure"
           },
           "503": {
             "content": {
@@ -1604,7 +2301,7 @@
                 }
               }
             },
-            "description": "`not-ready`: the service has not read the brain yet"
+            "description": "`not-ready`: the service has not read the brain and moved it into companies yet"
           }
         },
         "summary": "Name and colour a source, every account's hidden mark kept. The service token alone.",
@@ -1703,7 +2400,7 @@
                 }
               }
             },
-            "description": "`upstream-failed`: the brain, the receiver or the account service answered a failure"
+            "description": "`upstream-failed`: the brain, the receiver, the account service or agency answered a failure"
           },
           "503": {
             "content": {
@@ -1713,7 +2410,7 @@
                 }
               }
             },
-            "description": "`not-ready`: the service has not read the brain yet"
+            "description": "`not-ready`: the service has not read the brain and moved it into companies yet"
           }
         },
         "summary": "A source's whole set: each item that differs written, each standing one the set does not name removed. The service token alone.",
@@ -1795,7 +2492,7 @@
                 }
               }
             },
-            "description": "`upstream-failed`: the brain, the receiver or the account service answered a failure"
+            "description": "`upstream-failed`: the brain, the receiver, the account service or agency answered a failure"
           },
           "503": {
             "content": {
@@ -1805,7 +2502,7 @@
                 }
               }
             },
-            "description": "`not-ready`: the service has not read the brain yet"
+            "description": "`not-ready`: the service has not read the brain and moved it into companies yet"
           }
         },
         "summary": "Remove one schedule of a source; one that does not stand is no failure. The service token alone.",
@@ -1921,7 +2618,7 @@
                 }
               }
             },
-            "description": "`upstream-failed`: the brain, the receiver or the account service answered a failure"
+            "description": "`upstream-failed`: the brain, the receiver, the account service or agency answered a failure"
           },
           "503": {
             "content": {
@@ -1931,7 +2628,7 @@
                 }
               }
             },
-            "description": "`not-ready`: the service has not read the brain yet"
+            "description": "`not-ready`: the service has not read the brain and moved it into companies yet"
           }
         },
         "summary": "Write or change one schedule of a source, the source made where none stands. The service token alone.",
@@ -1968,6 +2665,18 @@
           {
             "in": "query",
             "name": "account",
+            "required": true,
+            "schema": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "company",
             "required": true,
             "schema": {
               "default": null,
@@ -2017,7 +2726,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Page5"
+                  "$ref": "#/components/schemas/Page8"
                 }
               }
             },
@@ -2081,7 +2790,7 @@
                 }
               }
             },
-            "description": "`upstream-failed`: the brain, the receiver or the account service answered a failure"
+            "description": "`upstream-failed`: the brain, the receiver, the account service or agency answered a failure"
           },
           "503": {
             "content": {
@@ -2091,7 +2800,7 @@
                 }
               }
             },
-            "description": "`not-ready`: the service has not read the brain yet"
+            "description": "`not-ready`: the service has not read the brain and moved it into companies yet"
           }
         },
         "summary": "The alarm moments in a span of at most 92 days, each with whether it was told.",
@@ -2105,6 +2814,1249 @@
           "not-found",
           "no-account",
           "span-too-long",
+          "upstream-failed",
+          "not-ready"
+        ]
+      }
+    },
+    "/{realm}/bookings": {
+      "get": {
+        "operationId": "listBookings",
+        "parameters": [
+          {
+            "description": "The realm: mine or organization.",
+            "in": "path",
+            "name": "realm",
+            "required": true,
+            "schema": {
+              "enum": [
+                "mine",
+                "organization"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "account",
+            "required": true,
+            "schema": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "company",
+            "required": true,
+            "schema": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "Local ISO datetime, at most 92 days after the start.",
+            "in": "query",
+            "name": "end",
+            "required": true,
+            "schema": {
+              "description": "Local ISO datetime, at most 92 days after the start.",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "holderName",
+            "required": true,
+            "schema": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "Only the bookings of this resource, in the `organization` realm.",
+            "in": "query",
+            "name": "resourceId",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "Only the bookings of this resource, in the `organization` realm.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "Local ISO datetime.",
+            "in": "query",
+            "name": "start",
+            "required": true,
+            "schema": {
+              "description": "Local ISO datetime.",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page7"
+                }
+              }
+            },
+            "description": "Answered."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`bad-request`: the body or the query is not the shape the route takes"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`unauthorized`: the token is missing or wrong"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`forbidden`: the token is right but the caller may not do this"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-found`: nothing stands at the key the path names"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`no-account`: a mine call names no account, or its holder's account cannot be found\n`span-too-long`: a span over 92 days, or one ending before it starts"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`upstream-failed`: the brain, the receiver, the account service or agency answered a failure"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-ready`: the service has not read the brain and moved it into companies yet"
+          }
+        },
+        "summary": "The bookings overlapping a span of at most 92 days, one row per occurrence: the company's standing ones in the organization realm, the account's own in the mine realm.",
+        "tags": [
+          "bookings"
+        ],
+        "x-codes": [
+          "bad-request",
+          "unauthorized",
+          "forbidden",
+          "not-found",
+          "no-account",
+          "span-too-long",
+          "upstream-failed",
+          "not-ready"
+        ]
+      },
+      "post": {
+        "operationId": "createBooking",
+        "parameters": [
+          {
+            "description": "The realm: mine or organization.",
+            "in": "path",
+            "name": "realm",
+            "required": true,
+            "schema": {
+              "enum": [
+                "mine",
+                "organization"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "The account, by its key.",
+            "in": "query",
+            "name": "account",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The account, by its key.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "The company an organization call reads: a company's id, or `platform`; the caller's own where none.",
+            "in": "query",
+            "name": "company",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The company an organization call reads: a company's id, or `platform`; the caller's own where none.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "The holder of a tool session, which acts for the account agency names as its owner.",
+            "in": "query",
+            "name": "holderName",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The holder of a tool session, which acts for the account agency names as its owner.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewBooking"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Booking"
+                }
+              }
+            },
+            "description": "Answered."
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Booking"
+                }
+              }
+            },
+            "description": "Created."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`bad-request`: the body or the query is not the shape the route takes"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`unauthorized`: the token is missing or wrong"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`forbidden`: the token is right but the caller may not do this\n`not-a-writer`: a write the caller may not make"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-found`: nothing stands at the key the path names"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`overlap`: a booking that would meet another standing booking of its resource"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`no-account`: a mine call names no account, or its holder's account cannot be found\n`no-company`: an organization write with no company, named or its own\n`unknown-resource`: a booking written on a resource the company does not hold live\n`end-before-start`: an end not after its start"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`upstream-failed`: the brain, the receiver, the account service or agency answered a failure"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-ready`: the service has not read the brain and moved it into companies yet"
+          }
+        },
+        "summary": "Book a resource; a POST naming an id the company holds writes over it and answers 200.",
+        "tags": [
+          "bookings"
+        ],
+        "x-codes": [
+          "bad-request",
+          "unauthorized",
+          "forbidden",
+          "not-a-writer",
+          "not-found",
+          "overlap",
+          "no-account",
+          "no-company",
+          "unknown-resource",
+          "end-before-start",
+          "upstream-failed",
+          "not-ready"
+        ]
+      }
+    },
+    "/{realm}/bookings/requests": {
+      "get": {
+        "operationId": "listBookingRequests",
+        "parameters": [
+          {
+            "description": "The realm: mine or organization.",
+            "in": "path",
+            "name": "realm",
+            "required": true,
+            "schema": {
+              "enum": [
+                "mine",
+                "organization"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "The account, by its key.",
+            "in": "query",
+            "name": "account",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The account, by its key.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "The company an organization call reads: a company's id, or `platform`; the caller's own where none.",
+            "in": "query",
+            "name": "company",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The company an organization call reads: a company's id, or `platform`; the caller's own where none.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "The holder of a tool session, which acts for the account agency names as its owner.",
+            "in": "query",
+            "name": "holderName",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The holder of a tool session, which acts for the account agency names as its owner.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page7"
+                }
+              }
+            },
+            "description": "Answered."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`bad-request`: the body or the query is not the shape the route takes"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`unauthorized`: the token is missing or wrong"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`forbidden`: the token is right but the caller may not do this"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-found`: nothing stands at the key the path names"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`no-account`: a mine call names no account, or its holder's account cannot be found"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`upstream-failed`: the brain, the receiver, the account service or agency answered a failure"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-ready`: the service has not read the brain and moved it into companies yet"
+          }
+        },
+        "summary": "The requested bookings of the resources the caller keeps, oldest request first.",
+        "tags": [
+          "bookings"
+        ],
+        "x-codes": [
+          "bad-request",
+          "unauthorized",
+          "forbidden",
+          "not-found",
+          "no-account",
+          "upstream-failed",
+          "not-ready"
+        ]
+      }
+    },
+    "/{realm}/bookings/{bookingId}": {
+      "delete": {
+        "operationId": "cancelBooking",
+        "parameters": [
+          {
+            "description": "The realm: mine or organization.",
+            "in": "path",
+            "name": "realm",
+            "required": true,
+            "schema": {
+              "enum": [
+                "mine",
+                "organization"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "The booking's id.",
+            "in": "path",
+            "name": "bookingId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "account",
+            "required": true,
+            "schema": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "company",
+            "required": true,
+            "schema": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "holderName",
+            "required": true,
+            "schema": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "The one occurrence cancelled, by its local start.",
+            "in": "query",
+            "name": "occurrence",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The one occurrence cancelled, by its local start.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Done; no content."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`bad-request`: the body or the query is not the shape the route takes"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`unauthorized`: the token is missing or wrong"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`forbidden`: the token is right but the caller may not do this\n`not-a-writer`: a write the caller may not make"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-found`: nothing stands at the key the path names"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`no-account`: a mine call names no account, or its holder's account cannot be found\n`not-an-occurrence`: an occurrence that is not one of the event's"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`upstream-failed`: the brain, the receiver, the account service or agency answered a failure"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-ready`: the service has not read the brain and moved it into companies yet"
+          }
+        },
+        "summary": "Cancel a booking, or one occurrence of a repeating booking.",
+        "tags": [
+          "bookings"
+        ],
+        "x-codes": [
+          "bad-request",
+          "unauthorized",
+          "forbidden",
+          "not-a-writer",
+          "not-found",
+          "no-account",
+          "not-an-occurrence",
+          "upstream-failed",
+          "not-ready"
+        ]
+      },
+      "get": {
+        "operationId": "readBooking",
+        "parameters": [
+          {
+            "description": "The realm: mine or organization.",
+            "in": "path",
+            "name": "realm",
+            "required": true,
+            "schema": {
+              "enum": [
+                "mine",
+                "organization"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "The booking's id.",
+            "in": "path",
+            "name": "bookingId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The account, by its key.",
+            "in": "query",
+            "name": "account",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The account, by its key.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "The company an organization call reads: a company's id, or `platform`; the caller's own where none.",
+            "in": "query",
+            "name": "company",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The company an organization call reads: a company's id, or `platform`; the caller's own where none.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "The holder of a tool session, which acts for the account agency names as its owner.",
+            "in": "query",
+            "name": "holderName",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The holder of a tool session, which acts for the account agency names as its owner.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Booking"
+                }
+              }
+            },
+            "description": "Answered."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`bad-request`: the body or the query is not the shape the route takes"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`unauthorized`: the token is missing or wrong"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`forbidden`: the token is right but the caller may not do this"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-found`: nothing stands at the key the path names"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`no-account`: a mine call names no account, or its holder's account cannot be found"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`upstream-failed`: the brain, the receiver, the account service or agency answered a failure"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-ready`: the service has not read the brain and moved it into companies yet"
+          }
+        },
+        "summary": "One booking.",
+        "tags": [
+          "bookings"
+        ],
+        "x-codes": [
+          "bad-request",
+          "unauthorized",
+          "forbidden",
+          "not-found",
+          "no-account",
+          "upstream-failed",
+          "not-ready"
+        ]
+      },
+      "patch": {
+        "operationId": "changeBooking",
+        "parameters": [
+          {
+            "description": "The realm: mine or organization.",
+            "in": "path",
+            "name": "realm",
+            "required": true,
+            "schema": {
+              "enum": [
+                "mine",
+                "organization"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "The booking's id.",
+            "in": "path",
+            "name": "bookingId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The account, by its key.",
+            "in": "query",
+            "name": "account",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The account, by its key.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "The company an organization call reads: a company's id, or `platform`; the caller's own where none.",
+            "in": "query",
+            "name": "company",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The company an organization call reads: a company's id, or `platform`; the caller's own where none.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "The holder of a tool session, which acts for the account agency names as its owner.",
+            "in": "query",
+            "name": "holderName",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The holder of a tool session, which acts for the account agency names as its owner.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BookingChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Booking"
+                }
+              }
+            },
+            "description": "Answered."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`bad-request`: the body or the query is not the shape the route takes"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`unauthorized`: the token is missing or wrong"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`forbidden`: the token is right but the caller may not do this\n`not-a-writer`: a write the caller may not make"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-found`: nothing stands at the key the path names"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`overlap`: a booking that would meet another standing booking of its resource"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`no-account`: a mine call names no account, or its holder's account cannot be found\n`unknown-resource`: a booking written on a resource the company does not hold live\n`end-before-start`: an end not after its start\n`not-an-occurrence`: an occurrence that is not one of the event's"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`upstream-failed`: the brain, the receiver, the account service or agency answered a failure"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-ready`: the service has not read the brain and moved it into companies yet"
+          }
+        },
+        "summary": "Change the fields named; with an occurrence, that occurrence alone, which becomes a booking of its own.",
+        "tags": [
+          "bookings"
+        ],
+        "x-codes": [
+          "bad-request",
+          "unauthorized",
+          "forbidden",
+          "not-a-writer",
+          "not-found",
+          "overlap",
+          "no-account",
+          "unknown-resource",
+          "end-before-start",
+          "not-an-occurrence",
+          "upstream-failed",
+          "not-ready"
+        ]
+      }
+    },
+    "/{realm}/bookings/{bookingId}/decision": {
+      "post": {
+        "operationId": "decideBooking",
+        "parameters": [
+          {
+            "description": "The realm: mine or organization.",
+            "in": "path",
+            "name": "realm",
+            "required": true,
+            "schema": {
+              "enum": [
+                "mine",
+                "organization"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "The booking's id.",
+            "in": "path",
+            "name": "bookingId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The account, by its key.",
+            "in": "query",
+            "name": "account",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The account, by its key.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "The company an organization call reads: a company's id, or `platform`; the caller's own where none.",
+            "in": "query",
+            "name": "company",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The company an organization call reads: a company's id, or `platform`; the caller's own where none.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "The holder of a tool session, which acts for the account agency names as its owner.",
+            "in": "query",
+            "name": "holderName",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The holder of a tool session, which acts for the account agency names as its owner.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Decision"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Booking"
+                }
+              }
+            },
+            "description": "Answered."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`bad-request`: the body or the query is not the shape the route takes"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`unauthorized`: the token is missing or wrong"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`forbidden`: the token is right but the caller may not do this\n`not-a-keeper`: a decision by one who keeps no such resource"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-found`: nothing stands at the key the path names"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-requested`: a decision on a booking that is not requested"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`no-account`: a mine call names no account, or its holder's account cannot be found"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`upstream-failed`: the brain, the receiver, the account service or agency answered a failure"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-ready`: the service has not read the brain and moved it into companies yet"
+          }
+        },
+        "summary": "A keeper approves or refuses a requested booking; its booker is told.",
+        "tags": [
+          "bookings"
+        ],
+        "x-codes": [
+          "bad-request",
+          "unauthorized",
+          "forbidden",
+          "not-a-keeper",
+          "not-found",
+          "not-requested",
+          "no-account",
           "upstream-failed",
           "not-ready"
         ]
@@ -2142,13 +4094,27 @@
             }
           },
           {
-            "description": "The holder of a tool session, which acts for the owner.",
+            "description": "The company an organization call reads: a company's id, or `platform`; the caller's own where none.",
+            "in": "query",
+            "name": "company",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The company an organization call reads: a company's id, or `platform`; the caller's own where none.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "The holder of a tool session, which acts for the account agency names as its owner.",
             "in": "query",
             "name": "holderName",
             "required": true,
             "schema": {
               "default": null,
-              "description": "The holder of a tool session, which acts for the owner.",
+              "description": "The holder of a tool session, which acts for the account agency names as its owner.",
               "type": [
                 "string",
                 "null"
@@ -2225,7 +4191,7 @@
                 }
               }
             },
-            "description": "`upstream-failed`: the brain, the receiver or the account service answered a failure"
+            "description": "`upstream-failed`: the brain, the receiver, the account service or agency answered a failure"
           },
           "503": {
             "content": {
@@ -2235,7 +4201,7 @@
                 }
               }
             },
-            "description": "`not-ready`: the service has not read the brain yet"
+            "description": "`not-ready`: the service has not read the brain and moved it into companies yet"
           }
         },
         "summary": "The realm's calendars, the caller's hidden mark on each; one is made where the realm holds none.",
@@ -2283,13 +4249,27 @@
             }
           },
           {
-            "description": "The holder of a tool session, which acts for the owner.",
+            "description": "The company an organization call reads: a company's id, or `platform`; the caller's own where none.",
+            "in": "query",
+            "name": "company",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The company an organization call reads: a company's id, or `platform`; the caller's own where none.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "The holder of a tool session, which acts for the account agency names as its owner.",
             "in": "query",
             "name": "holderName",
             "required": true,
             "schema": {
               "default": null,
-              "description": "The holder of a tool session, which acts for the owner.",
+              "description": "The holder of a tool session, which acts for the account agency names as its owner.",
               "type": [
                 "string",
                 "null"
@@ -2366,7 +4346,7 @@
                 }
               }
             },
-            "description": "`no-account`: a mine call names no account, or its holder's account cannot be found"
+            "description": "`no-account`: a mine call names no account, or its holder's account cannot be found\n`no-company`: an organization write with no company, named or its own"
           },
           "502": {
             "content": {
@@ -2376,7 +4356,7 @@
                 }
               }
             },
-            "description": "`upstream-failed`: the brain, the receiver or the account service answered a failure"
+            "description": "`upstream-failed`: the brain, the receiver, the account service or agency answered a failure"
           },
           "503": {
             "content": {
@@ -2386,7 +4366,7 @@
                 }
               }
             },
-            "description": "`not-ready`: the service has not read the brain yet"
+            "description": "`not-ready`: the service has not read the brain and moved it into companies yet"
           }
         },
         "summary": "Make a calendar.",
@@ -2400,6 +4380,7 @@
           "not-a-writer",
           "not-found",
           "no-account",
+          "no-company",
           "upstream-failed",
           "not-ready"
         ]
@@ -2446,13 +4427,27 @@
             }
           },
           {
-            "description": "The holder of a tool session, which acts for the owner.",
+            "description": "The company an organization call reads: a company's id, or `platform`; the caller's own where none.",
+            "in": "query",
+            "name": "company",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The company an organization call reads: a company's id, or `platform`; the caller's own where none.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "The holder of a tool session, which acts for the account agency names as its owner.",
             "in": "query",
             "name": "holderName",
             "required": true,
             "schema": {
               "default": null,
-              "description": "The holder of a tool session, which acts for the owner.",
+              "description": "The holder of a tool session, which acts for the account agency names as its owner.",
               "type": [
                 "string",
                 "null"
@@ -2512,7 +4507,7 @@
                 }
               }
             },
-            "description": "`no-account`: a mine call names no account, or its holder's account cannot be found"
+            "description": "`no-account`: a mine call names no account, or its holder's account cannot be found\n`no-company`: an organization write with no company, named or its own"
           },
           "502": {
             "content": {
@@ -2522,7 +4517,7 @@
                 }
               }
             },
-            "description": "`upstream-failed`: the brain, the receiver or the account service answered a failure"
+            "description": "`upstream-failed`: the brain, the receiver, the account service or agency answered a failure"
           },
           "503": {
             "content": {
@@ -2532,7 +4527,7 @@
                 }
               }
             },
-            "description": "`not-ready`: the service has not read the brain yet"
+            "description": "`not-ready`: the service has not read the brain and moved it into companies yet"
           }
         },
         "summary": "Retire a calendar and its events.",
@@ -2546,6 +4541,7 @@
           "not-a-writer",
           "not-found",
           "no-account",
+          "no-company",
           "upstream-failed",
           "not-ready"
         ]
@@ -2590,13 +4586,27 @@
             }
           },
           {
-            "description": "The holder of a tool session, which acts for the owner.",
+            "description": "The company an organization call reads: a company's id, or `platform`; the caller's own where none.",
+            "in": "query",
+            "name": "company",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The company an organization call reads: a company's id, or `platform`; the caller's own where none.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "The holder of a tool session, which acts for the account agency names as its owner.",
             "in": "query",
             "name": "holderName",
             "required": true,
             "schema": {
               "default": null,
-              "description": "The holder of a tool session, which acts for the owner.",
+              "description": "The holder of a tool session, which acts for the account agency names as its owner.",
               "type": [
                 "string",
                 "null"
@@ -2673,7 +4683,7 @@
                 }
               }
             },
-            "description": "`no-account`: a mine call names no account, or its holder's account cannot be found"
+            "description": "`no-account`: a mine call names no account, or its holder's account cannot be found\n`no-company`: an organization write with no company, named or its own"
           },
           "502": {
             "content": {
@@ -2683,7 +4693,7 @@
                 }
               }
             },
-            "description": "`upstream-failed`: the brain, the receiver or the account service answered a failure"
+            "description": "`upstream-failed`: the brain, the receiver, the account service or agency answered a failure"
           },
           "503": {
             "content": {
@@ -2693,7 +4703,7 @@
                 }
               }
             },
-            "description": "`not-ready`: the service has not read the brain yet"
+            "description": "`not-ready`: the service has not read the brain and moved it into companies yet"
           }
         },
         "summary": "Change a calendar's name, colour, writers or tell, or hide or show it for the caller.",
@@ -2705,6 +4715,164 @@
           "unauthorized",
           "forbidden",
           "not-a-writer",
+          "not-found",
+          "no-account",
+          "no-company",
+          "upstream-failed",
+          "not-ready"
+        ]
+      }
+    },
+    "/{realm}/companies": {
+      "get": {
+        "operationId": "listCompanies",
+        "parameters": [
+          {
+            "description": "The realm: mine or organization.",
+            "in": "path",
+            "name": "realm",
+            "required": true,
+            "schema": {
+              "enum": [
+                "mine",
+                "organization"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "The account, by its key.",
+            "in": "query",
+            "name": "account",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The account, by its key.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "The company an organization call reads: a company's id, or `platform`; the caller's own where none.",
+            "in": "query",
+            "name": "company",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The company an organization call reads: a company's id, or `platform`; the caller's own where none.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "The holder of a tool session, which acts for the account agency names as its owner.",
+            "in": "query",
+            "name": "holderName",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The holder of a tool session, which acts for the account agency names as its owner.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page5"
+                }
+              }
+            },
+            "description": "Answered."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`bad-request`: the body or the query is not the shape the route takes"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`unauthorized`: the token is missing or wrong"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`forbidden`: the token is right but the caller may not do this"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-found`: nothing stands at the key the path names"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`no-account`: a mine call names no account, or its holder's account cannot be found"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`upstream-failed`: the brain, the receiver, the account service or agency answered a failure"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-ready`: the service has not read the brain and moved it into companies yet"
+          }
+        },
+        "summary": "The companies the caller reads, its own first; for the administrator every company and the platform's own last. The organization realm alone.",
+        "tags": [
+          "companies"
+        ],
+        "x-codes": [
+          "bad-request",
+          "unauthorized",
+          "forbidden",
           "not-found",
           "no-account",
           "upstream-failed",
@@ -2732,6 +4900,18 @@
           {
             "in": "query",
             "name": "account",
+            "required": true,
+            "schema": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "company",
             "required": true,
             "schema": {
               "default": null,
@@ -2843,7 +5023,7 @@
                 }
               }
             },
-            "description": "`upstream-failed`: the brain, the receiver or the account service answered a failure"
+            "description": "`upstream-failed`: the brain, the receiver, the account service or agency answered a failure"
           },
           "503": {
             "content": {
@@ -2853,7 +5033,7 @@
                 }
               }
             },
-            "description": "`not-ready`: the service has not read the brain yet"
+            "description": "`not-ready`: the service has not read the brain and moved it into companies yet"
           }
         },
         "summary": "The events overlapping a span of at most 92 days, a repeating event one row per occurrence.",
@@ -2902,13 +5082,27 @@
             }
           },
           {
-            "description": "The holder of a tool session, which acts for the owner.",
+            "description": "The company an organization call reads: a company's id, or `platform`; the caller's own where none.",
+            "in": "query",
+            "name": "company",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The company an organization call reads: a company's id, or `platform`; the caller's own where none.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "The holder of a tool session, which acts for the account agency names as its owner.",
             "in": "query",
             "name": "holderName",
             "required": true,
             "schema": {
               "default": null,
-              "description": "The holder of a tool session, which acts for the owner.",
+              "description": "The holder of a tool session, which acts for the account agency names as its owner.",
               "type": [
                 "string",
                 "null"
@@ -2995,7 +5189,7 @@
                 }
               }
             },
-            "description": "`no-account`: a mine call names no account, or its holder's account cannot be found\n`end-before-start`: an end not after its start\n`unknown-calendar`: an event written under a calendar the realm does not hold live"
+            "description": "`no-account`: a mine call names no account, or its holder's account cannot be found\n`no-company`: an organization write with no company, named or its own\n`end-before-start`: an end not after its start\n`unknown-calendar`: an event written under a calendar the realm does not hold live"
           },
           "502": {
             "content": {
@@ -3005,7 +5199,7 @@
                 }
               }
             },
-            "description": "`upstream-failed`: the brain, the receiver or the account service answered a failure"
+            "description": "`upstream-failed`: the brain, the receiver, the account service or agency answered a failure"
           },
           "503": {
             "content": {
@@ -3015,7 +5209,7 @@
                 }
               }
             },
-            "description": "`not-ready`: the service has not read the brain yet"
+            "description": "`not-ready`: the service has not read the brain and moved it into companies yet"
           }
         },
         "summary": "Write an event; a POST naming an id the realm holds writes over it and answers 200.",
@@ -3029,6 +5223,7 @@
           "not-a-writer",
           "not-found",
           "no-account",
+          "no-company",
           "end-before-start",
           "unknown-calendar",
           "upstream-failed",
@@ -3065,6 +5260,18 @@
           {
             "in": "query",
             "name": "account",
+            "required": true,
+            "schema": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "company",
             "required": true,
             "schema": {
               "default": null,
@@ -3163,7 +5370,7 @@
                 }
               }
             },
-            "description": "`upstream-failed`: the brain, the receiver or the account service answered a failure"
+            "description": "`upstream-failed`: the brain, the receiver, the account service or agency answered a failure"
           },
           "503": {
             "content": {
@@ -3173,7 +5380,7 @@
                 }
               }
             },
-            "description": "`not-ready`: the service has not read the brain yet"
+            "description": "`not-ready`: the service has not read the brain and moved it into companies yet"
           }
         },
         "summary": "Cancel an event, or one occurrence of a repeating event.",
@@ -3232,13 +5439,27 @@
             }
           },
           {
-            "description": "The holder of a tool session, which acts for the owner.",
+            "description": "The company an organization call reads: a company's id, or `platform`; the caller's own where none.",
+            "in": "query",
+            "name": "company",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The company an organization call reads: a company's id, or `platform`; the caller's own where none.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "The holder of a tool session, which acts for the account agency names as its owner.",
             "in": "query",
             "name": "holderName",
             "required": true,
             "schema": {
               "default": null,
-              "description": "The holder of a tool session, which acts for the owner.",
+              "description": "The holder of a tool session, which acts for the account agency names as its owner.",
               "type": [
                 "string",
                 "null"
@@ -3315,7 +5536,7 @@
                 }
               }
             },
-            "description": "`upstream-failed`: the brain, the receiver or the account service answered a failure"
+            "description": "`upstream-failed`: the brain, the receiver, the account service or agency answered a failure"
           },
           "503": {
             "content": {
@@ -3325,7 +5546,7 @@
                 }
               }
             },
-            "description": "`not-ready`: the service has not read the brain yet"
+            "description": "`not-ready`: the service has not read the brain and moved it into companies yet"
           }
         },
         "summary": "One event.",
@@ -3382,13 +5603,27 @@
             }
           },
           {
-            "description": "The holder of a tool session, which acts for the owner.",
+            "description": "The company an organization call reads: a company's id, or `platform`; the caller's own where none.",
+            "in": "query",
+            "name": "company",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The company an organization call reads: a company's id, or `platform`; the caller's own where none.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "The holder of a tool session, which acts for the account agency names as its owner.",
             "in": "query",
             "name": "holderName",
             "required": true,
             "schema": {
               "default": null,
-              "description": "The holder of a tool session, which acts for the owner.",
+              "description": "The holder of a tool session, which acts for the account agency names as its owner.",
               "type": [
                 "string",
                 "null"
@@ -3475,7 +5710,7 @@
                 }
               }
             },
-            "description": "`upstream-failed`: the brain, the receiver or the account service answered a failure"
+            "description": "`upstream-failed`: the brain, the receiver, the account service or agency answered a failure"
           },
           "503": {
             "content": {
@@ -3485,7 +5720,7 @@
                 }
               }
             },
-            "description": "`not-ready`: the service has not read the brain yet"
+            "description": "`not-ready`: the service has not read the brain and moved it into companies yet"
           }
         },
         "summary": "Change the fields named; with an occurrence, that occurrence alone, which becomes an event of its own.",
@@ -3502,6 +5737,905 @@
           "end-before-start",
           "unknown-calendar",
           "not-an-occurrence",
+          "upstream-failed",
+          "not-ready"
+        ]
+      }
+    },
+    "/{realm}/resources": {
+      "get": {
+        "operationId": "listResources",
+        "parameters": [
+          {
+            "description": "The realm: mine or organization.",
+            "in": "path",
+            "name": "realm",
+            "required": true,
+            "schema": {
+              "enum": [
+                "mine",
+                "organization"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "account",
+            "required": true,
+            "schema": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "company",
+            "required": true,
+            "schema": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "holderName",
+            "required": true,
+            "schema": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "Only the resources of this kind.",
+            "in": "query",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "Only the resources of this kind.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page6"
+                }
+              }
+            },
+            "description": "Answered."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`bad-request`: the body or the query is not the shape the route takes"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`unauthorized`: the token is missing or wrong"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`forbidden`: the token is right but the caller may not do this"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-found`: nothing stands at the key the path names"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`no-account`: a mine call names no account, or its holder's account cannot be found"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`upstream-failed`: the brain, the receiver, the account service or agency answered a failure"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-ready`: the service has not read the brain and moved it into companies yet"
+          }
+        },
+        "summary": "The company's live resources, by kind, place and name. The organization realm alone.",
+        "tags": [
+          "bookings"
+        ],
+        "x-codes": [
+          "bad-request",
+          "unauthorized",
+          "forbidden",
+          "not-found",
+          "no-account",
+          "upstream-failed",
+          "not-ready"
+        ]
+      },
+      "post": {
+        "operationId": "createResource",
+        "parameters": [
+          {
+            "description": "The realm: mine or organization.",
+            "in": "path",
+            "name": "realm",
+            "required": true,
+            "schema": {
+              "enum": [
+                "mine",
+                "organization"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "The account, by its key.",
+            "in": "query",
+            "name": "account",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The account, by its key.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "The company an organization call reads: a company's id, or `platform`; the caller's own where none.",
+            "in": "query",
+            "name": "company",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The company an organization call reads: a company's id, or `platform`; the caller's own where none.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "The holder of a tool session, which acts for the account agency names as its owner.",
+            "in": "query",
+            "name": "holderName",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The holder of a tool session, which acts for the account agency names as its owner.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewResource"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Resource"
+                }
+              }
+            },
+            "description": "Answered."
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Resource"
+                }
+              }
+            },
+            "description": "Created."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`bad-request`: the body or the query is not the shape the route takes"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`unauthorized`: the token is missing or wrong"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`forbidden`: the token is right but the caller may not do this\n`not-a-writer`: a write the caller may not make"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-found`: nothing stands at the key the path names"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`no-account`: a mine call names no account, or its holder's account cannot be found\n`no-company`: an organization write with no company, named or its own\n`not-in-company`: a resource's keeper who stands in another company or none"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`upstream-failed`: the brain, the receiver, the account service or agency answered a failure"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-ready`: the service has not read the brain and moved it into companies yet"
+          }
+        },
+        "summary": "Make a resource: the administrator's and a head of the company's.",
+        "tags": [
+          "bookings"
+        ],
+        "x-codes": [
+          "bad-request",
+          "unauthorized",
+          "forbidden",
+          "not-a-writer",
+          "not-found",
+          "no-account",
+          "no-company",
+          "not-in-company",
+          "upstream-failed",
+          "not-ready"
+        ]
+      }
+    },
+    "/{realm}/resources/free": {
+      "get": {
+        "operationId": "listFreeResources",
+        "parameters": [
+          {
+            "description": "The realm: mine or organization.",
+            "in": "path",
+            "name": "realm",
+            "required": true,
+            "schema": {
+              "enum": [
+                "mine",
+                "organization"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "account",
+            "required": true,
+            "schema": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "company",
+            "required": true,
+            "schema": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "Local ISO datetime, after the start.",
+            "in": "query",
+            "name": "end",
+            "required": true,
+            "schema": {
+              "description": "Local ISO datetime, after the start.",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "holderName",
+            "required": true,
+            "schema": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "How the span repeats; `none` where none is given.",
+            "in": "query",
+            "name": "repeat",
+            "required": true,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Repeat"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "description": "How the span repeats; `none` where none is given."
+            }
+          },
+          {
+            "description": "The fewest seats; 1 where none is given.",
+            "in": "query",
+            "name": "seats",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The fewest seats; 1 where none is given.",
+              "format": "uint32",
+              "minimum": 0,
+              "type": [
+                "integer",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "Local ISO datetime.",
+            "in": "query",
+            "name": "start",
+            "required": true,
+            "schema": {
+              "description": "Local ISO datetime.",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Page6"
+                }
+              }
+            },
+            "description": "Answered."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`bad-request`: the body or the query is not the shape the route takes"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`unauthorized`: the token is missing or wrong"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`forbidden`: the token is right but the caller may not do this"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-found`: nothing stands at the key the path names"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`no-account`: a mine call names no account, or its holder's account cannot be found\n`end-before-start`: an end not after its start"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`upstream-failed`: the brain, the receiver, the account service or agency answered a failure"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-ready`: the service has not read the brain and moved it into companies yet"
+          }
+        },
+        "summary": "The resources with at least the seats asked that no standing booking meets over the span and its repeat, fewest seats first.",
+        "tags": [
+          "bookings"
+        ],
+        "x-codes": [
+          "bad-request",
+          "unauthorized",
+          "forbidden",
+          "not-found",
+          "no-account",
+          "end-before-start",
+          "upstream-failed",
+          "not-ready"
+        ]
+      }
+    },
+    "/{realm}/resources/{resourceId}": {
+      "delete": {
+        "operationId": "retireResource",
+        "parameters": [
+          {
+            "description": "The realm: mine or organization.",
+            "in": "path",
+            "name": "realm",
+            "required": true,
+            "schema": {
+              "enum": [
+                "mine",
+                "organization"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "The resource's id.",
+            "in": "path",
+            "name": "resourceId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The account, by its key.",
+            "in": "query",
+            "name": "account",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The account, by its key.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "The company an organization call reads: a company's id, or `platform`; the caller's own where none.",
+            "in": "query",
+            "name": "company",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The company an organization call reads: a company's id, or `platform`; the caller's own where none.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "The holder of a tool session, which acts for the account agency names as its owner.",
+            "in": "query",
+            "name": "holderName",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The holder of a tool session, which acts for the account agency names as its owner.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Done; no content."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`bad-request`: the body or the query is not the shape the route takes"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`unauthorized`: the token is missing or wrong"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`forbidden`: the token is right but the caller may not do this\n`not-a-writer`: a write the caller may not make"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-found`: nothing stands at the key the path names"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`no-account`: a mine call names no account, or its holder's account cannot be found\n`no-company`: an organization write with no company, named or its own"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`upstream-failed`: the brain, the receiver, the account service or agency answered a failure"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-ready`: the service has not read the brain and moved it into companies yet"
+          }
+        },
+        "summary": "Retire a resource and cancel its standing bookings.",
+        "tags": [
+          "bookings"
+        ],
+        "x-codes": [
+          "bad-request",
+          "unauthorized",
+          "forbidden",
+          "not-a-writer",
+          "not-found",
+          "no-account",
+          "no-company",
+          "upstream-failed",
+          "not-ready"
+        ]
+      },
+      "patch": {
+        "operationId": "changeResource",
+        "parameters": [
+          {
+            "description": "The realm: mine or organization.",
+            "in": "path",
+            "name": "realm",
+            "required": true,
+            "schema": {
+              "enum": [
+                "mine",
+                "organization"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "The resource's id.",
+            "in": "path",
+            "name": "resourceId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The account, by its key.",
+            "in": "query",
+            "name": "account",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The account, by its key.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "The company an organization call reads: a company's id, or `platform`; the caller's own where none.",
+            "in": "query",
+            "name": "company",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The company an organization call reads: a company's id, or `platform`; the caller's own where none.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "The holder of a tool session, which acts for the account agency names as its owner.",
+            "in": "query",
+            "name": "holderName",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The holder of a tool session, which acts for the account agency names as its owner.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResourceChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Resource"
+                }
+              }
+            },
+            "description": "Answered."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`bad-request`: the body or the query is not the shape the route takes"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`unauthorized`: the token is missing or wrong"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`forbidden`: the token is right but the caller may not do this\n`not-a-writer`: a write the caller may not make"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-found`: nothing stands at the key the path names"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`no-account`: a mine call names no account, or its holder's account cannot be found\n`no-company`: an organization write with no company, named or its own\n`not-in-company`: a resource's keeper who stands in another company or none"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`upstream-failed`: the brain, the receiver, the account service or agency answered a failure"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`not-ready`: the service has not read the brain and moved it into companies yet"
+          }
+        },
+        "summary": "Change the fields named of a resource.",
+        "tags": [
+          "bookings"
+        ],
+        "x-codes": [
+          "bad-request",
+          "unauthorized",
+          "forbidden",
+          "not-a-writer",
+          "not-found",
+          "no-account",
+          "no-company",
+          "not-in-company",
           "upstream-failed",
           "not-ready"
         ]
@@ -3527,6 +6661,18 @@
           {
             "in": "query",
             "name": "account",
+            "required": true,
+            "schema": {
+              "default": null,
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "company",
             "required": true,
             "schema": {
               "default": null,
@@ -3638,7 +6784,7 @@
                 }
               }
             },
-            "description": "`upstream-failed`: the brain, the receiver or the account service answered a failure"
+            "description": "`upstream-failed`: the brain, the receiver, the account service or agency answered a failure"
           },
           "503": {
             "content": {
@@ -3648,7 +6794,7 @@
                 }
               }
             },
-            "description": "`not-ready`: the service has not read the brain yet"
+            "description": "`not-ready`: the service has not read the brain and moved it into companies yet"
           }
         },
         "summary": "The schedules overlapping a span of at most 92 days: every one in the organization realm, those assigned to the account in the mine realm.",
@@ -3699,13 +6845,27 @@
             }
           },
           {
-            "description": "The holder of a tool session, which acts for the owner.",
+            "description": "The company an organization call reads: a company's id, or `platform`; the caller's own where none.",
+            "in": "query",
+            "name": "company",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The company an organization call reads: a company's id, or `platform`; the caller's own where none.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "The holder of a tool session, which acts for the account agency names as its owner.",
             "in": "query",
             "name": "holderName",
             "required": true,
             "schema": {
               "default": null,
-              "description": "The holder of a tool session, which acts for the owner.",
+              "description": "The holder of a tool session, which acts for the account agency names as its owner.",
               "type": [
                 "string",
                 "null"
@@ -3782,7 +6942,7 @@
                 }
               }
             },
-            "description": "`upstream-failed`: the brain, the receiver or the account service answered a failure"
+            "description": "`upstream-failed`: the brain, the receiver, the account service or agency answered a failure"
           },
           "503": {
             "content": {
@@ -3792,7 +6952,7 @@
                 }
               }
             },
-            "description": "`not-ready`: the service has not read the brain yet"
+            "description": "`not-ready`: the service has not read the brain and moved it into companies yet"
           }
         },
         "summary": "Every source, the caller's hidden mark for the realm on each.",
@@ -3851,13 +7011,27 @@
             }
           },
           {
-            "description": "The holder of a tool session, which acts for the owner.",
+            "description": "The company an organization call reads: a company's id, or `platform`; the caller's own where none.",
+            "in": "query",
+            "name": "company",
+            "required": true,
+            "schema": {
+              "default": null,
+              "description": "The company an organization call reads: a company's id, or `platform`; the caller's own where none.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
+            "description": "The holder of a tool session, which acts for the account agency names as its owner.",
             "in": "query",
             "name": "holderName",
             "required": true,
             "schema": {
               "default": null,
-              "description": "The holder of a tool session, which acts for the owner.",
+              "description": "The holder of a tool session, which acts for the account agency names as its owner.",
               "type": [
                 "string",
                 "null"
@@ -3944,7 +7118,7 @@
                 }
               }
             },
-            "description": "`upstream-failed`: the brain, the receiver or the account service answered a failure"
+            "description": "`upstream-failed`: the brain, the receiver, the account service or agency answered a failure"
           },
           "503": {
             "content": {
@@ -3954,7 +7128,7 @@
                 }
               }
             },
-            "description": "`not-ready`: the service has not read the brain yet"
+            "description": "`not-ready`: the service has not read the brain and moved it into companies yet"
           }
         },
         "summary": "Hide or show a source's schedules in the realm for the caller's account.",
@@ -3998,6 +7172,12 @@
       "name": "sources"
     },
     {
+      "name": "companies"
+    },
+    {
+      "name": "bookings"
+    },
+    {
       "name": "alarms"
     },
     {
@@ -4010,17 +7190,27 @@
   "x-calls": [
     "bmo-brain",
     "bmo-receiver",
-    "the account service"
+    "the account service",
+    "bmo-agency"
   ],
   "x-event-data": {
     "alarm.told": {
       "$ref": "#/components/schemas/AlarmTold"
+    },
+    "booking.changed": {
+      "$ref": "#/components/schemas/BookingChanged"
+    },
+    "booking.decided": {
+      "$ref": "#/components/schemas/BookingDecided"
     },
     "calendar.changed": {
       "$ref": "#/components/schemas/CalendarChanged"
     },
     "event.changed": {
       "$ref": "#/components/schemas/EventChanged"
+    },
+    "resource.changed": {
+      "$ref": "#/components/schemas/ResourceChanged"
     },
     "schedule.changed": {
       "$ref": "#/components/schemas/ScheduleChanged"
@@ -4034,7 +7224,10 @@
     "event.changed",
     "alarm.told",
     "source.changed",
-    "schedule.changed"
+    "schedule.changed",
+    "resource.changed",
+    "booking.changed",
+    "booking.decided"
   ],
   "x-layer": "downstream",
   "x-tools": [
@@ -4419,6 +7612,200 @@
         "type": "object"
       },
       "route": "DELETE /{realm}/events/{eventId}"
+    },
+    {
+      "capabilities": [
+        "room.tools"
+      ],
+      "description": "The resources of the company: its rooms and whatever else it books.",
+      "input": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "description": "Only the resources of this kind, the word the company groups them under, as a listing names it.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "name": "calendar_resources",
+      "namespace": "bmo",
+      "output": {
+        "$ref": "#/components/schemas/Page6"
+      },
+      "route": "GET /{realm}/resources"
+    },
+    {
+      "capabilities": [
+        "room.tools"
+      ],
+      "description": "The company's resources free for a span, with at least the seats asked.",
+      "input": {
+        "additionalProperties": false,
+        "properties": {
+          "end": {
+            "description": "The local end of the span; an hour after the start where none is given.",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}$",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "kind": {
+            "description": "Only the resources of this kind, as a listing names it.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "repeat": {
+            "description": "How the span repeats: none, daily, weekly, monthly or yearly.",
+            "enum": [
+              "none",
+              "daily",
+              "weekly",
+              "monthly",
+              "yearly",
+              null
+            ],
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "seats": {
+            "description": "The fewest seats the resource has; 1 where none is given.",
+            "minimum": 1,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "start": {
+            "description": "The local start of the span, YYYY-MM-DDTHH:mm:ss.",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start"
+        ],
+        "type": "object"
+      },
+      "name": "calendar_free_resources",
+      "namespace": "bmo",
+      "output": {
+        "$ref": "#/components/schemas/Page6"
+      },
+      "route": "GET /{realm}/resources/free"
+    },
+    {
+      "capabilities": [
+        "room.tools"
+      ],
+      "description": "Books a resource for a span; on a resource that waits for approval the booking stands requested.",
+      "input": {
+        "additionalProperties": false,
+        "properties": {
+          "allDay": {
+            "description": "Whether it takes the whole day.",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "end": {
+            "description": "The local end; an hour after the start where none is given, the whole day where allDay.",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}$",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "repeat": {
+            "description": "How it repeats: none, daily, weekly, monthly or yearly.",
+            "enum": [
+              "none",
+              "daily",
+              "weekly",
+              "monthly",
+              "yearly",
+              null
+            ],
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "resourceId": {
+            "description": "The resource booked, by its id as a listing names it.",
+            "type": "string"
+          },
+          "start": {
+            "description": "The local start, YYYY-MM-DDTHH:mm:ss.",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}$",
+            "type": "string"
+          },
+          "title": {
+            "description": "What the booking is for, one line.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "resourceId",
+          "title",
+          "start"
+        ],
+        "type": "object"
+      },
+      "name": "calendar_book",
+      "namespace": "bmo",
+      "output": {
+        "$ref": "#/components/schemas/Booking"
+      },
+      "route": "POST /{realm}/bookings"
+    },
+    {
+      "capabilities": [
+        "room.tools"
+      ],
+      "description": "Cancels a booking or one occurrence.",
+      "input": {
+        "additionalProperties": false,
+        "properties": {
+          "bookingId": {
+            "description": "The booking's id, as a booking or a listing names it.",
+            "type": "string"
+          },
+          "occurrence": {
+            "description": "One occurrence of a repeating booking, by its local start; the cancellation reaches that occurrence alone.",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}$",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "bookingId"
+        ],
+        "type": "object"
+      },
+      "name": "calendar_cancel_booking",
+      "namespace": "bmo",
+      "output": {
+        "properties": {
+          "cancelled": {
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "route": "DELETE /{realm}/bookings/{bookingId}"
     }
   ]
 }

@@ -1,13 +1,15 @@
 //! Sources and schedules other units push: one written, changed and removed by its source and item id, a
-//! source's whole set reconciled, the reads of both realms, each account's layers, and the refusals.
+//! source's whole set reconciled, each kept in its company, the reads of both realms, each account's layers,
+//! and the refusals.
 
 use reqwest::Method;
 use serde_json::{Value, json};
 
-use crate::support::{Service, labels};
+use crate::support::{COMPANY, Service, labels};
 
+/// A schedule of the first company.
 fn schedule(title: &str, start: &str, end: &str, assignee: Option<&str>) -> Value {
-  json!({ "title": title, "start": start, "end": end, "link": "/schedule/items/1", "assignee": assignee })
+  json!({ "title": title, "start": start, "end": end, "link": "/schedule/items/1", "assignee": assignee, "company": COMPANY })
 }
 
 fn item(id: &str, title: &str, assignee: Option<&str>) -> Value {
@@ -40,6 +42,7 @@ async fn a_unit_writes_changes_and_removes_one_schedule_by_its_source_and_item()
   assert_eq!(made["itemId"], "task-1");
   assert_eq!(made["assignee"], "2");
   assert_eq!(made["allDay"], false);
+  assert_eq!(made["company"], COMPANY);
 
   let memory = &service.stand.live("schedule:plans:task-1")[0];
   assert_eq!(memory["type"], "schedule");
@@ -49,9 +52,15 @@ async fn a_unit_writes_changes_and_removes_one_schedule_by_its_source_and_item()
   assert_eq!(kept["assignee"], "2");
   assert_eq!(kept["realm"], "organization");
   let brains = service.stand.peers.lock().unwrap().brains.clone();
-  let organization = brains.iter().find(|brain| brain["accountKey"] == "organization").unwrap();
-  assert_eq!(memory["brainId"], organization["id"], "kept in the organization's brain alone");
-  assert_eq!(brains.len(), 1);
+  let company = brains.iter().find(|brain| brain["accountKey"] == "company:10").unwrap();
+  assert_eq!(memory["brainId"], company["id"], "kept in its company's brain alone");
+  let platform = brains.iter().find(|brain| brain["accountKey"] == "organization").unwrap();
+  assert_eq!(
+    service.stand.live("source:plans")[0]["brainId"],
+    platform["id"],
+    "a source is no company's"
+  );
+  assert_eq!(brains.len(), 2);
 
   let source = &service.stand.live("source:plans")[0];
   assert_eq!(source["text"], "plans", "a source first written to is named by its id");
@@ -105,7 +114,7 @@ async fn a_whole_set_writes_what_differs_and_removes_what_it_does_not_name() {
   let (_, done) = service.call(Method::PUT, "/sources/plans/schedules", Some(set)).await;
   assert_eq!(done, json!({ "written": 2, "unchanged": 1, "removed": 1 }));
 
-  let (_, page) = service.get(&format!("/organization/schedules?{SPAN}")).await;
+  let (_, page) = service.get(&format!("/organization/schedules?account=1&{SPAN}")).await;
   let mut held = pairs(&page);
   held.sort();
   assert_eq!(held, ["plans:a", "plans:b", "plans:d", "work:x"], "another source's schedules stand");
@@ -153,8 +162,8 @@ async fn the_organization_reads_every_schedule_and_an_account_its_own() {
   assert_eq!(mine["items"][0]["realm"], "mine");
   assert_eq!(
     service.stand.peers.lock().unwrap().brains.len(),
-    1,
-    "an account's brain is never written"
+    2,
+    "an account's brain is never written: the platform's holds the source, the company's the schedules"
   );
 }
 
@@ -210,6 +219,7 @@ async fn the_writes_are_the_service_tokens_and_hold_their_shape() {
     (refused("link", json!("/\\elsewhere.example/x")), "bad-request"),
     (refused("title", json!("two\nlines")), "bad-request"),
     (refused("assignee", json!("k".repeat(201))), "bad-request"),
+    (refused("company", json!("no good")), "bad-request"),
     (refused("end", json!("2026-11-20T08:00:00")), "end-before-start"),
   ] {
     let (_, refusal) = service.call(Method::PUT, path, Some(write.clone())).await;
@@ -223,7 +233,52 @@ async fn the_writes_are_the_service_tokens_and_hold_their_shape() {
   assert_eq!(status, 201, "an https address opens");
 
   let (_, refusal) = service
-    .get("/organization/schedules?start=2026-01-01T00:00:00&end=2026-12-01T00:00:00")
+    .get("/organization/schedules?account=1&start=2026-01-01T00:00:00&end=2026-12-01T00:00:00")
     .await;
   assert_eq!(refusal["code"], "span-too-long");
+}
+
+#[tokio::test]
+async fn a_schedule_stands_in_its_company_alone_and_one_of_no_company_with_the_administrator() {
+  let service = Service::fresh().await;
+  let ours = schedule("Ours", "2026-11-20T09:00:00", "2026-11-20T10:00:00", Some("4"));
+  service.call(Method::PUT, "/sources/plans/schedules/ours", Some(ours)).await;
+  let mut nobodys = schedule("Nobody's", "2026-11-20T09:00:00", "2026-11-20T10:00:00", Some("2"));
+  nobodys["company"] = json!(null);
+  let (status, kept) = service.call(Method::PUT, "/sources/plans/schedules/nobodys", Some(nobodys)).await;
+  assert_eq!((status, kept["company"].as_str()), (201, Some("platform")));
+
+  let read = async |path: &str, key: &str, role: &str| {
+    let (status, page) = service.console(Method::GET, path, key, role, None).await;
+    (status, if status == 200 { pairs(&page) } else { Vec::new() })
+  };
+  let organization = format!("/organization/schedules?{SPAN}");
+  assert_eq!(read(&organization, "2", "member").await, (200, vec!["plans:ours".to_owned()]));
+  assert_eq!(read(&organization, "4", "member").await, (200, vec![]), "another company reads nothing");
+  assert_eq!(read(&format!("{organization}&company=10"), "4", "member").await.0, 404);
+  assert_eq!(
+    read(&format!("/mine/schedules?{SPAN}"), "4", "member").await,
+    (200, vec![]),
+    "an assignee of another company is shown none of it"
+  );
+  assert_eq!(
+    read(&format!("/mine/schedules?{SPAN}"), "2", "member").await,
+    (200, vec![]),
+    "a schedule of no company stands in no account's own realm"
+  );
+  let platform = format!("{organization}&company=platform");
+  assert_eq!(read(&platform, "2", "member").await.0, 404);
+  assert_eq!(read(&platform, "1", "administrator").await, (200, vec!["plans:nobodys".to_owned()]));
+
+  let mut moved = schedule("Ours", "2026-11-20T09:00:00", "2026-11-20T10:00:00", None);
+  moved["company"] = json!("20");
+  service.call(Method::PUT, "/sources/plans/schedules/ours", Some(moved)).await;
+  assert_eq!(
+    read(&organization, "2", "member").await,
+    (200, vec![]),
+    "a schedule sent to another company leaves"
+  );
+  assert_eq!(read(&organization, "4", "member").await, (200, vec!["plans:ours".to_owned()]));
+  let live = service.stand.live("schedule:plans:ours");
+  assert_eq!(live.len(), 1, "kept once");
 }
