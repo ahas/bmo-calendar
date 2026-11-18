@@ -127,12 +127,17 @@ fn build(folder: &Path, layer: Option<&str>) {
 /// The client's folder.
 const CLIENT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/client");
 
-/// The release of bmo-ui the client has installed, as its own layer file names it.
+/// The layer the bundle is built on: the release of bmo-ui the client vendors, as its file is named
+/// (`bmo-ui-<version>.tgz`), which is what the bundle build writes into its layer file. It is read from the
+/// file's name, since the suite runs where the client's packages are not installed.
 fn installed_layer() -> String {
-  let path = Path::new(CLIENT).join("node_modules/bmo-ui/shared/layer.json");
-  let file: Value =
-    serde_json::from_slice(&std::fs::read(path).expect("the client's packages are installed")).unwrap();
-  file["layer"].as_str().unwrap().to_owned()
+  let release = vendored_release();
+  let name = release.file_name().and_then(|name| name.to_str()).unwrap_or_default();
+  name
+    .strip_prefix("bmo-ui-")
+    .and_then(|rest| rest.strip_suffix(".tgz"))
+    .expect("the vendored release is named bmo-ui-<version>.tgz")
+    .to_owned()
 }
 
 /// The bmo-ui release file the client vendors, as its package manifest names it.
