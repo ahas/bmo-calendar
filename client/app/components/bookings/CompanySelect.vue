@@ -2,10 +2,11 @@
   <!-- The administrator's choice of company (docs/design.md, 「The console」): every company and the platform's
        own among them, the administrator's own first chosen. The organization's calendars, events, schedules,
        resources and bookings then read the company chosen. A member reads one company and sees no choice. -->
-  <USelect
+  <ChoiceSelect
     v-if="administrator"
     :model-value="company ?? undefined"
     :items="items"
+    value-key="value"
     :size="props.size"
     :aria-label="$t('calendar.label.company')"
     icon="i-material-symbols-domain"

@@ -285,7 +285,15 @@ again with its form, and the focus stays on the same field of the form drawn the
 of a new event puts the focus on its title. A new event holds a change while it differs from what it was
 drawn as, read through bmo-ui's opened-with snapshot of the draft itself, or while its form holds one the
 draft cannot take, such as an end before its start. So the form still asks before a change is thrown
-away, wherever it was drawn again, by Esc, by a press outside or by back, one question at a time.
+away, wherever it was drawn again, by Esc, by a press outside or by back, one question at a time. Every
+form that floats over the screen, an event's, a calendar's settings, a booking's and a resource's, closes
+through its open state alone, with its close guard the one refusal, so a focus a menu hands back while it
+stands asks nothing.
+
+Every value chosen from a list, the view and the kind in the toolbars among them, is chosen in bmo-ui's
+one select (`ChoiceSelect`, its components document, 「Choosing a value」), which alone decides when a list
+offers a search; the keepers of a resource are found through the people directory as their names are
+typed.
 
 The screen is used by finger and by ear as well as by mouse:
 

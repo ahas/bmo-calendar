@@ -2,11 +2,10 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 
-import { parse } from "vue/compiler-sfc";
-
-import type { SFCDescriptor } from "vue/compiler-sfc";
-
+import { attribute, component, elements, templateElements } from "./template";
 import { PACKS, keysOf, word } from "./words";
+
+import type { Element } from "./template";
 
 // The bundle as a console finds it: the words every key the screens ask for, in both locales, under the
 // bundle's namespace, and no Korean anywhere in the code. The manifest is the service's, read through bmo-ui's
@@ -51,28 +50,8 @@ describe("the code", () => {
   });
 });
 
-// The screen's template as the Vue compiler reads it: its elements by tag, an attribute by its name whether
-// written plain or bound.
-type TemplateNode = NonNullable<NonNullable<SFCDescriptor["template"]>["ast"]>["children"][number];
-type Element = Extract<TemplateNode, { tag: string }>;
-
 describe("the screen's bars", () => {
-  const screen = parse(readFileSync(join(root, "app/pages/calendar/[view]/[date].vue"), "utf8")).descriptor.template!.ast!;
-
-  function elements(node: { children?: unknown }): Element[] {
-    const children = Array.isArray(node.children) ? (node.children as TemplateNode[]) : [];
-
-    return children.flatMap((child) => ("tag" in child ? [child, ...elements(child)] : elements(child)));
-  }
-
-  function attribute(element: Element, name: string): string | undefined {
-    for (const prop of element.props) {
-      if (!("exp" in prop) && prop.name === name) return prop.value?.content;
-      if ("exp" in prop && prop.name === "bind" && prop.arg && "content" in prop.arg && prop.arg.content === name) return prop.exp?.loc.source;
-    }
-
-    return undefined;
-  }
+  const screen = component(join(root, "app/pages/calendar/[view]/[date].vue")).template!.ast!;
 
   // The library's button, and bmo-ui's icon button drawing it as its icon alone.
   const BUTTONS = ["UButton", "IconButton"];
@@ -96,12 +75,12 @@ describe("the screen's bars", () => {
   });
 
   test("a new event is made from the one create button alone, set once on the screen", () => {
-    const newEvent = parse(readFileSync(join(root, "app/components/calendar/CalendarNewEvent.vue"), "utf8")).descriptor.template!.ast!;
+    const newEvent = templateElements(join(root, "app/components/calendar/CalendarNewEvent.vue"));
     const all = elements(screen);
 
     expect(all.filter((element) => element.tag === "CalendarNewEvent").length).toBe(1);
-    expect(elements(newEvent).filter((element) => element.tag === "CreateButton").length).toBe(1);
-    expect([...all, ...elements(newEvent)].some((element) => element.tag === "UButton" && attribute(element, "icon") === "i-material-symbols-add")).toBe(false);
+    expect(newEvent.filter((element) => element.tag === "CreateButton").length).toBe(1);
+    expect([...all, ...newEvent].some((element) => element.tag === "UButton" && attribute(element, "icon") === "i-material-symbols-add")).toBe(false);
   });
 
   test("every button in either bar is the small button at its own size", () => {

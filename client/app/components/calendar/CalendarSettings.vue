@@ -9,21 +9,21 @@
       </UFormField>
 
       <span class="whitespace-nowrap text-sm text-muted">{{ $t("calendar.label.color") }}</span>
-      <USelect v-model="state.color" :items="colorItems" :aria-label="$t('calendar.label.color')" class="w-full">
+      <ChoiceSelect v-model="state.color" :items="colorItems" value-key="value" :aria-label="$t('calendar.label.color')" class="w-full">
         <template #leading>
           <span class="m-0.5 block size-2.5 rounded-full" :class="CALENDAR_DOT[state.color]" />
         </template>
         <template #item-leading="{ item }">
-          <span class="m-0.5 block size-2.5 rounded-full" :class="CALENDAR_DOT[item.value]" />
+          <span class="m-0.5 block size-2.5 rounded-full" :class="CALENDAR_DOT[(item as { value: CalendarColor }).value]" />
         </template>
-      </USelect>
+      </ChoiceSelect>
 
       <template v-if="realm === 'organization'">
         <span class="whitespace-nowrap text-sm text-muted">{{ $t("calendar.label.writers") }}</span>
-        <USelect v-model="state.writers" :items="writersItems" :aria-label="$t('calendar.label.writers')" class="w-full" />
+        <ChoiceSelect v-model="state.writers" :items="writersItems" value-key="value" :aria-label="$t('calendar.label.writers')" class="w-full" />
 
         <span class="whitespace-nowrap text-sm text-muted">{{ $t("calendar.label.tell") }}</span>
-        <USelect v-model="state.tell" :items="tellItems" :aria-label="$t('calendar.label.tell')" class="w-full" />
+        <ChoiceSelect v-model="state.tell" :items="tellItems" value-key="value" :aria-label="$t('calendar.label.tell')" class="w-full" />
       </template>
     </div>
 

@@ -1,10 +1,13 @@
 <template>
   <!-- A booking's form, or a new booking's, as a centred dialog: a small form, and no part of the page, its
        actions in the dialog's footer. Opened from the reader's own list it acts on the whole booking (`whole`).
-       Closed with a change held, it asks first whether to throw the change away. -->
-  <UModal v-model:open="open" :dismissible="dismissible" :title="title" :ui="{ content: 'sm:max-w-lg' }" @close:prevent="leave">
+       Closed with a change held, it asks first whether to throw the change away: every request of the modal to
+       close reaches the guard through its open state, and the guard alone refuses, so a focus the modal holds
+       off on its own, as a menu handing it back to its trigger, asks nothing. -->
+  <UModal :open="open" :title="title" :ui="{ content: 'sm:max-w-lg' }" @update:open="(standing: boolean) => (standing ? (open = true) : void leave())">
     <template #close="{ ui }">
-      <ShellClose :class="ui.close()" @close="leave" />
+      <!-- Pressed, it reaches the guard through the modal's own close alone, so it asks only once. -->
+      <ShellClose :class="ui.close()" />
     </template>
 
     <template #body>
@@ -80,5 +83,5 @@ watch(
   { immediate: true }
 );
 
-const { dismissible, leave } = useCloseGuard(open, () => dirty.value, t);
+const { leave } = useCloseGuard(open, () => dirty.value, t);
 </script>

@@ -1,10 +1,12 @@
 <template>
   <!-- A resource's form, or a new resource's, as a centred dialog (docs/design.md, 「The console」): its name,
        its kind, its place, its seats, whether a booking of it waits for approval, and its keepers. One save
-       at its foot; a refusal stays in the form. Closed with a change held, it asks first. -->
-  <UModal v-model:open="open" :dismissible="dismissible" :title="title" :ui="{ content: 'sm:max-w-lg' }" @close:prevent="leave">
+       at its foot; a refusal stays in the form. Closed with a change held, it asks first: every request of the
+       modal to close reaches the guard through its open state, and the guard alone refuses. -->
+  <UModal :open="open" :title="title" :ui="{ content: 'sm:max-w-lg' }" @update:open="(standing: boolean) => (standing ? (open = true) : void leave())">
     <template #close="{ ui }">
-      <ShellClose :class="ui.close()" @close="leave" />
+      <!-- Pressed, it reaches the guard through the modal's own close alone, so it asks only once. -->
+      <ShellClose :class="ui.close()" />
     </template>
 
     <template #body>
@@ -154,5 +156,5 @@ async function save(): Promise<void> {
   }
 }
 
-const { dismissible, leave } = useCloseGuard(open, () => dirty.value, t);
+const { leave } = useCloseGuard(open, () => dirty.value, t);
 </script>

@@ -20,11 +20,11 @@
       </UFormField>
 
       <label :for="calendarId" class="whitespace-nowrap text-sm text-muted">{{ $t("calendar.label.calendar") }}</label>
-      <USelect :id="calendarId" v-model="state.calendar" :items="calendarItems" :size="fieldSize" class="w-full">
+      <ChoiceSelect :id="calendarId" v-model="state.calendar" :items="calendarItems" value-key="value" :size="fieldSize" class="w-full">
         <template #leading>
           <span class="m-0.5 block size-2.5 rounded-full" :class="CALENDAR_DOT[color]" />
         </template>
-      </USelect>
+      </ChoiceSelect>
 
       <label :for="allDayId" class="whitespace-nowrap text-sm text-muted">{{ $t("calendar.label.all_day") }}</label>
       <UCheckbox :id="allDayId" v-model="state.allDay" :size="fieldSize" class="justify-self-start" />
@@ -44,10 +44,10 @@
       </UFormField>
 
       <label :for="alarmId" class="whitespace-nowrap text-sm text-muted">{{ $t("calendar.label.alarm") }}</label>
-      <USelect :id="alarmId" v-model="state.alarm" :items="alarmItems" :size="fieldSize" class="w-full" />
+      <ChoiceSelect :id="alarmId" v-model="state.alarm" :items="alarmItems" value-key="value" :size="fieldSize" class="w-full" />
 
       <label :for="repeatId" class="whitespace-nowrap text-sm text-muted">{{ $t("calendar.label.repeat") }}</label>
-      <USelect :id="repeatId" v-model="state.repeat" :items="repeatItems" :size="fieldSize" class="w-full" />
+      <ChoiceSelect :id="repeatId" v-model="state.repeat" :items="repeatItems" value-key="value" :size="fieldSize" class="w-full" />
 
       <label :for="notesId" class="self-start whitespace-nowrap pt-1.5 text-sm text-muted">{{ $t("calendar.label.notes") }}</label>
       <GrowingTextarea :id="notesId" v-model="state.description" class="w-full" />

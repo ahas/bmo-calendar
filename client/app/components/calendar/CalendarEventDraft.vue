@@ -1,7 +1,7 @@
 <template>
   <!-- The ghost of an event being made, dressed as the event it would be, its form open beside it, or on
        a phone as a centred dialog over it. Only the segment holding its start carries the form. -->
-  <CalendarFormFloat anchor :open="shown" :dismissible="dismissible" :keep-focus="redrawn" :title="$t('calendar.action.new_event')" :content="content" @update:open="shown = $event" @close:prevent="leave">
+  <CalendarFormFloat anchor :open="shown" :keep-focus="redrawn" :title="$t('calendar.action.new_event')" :content="content" @update:open="(standing: boolean) => (standing ? (shown = true) : void leave())">
     <div
       ref="el"
       v-bind="$attrs"
@@ -83,7 +83,7 @@ const shown = computed({
     discardDraft(true);
   }
 });
-const { dismissible, leave } = useCloseGuard(shown, () => dirty.value, t);
+const { leave } = useCloseGuard(shown, () => dirty.value, t);
 
 // The form standing here is the draft's first, or one drawn again where the draft moved to, which leaves
 // the focus to the form rather than to its first field (CalendarEventForm). Read as it opens, before the

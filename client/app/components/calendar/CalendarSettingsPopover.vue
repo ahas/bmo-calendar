@@ -1,7 +1,7 @@
 <template>
   <!-- What a calendar's settings, or a new calendar's, open in: a popover from the button that opened it,
        or on a phone a centred dialog. -->
-  <CalendarFormFloat v-model:open="open" :dismissible="!dirty" :title="label" :content="{ align: 'end', collisionPadding: 16 }" width="w-80" @close:prevent="leave">
+  <CalendarFormFloat :open="open" :title="label" :content="{ align: 'end', collisionPadding: 16 }" width="w-80" @update:open="(standing: boolean) => (standing ? (open = true) : void leave())">
     <IconButton size="sm" :icon="calendar ? 'i-material-symbols-settings-outline' : 'i-material-symbols-add'" :label="label" class="pointer-coarse:size-11 pointer-coarse:justify-center" />
 
     <template #content>

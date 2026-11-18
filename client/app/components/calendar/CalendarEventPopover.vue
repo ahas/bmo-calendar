@@ -10,7 +10,7 @@
 
     <UContextMenu v-else :items="items" :disabled="disabled">
       <div class="contents">
-        <CalendarFormFloat :open="open" :dismissible="dismissible" :title="event.title || $t('calendar.label.untitled')" :content="{ side: formSide, collisionPadding: 16 }" @update:open="onUpdateOpen" @close:prevent="leave">
+        <CalendarFormFloat :open="open" :title="event.title || $t('calendar.label.untitled')" :content="{ side: formSide, collisionPadding: 16 }" @update:open="onUpdateOpen">
           <slot :open="open" />
 
           <template #content>
@@ -79,7 +79,7 @@ function onUpdateOpen(value: boolean): void {
   if (props.disabled) return;
 
   if (value) openEvent(props.event.key);
-  else closeEvent(props.event.key);
+  else void leave();
 }
 
 // Closing a form that holds a change asks first whether to throw it away, one question at a time.
@@ -92,7 +92,7 @@ const shown = computed({
     closeEvent(props.event.key);
   }
 });
-const { dismissible, leave } = useCloseGuard(shown, () => dirty.value, t);
+const { leave } = useCloseGuard(shown, () => dirty.value, t);
 
 // A booking is cancelled rather than deleted, and a refusal of it is told where the reader is.
 async function cancelBooking(): Promise<void> {

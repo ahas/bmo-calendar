@@ -54,24 +54,33 @@
           </div>
 
           <div>
-            <UDropdownMenu :items="viewItems" :content="{ align: 'end' }">
-              <UButton color="neutral" variant="ghost" size="sm" :label="$t(VIEW_LABELS[view])" trailing-icon="i-material-symbols-arrow-drop-down" :aria-label="$t('calendar.aria.view_named', { view: $t(VIEW_LABELS[view]) })" />
-            </UDropdownMenu>
+            <ChoiceSelect
+              :model-value="view"
+              :items="viewItems"
+              value-key="value"
+              color="neutral"
+              variant="ghost"
+              size="sm"
+              trailing-icon="i-material-symbols-arrow-drop-down"
+              :aria-label="$t('calendar.aria.view_named', { view: $t(VIEW_LABELS[view]) })"
+              @update:model-value="(one: BookingView) => go({ view: one })"
+            />
           </div>
 
           <!-- On a phone the kind is cut to its room, its whole name in the shared tooltip of a cut line. -->
           <div v-if="kinds.length" class="min-w-0 shrink!">
-            <UDropdownMenu :items="kindItems" :content="{ align: 'end' }">
-              <UButton
-                color="neutral"
-                variant="ghost"
-                size="sm"
-                :label="shownKind ?? ''"
-                trailing-icon="i-material-symbols-arrow-drop-down"
-                class="min-w-0 max-sm:max-w-20"
-                :aria-label="$t('calendar.aria.kind_named', { kind: shownKind ?? '' })"
-              />
-            </UDropdownMenu>
+            <ChoiceSelect
+              :model-value="shownKind ?? undefined"
+              :items="kindItems"
+              value-key="value"
+              color="neutral"
+              variant="ghost"
+              size="sm"
+              trailing-icon="i-material-symbols-arrow-drop-down"
+              class="min-w-0 max-sm:max-w-20"
+              :aria-label="$t('calendar.aria.kind_named', { kind: shownKind ?? '' })"
+              @update:model-value="(one: string) => go({ kind: one })"
+            />
           </div>
         </template>
 
@@ -171,14 +180,14 @@ import { WEEK_STARTS_ON, eachDay, toCalendarDate, toDate, todayDate } from "../.
 import { refusalText } from "../../domain/store";
 import { useCalendarStream } from "../../domain/stream";
 import { useBookingChange } from "../../composables/useBookingChange";
-import { useBookingScreen } from "../../composables/useBookingScreen";
+import { BOOKING_VIEWS, useBookingScreen } from "../../composables/useBookingScreen";
 import { useBookings } from "../../composables/useBookings";
 import { SERVICE } from "../../composables/useCalendarApi";
 import { useCompanies } from "../../composables/useCompanies";
 import { usePeople } from "../../composables/usePeople";
 
 import type { CalendarDate } from "@internationalized/date";
-import type { DropdownMenuItem, TabsItem } from "@nuxt/ui";
+import type { TabsItem } from "@nuxt/ui";
 import type { BookingDraft } from "../../components/bookings/BookingForm.vue";
 import type { BookingTab, BookingView } from "../../composables/useBookingScreen";
 import type { CalendarStreamEvent } from "../../domain/stream";
@@ -276,23 +285,9 @@ const tabItems = computed<TabsItem[]>(() => {
   return items;
 });
 
-const viewItems = computed<DropdownMenuItem[]>(() =>
-  (["day", "week", "month"] as const).map((one) => ({
-    label: t(VIEW_LABELS[one]),
-    type: "checkbox" as const,
-    checked: view.value === one,
-    onSelect: () => go({ view: one })
-  }))
-);
+const viewItems = computed(() => BOOKING_VIEWS.map((one) => ({ label: t(VIEW_LABELS[one]), value: one })));
 
-const kindItems = computed<DropdownMenuItem[]>(() =>
-  kinds.value.map((one) => ({
-    label: one,
-    type: "checkbox" as const,
-    checked: shownKind.value === one,
-    onSelect: () => go({ kind: one })
-  }))
-);
+const kindItems = computed(() => kinds.value.map((one) => ({ label: one, value: one })));
 
 watch(range, (span) => void loadSpan(span), { immediate: true });
 

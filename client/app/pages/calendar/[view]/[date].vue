@@ -42,9 +42,21 @@
         </div>
 
         <div>
-          <UDropdownMenu :items="viewItems" :content="{ align: 'end' }">
-            <UButton color="neutral" variant="ghost" size="sm" :label="$t(VIEW_LABELS[view])" trailing-icon="i-material-symbols-arrow-drop-down" :aria-label="$t('calendar.aria.view_named', { view: $t(VIEW_LABELS[view]) })" />
-          </UDropdownMenu>
+          <ChoiceSelect
+            :model-value="view"
+            :items="viewItems"
+            value-key="value"
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            trailing-icon="i-material-symbols-arrow-drop-down"
+            :aria-label="$t('calendar.aria.view_named', { view: $t(VIEW_LABELS[view]) })"
+            @update:model-value="(one: CalendarView) => void navigateTo(pathFor(date, one))"
+          >
+            <template #item-trailing="{ item }">
+              <UKbd :value="VIEW_KEYS[(item as { value: CalendarView }).value]" />
+            </template>
+          </ChoiceSelect>
         </div>
 
         <!-- On a phone the mark stands alone, so the row keeps its steps and its title; its words stay in its
@@ -147,7 +159,7 @@ import { useEventDraft } from "../../../composables/useEventDraft";
 import { useEventEditor } from "../../../composables/useEventEditor";
 
 import type { CalendarDate } from "@internationalized/date";
-import type { DropdownMenuItem, SplitterItem } from "@nuxt/ui";
+import type { SplitterItem } from "@nuxt/ui";
 import type { CalendarStreamEvent } from "../../../domain/stream";
 import type { CalendarView } from "../../../../shared/types";
 
@@ -190,15 +202,7 @@ const { editingKey } = useEventEditor();
 const offlineLabel = computed(() => (queue.value.length ? t("calendar.label.offline_waiting", { n: countText(queue.value.length) }) : t("calendar.label.offline")));
 const failed = computed(() => failedSpans.value.length > 0);
 
-const viewItems = computed<DropdownMenuItem[]>(() =>
-  (["day", "week", "month", "year"] as const).map((one) => ({
-    label: t(VIEW_LABELS[one]),
-    kbds: [VIEW_KEYS[one]],
-    type: "checkbox" as const,
-    checked: view.value === one,
-    onSelect: () => void navigateTo(pathFor(date.value, one))
-  }))
-);
+const viewItems = computed(() => (["day", "week", "month", "year"] as const).map((one) => ({ label: t(VIEW_LABELS[one]), value: one })));
 
 // Nothing is said as the screen opens; a step to another span is said once it has landed.
 const announced = ref("");

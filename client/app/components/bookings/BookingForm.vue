@@ -17,11 +17,11 @@
 
       <label :for="resourceId" class="self-start whitespace-nowrap pt-1.5 text-sm text-muted">{{ $t("calendar.label.resource") }}</label>
       <div class="flex min-w-0 flex-col gap-1">
-        <USelect :id="resourceId" v-model="state.resourceId" :items="resourceItems" :disabled="!editable" :size="fieldSize" class="w-full">
+        <ChoiceSelect :id="resourceId" v-model="state.resourceId" :items="resourceItems" value-key="value" :disabled="!editable" :size="fieldSize" class="w-full">
           <template #leading>
             <UIcon :name="BOOKING_ICON" class="size-4 text-muted" />
           </template>
-        </USelect>
+        </ChoiceSelect>
         <p v-if="chosen" class="text-sm text-muted">{{ termsOf(chosen) }}</p>
       </div>
 
@@ -44,7 +44,7 @@
 
       <label :for="repeatId" class="whitespace-nowrap text-sm text-muted">{{ $t("calendar.label.repeat") }}</label>
       <div class="flex min-w-0 flex-col gap-1">
-        <USelect :id="repeatId" v-model="state.repeat" :items="repeatItems" :disabled="!editable" :size="fieldSize" class="w-full" />
+        <ChoiceSelect :id="repeatId" v-model="state.repeat" :items="repeatItems" value-key="value" :disabled="!editable" :size="fieldSize" class="w-full" />
         <p v-if="wholeOnly" class="text-sm text-muted">{{ $t("calendar.message.booking_repeat_whole") }}</p>
       </div>
 

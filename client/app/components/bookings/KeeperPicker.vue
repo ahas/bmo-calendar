@@ -13,15 +13,13 @@
       </li>
     </ul>
 
-    <UInputMenu
+    <ChoiceSelect
       v-if="searchable"
       :id="props.id"
-      v-model:search-term="term"
       :model-value="undefined"
-      :items="hits"
+      :items="[]"
+      :find="find"
       value-key="value"
-      ignore-filter
-      :loading="searching"
       :placeholder="$t('calendar.placeholder.keeper_search')"
       class="w-full"
       @update:model-value="add"
@@ -31,16 +29,12 @@
 </template>
 
 <script setup lang="ts">
-import { watchDebounced } from "@vueuse/core";
-import { computed, ref } from "vue";
+import { computed } from "vue";
 
 import { useCompanies } from "../../composables/useCompanies";
 import { usePeople } from "../../composables/usePeople";
 
-import type { ConsolePerson } from "../../composables/usePeople";
-
-/** How long typing rests before the directory is asked. */
-const SEARCH_REST_MS = 250;
+import type { SelectMenuItem } from "@nuxt/ui";
 
 const props = defineProps<{ id?: string }>();
 
@@ -50,38 +44,21 @@ const model = defineModel<string[]>({ default: () => [] });
 const { found, nameOf, search } = usePeople();
 const { current } = useCompanies();
 
-const term = ref("");
-const people = ref<ConsolePerson[]>([]);
-const searching = ref(false);
-
 const searchable = computed(() => found && (current.value?.own ?? true));
-const hits = computed(() =>
-  people.value
+
+/** The people the directory finds for the words typed, those already keeping it left out. */
+async function find(words: string): Promise<SelectMenuItem[]> {
+  const people = await search(words);
+
+  return people
     .filter((person) => !model.value.includes(person.user))
-    .map((person) => ({ label: person.name || person.user, value: person.user, description: [person.organization, person.jobTitle].filter(Boolean).join(" · ") }))
-);
-
-watchDebounced(
-  term,
-  async (words) => {
-    searching.value = true;
-
-    try {
-      people.value = await search(words);
-    } catch {
-      people.value = [];
-    } finally {
-      searching.value = false;
-    }
-  },
-  { debounce: SEARCH_REST_MS }
-);
+    .map((person) => ({ label: person.name || person.user, value: person.user, description: [person.organization, person.jobTitle].filter(Boolean).join(" · ") }));
+}
 
 function add(user: unknown): void {
   if (typeof user !== "string" || !user || model.value.includes(user)) return;
 
   model.value = [...model.value, user];
-  term.value = "";
 }
 
 function remove(user: string): void {
