@@ -14,6 +14,8 @@ export interface Company {
   name: string;
   /** The reader's own company. */
   own: boolean;
+  /** Whether the reader writes in the company's organization realm: the administrator reads another's alone. */
+  writes: boolean;
   /** Whether the reader makes, changes and retires the company's resources. */
   manages: boolean;
 }

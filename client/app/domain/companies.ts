@@ -32,3 +32,14 @@ export function booksIn(companies: readonly Company[], chosen: string | null): b
 
   return current ? current.own : chosen === null;
 }
+
+/**
+ * Whether the reader writes in the organization realm of the company read (`docs/api.md`, 「What the
+ * administrator writes」): the administrator reads another company's and writes nothing in it. Where the
+ * companies could not be read and none is chosen, the reads naming none are the reader's own company's.
+ */
+export function writesIn(companies: readonly Company[], chosen: string | null): boolean {
+  const current = currentCompany(companies, chosen);
+
+  return current ? current.writes : chosen === null;
+}

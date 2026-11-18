@@ -1,6 +1,6 @@
 import { computed, ref } from "vue";
 
-import { administers, booksIn, currentCompany, firstCompany } from "../domain/companies";
+import { administers, booksIn, currentCompany, firstCompany, writesIn } from "../domain/companies";
 import { createAppComposable } from "./shared";
 import { useCalendarApi } from "./useCalendarApi";
 
@@ -9,7 +9,8 @@ import type { Company } from "../../shared/types";
 // The administrator's choice of company (`docs/design.md`, 「The console」): read once from the companies
 // the reader reads, the administrator's own first chosen, and kept for both of the bundle's screens while
 // the console stands. A member reads one company, its own, and is offered no choice and sends none. Whether
-// the reader makes, changes and retires resources, and whether the reader books, is the company read's.
+// the reader writes in its organization realm, makes, changes and retires resources, and books, is the
+// company read's.
 
 const _useCompanies = () => {
   const { api, company } = useCalendarApi();
@@ -28,6 +29,8 @@ const _useCompanies = () => {
   const manages = computed(() => current.value?.manages ?? false);
   /** Whether the reader books in the current company (`booksIn`). */
   const books = computed(() => booksIn(companies.value, company.value));
+  /** Whether the reader writes in the current company's organization realm (`writesIn`). */
+  const writes = computed(() => writesIn(companies.value, company.value));
 
   // The first choice, the reader's own company, is what a read naming none already read: no change.
   function setCompany(next: string | null): void {
@@ -72,7 +75,7 @@ const _useCompanies = () => {
     if (administrator.value && companies.value.some((one) => one.id === id)) setCompany(id);
   }
 
-  return { companies, companiesRead, administrator, company, chosen, current, manages, books, switches, loadCompanies, chooseCompany };
+  return { companies, companiesRead, administrator, company, chosen, current, manages, books, writes, switches, loadCompanies, chooseCompany };
 };
 
 export const useCompanies = createAppComposable(_useCompanies);

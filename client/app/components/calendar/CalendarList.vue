@@ -3,7 +3,9 @@
        this account, and its settings a press away; a mark spins beside one while its change is sent. Under each
        realm's calendars stand the sources other units push schedules under, one layer each, shown or hidden
        the same way and marked as received. Under the organization's heading the administrator chooses the
-       company it reads; at the foot stands the way to the booking screen. -->
+       company it reads; another company's calendars and sources he reads alone, the heading marked read-only
+       and no calendar offered to add, set or hide, nor a source to hide. The mark is pressed to open the choice
+       of company, where the reading is changed. At the foot stands the way to the booking screen. -->
   <div class="flex flex-col gap-4">
     <section v-for="group in groups" :key="group.realm" class="flex flex-col gap-1">
       <div class="flex h-8 items-center justify-between gap-2 ps-2">
@@ -11,32 +13,35 @@
           <UIcon :name="REALM_ICON[group.realm]" class="size-4 text-muted" />
           {{ $t(group.realm === "mine" ? "calendar.label.mine" : "calendar.label.organization") }}
         </h2>
-        <CalendarSettingsPopover :realm="group.realm" />
+        <CalendarSettingsPopover v-if="writable(group.realm)" :realm="group.realm" />
+        <UButton v-else :label="$t('calendar.label.read_only')" color="neutral" variant="soft" size="xs" class="shrink-0" @click="choosingCompany = true" />
       </div>
 
       <div v-if="group.realm === 'organization' && administrator" class="flex ps-2 pb-1">
-        <CompanySelect class="w-full" />
+        <CompanySelect v-model:open="choosingCompany" class="w-full" />
       </div>
 
       <template v-if="calendarsRead">
-        <div v-for="calendar in group.calendars" :key="calendar.id" class="flex items-center gap-2 rounded-md ps-2 transition-colors hover:bg-elevated pointer-coarse:min-h-11">
+        <div v-for="calendar in group.calendars" :key="calendar.id" class="flex items-center gap-2 rounded-md ps-2 transition-colors pointer-coarse:min-h-11" :class="writable(group.realm) && 'hover:bg-elevated'">
           <UCheckbox
             :model-value="!calendar.hidden"
             :color="calendar.color"
             :label="calendar.name"
+            :disabled="!writable(group.realm)"
             class="min-w-0 flex-1 py-1.5"
             :ui="{ label: 'truncate pointer-coarse:py-3' }"
             @update:model-value="setHidden(calendar, !$event)"
           />
           <UIcon v-if="sendingLayers.includes(`calendar:${group.realm}:${calendar.id}`)" :name="SENDING_ICON" class="size-4 shrink-0 animate-spin text-muted motion-reduce:animate-none" />
-          <CalendarSettingsPopover :realm="group.realm" :calendar="calendar" />
+          <CalendarSettingsPopover v-if="writable(group.realm)" :realm="group.realm" :calendar="calendar" />
         </div>
 
-        <div v-for="source in group.sources" :key="`source:${source.id}`" class="flex items-center gap-2 rounded-md ps-2 transition-colors hover:bg-elevated pointer-coarse:min-h-11">
+        <div v-for="source in group.sources" :key="`source:${source.id}`" class="flex items-center gap-2 rounded-md ps-2 transition-colors pointer-coarse:min-h-11" :class="writable(group.realm) && 'hover:bg-elevated'">
           <UCheckbox
             :model-value="!source.hidden"
             :color="source.color"
             :label="source.name"
+            :disabled="!writable(group.realm)"
             class="min-w-0 flex-1 py-1.5"
             :ui="{ label: 'truncate pointer-coarse:py-3' }"
             @update:model-value="setSourceHidden(group.realm, source, !$event)"
@@ -63,6 +68,8 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from "vue";
+
 import CalendarSettingsPopover from "./CalendarSettingsPopover.vue";
 import CompanySelect from "../bookings/CompanySelect.vue";
 import { BOOKING_ICON } from "../../domain/bookings";
@@ -71,6 +78,9 @@ import { BOOKINGS_PATH } from "../../composables/useBookingScreen";
 import { useCalendarEvents } from "../../composables/useCalendarEvents";
 import { useCompanies } from "../../composables/useCompanies";
 
-const { groups, calendarsRead, calendarsFailed, setHidden, setSourceHidden, sendingLayers } = useCalendarEvents();
+const { groups, calendarsRead, calendarsFailed, setHidden, setSourceHidden, sendingLayers, writable } = useCalendarEvents();
 const { administrator } = useCompanies();
+
+// Whether the choice of company stands open, as its list or as the read-only mark opened it.
+const choosingCompany = ref(false);
 </script>

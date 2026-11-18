@@ -381,9 +381,7 @@ async fn another_company_reads_no_resource_or_booking_of_the_first() {
     .await;
   assert_eq!((status, read["booker"].as_str()), (200, Some("2")));
   let elsewhere = booking("room-a", "2026-03-04T10:00:00", "2026-03-04T11:00:00");
-  let (status, refusal) = service
-    .console(Method::POST, "/organization/bookings?company=20", "1", "administrator", Some(elsewhere))
-    .await;
+  let (status, refusal) = service.post("/organization/bookings?account=2&company=20", elsewhere).await;
   assert_eq!(
     (status, refusal["code"].as_str()),
     (403, Some("not-a-writer")),

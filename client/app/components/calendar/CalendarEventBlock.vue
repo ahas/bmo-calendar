@@ -1,8 +1,11 @@
 <template>
   <!-- An event on the time grid: dragged by a mouse to move it, its foot dragged to stretch it, pressed to
        open its form. A received schedule is a link to the item it stands for instead, never dragged or
-       stretched; the reader's own booking is neither, and opens its booking's form. Its calendar's, source's
-       or booking's colour is its fill and stripe, its realm its mark; its words keep the page's own text colour. Where it stands narrow it sheds its marks and its end time before its title. -->
+       stretched; the reader's own booking is neither, and opens its booking's form, and an event of a realm
+       the reader only reads, another company's for the administrator, is neither and opens its form
+       read-only. Its calendar's, source's or booking's colour is its fill and stripe, its realm its mark; its
+       words keep the page's own text colour. Where it stands narrow it sheds its marks and its end time
+       before its title. -->
   <CalendarEventPopover :event="event" :disabled="suppressed" :anchored="anchored">
     <component
       :is="opens ? ULink : 'button'"
@@ -13,7 +16,7 @@
       :style="style"
       :aria-label="name"
       @click.stop
-      v-on="fixed(event) ? {} : { pointerdown: onPointerdown, pointermove: onPointermove, pointerup: onPointerup, pointercancel: onPointercancel }"
+      v-on="!movable(event) ? {} : { pointerdown: onPointerdown, pointermove: onPointermove, pointerup: onPointerup, pointercancel: onPointercancel }"
     >
       <span class="absolute inset-y-1 start-1 w-1 rounded-full" :class="CALENDAR_DOT[color]" />
 
@@ -25,7 +28,7 @@
       </span>
       <span v-if="!compact || dragging" class="w-full truncate tabular-nums text-toned">{{ times.start }}<span class="@max-[5.25rem]:hidden">~{{ times.end }}</span></span>
 
-      <span v-if="!fixed(event)" data-resize-handle class="absolute inset-x-0 bottom-0 h-2 cursor-ns-resize" />
+      <span v-if="movable(event)" data-resize-handle class="absolute inset-x-0 bottom-0 h-2 cursor-ns-resize" />
     </component>
   </CalendarEventPopover>
 </template>
@@ -42,7 +45,7 @@ import { CALENDAR_DOT, EVENT_FILL, RECEIVED_ICON, REALM_ICON } from "../../domai
 import { formatTime, fromLocalISO, toLocalISO } from "../../domain/dates";
 import { COMPACT_MINUTES, MIN_EVENT_MINUTES, SNAP_MINUTES, eventBlockStyle, minutesLength } from "../../domain/layout";
 import { originLink } from "../../domain/origin";
-import { fixed, repeating } from "../../domain/store";
+import { repeating } from "../../domain/store";
 import { BOOKING_ICON } from "../../domain/bookings";
 import { useCalendarEvents } from "../../composables/useCalendarEvents";
 import { useEventChange } from "../../composables/useEventChange";
@@ -53,7 +56,7 @@ import type { PositionedEvent } from "../../domain/layout";
 const props = withDefaults(defineProps<{ positioned: PositionedEvent; anchored?: boolean }>(), { anchored: true });
 
 const { t } = useI18n();
-const { layerOf } = useCalendarEvents();
+const { layerOf, movable } = useCalendarEvents();
 const { changeEvent } = useEventChange();
 
 const event = computed(() => props.positioned.event);

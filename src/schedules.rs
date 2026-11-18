@@ -410,7 +410,8 @@ async fn change_source(
 ) -> Answer<Json<Source>> {
   let app = &served.app;
   let given = query(given)?;
-  let asked = asked(app, &headers, &realm, Named::of(given.account, given.holder_name, None)).await?;
+  let named = Named::of(given.account, given.holder_name, None);
+  let asked = asked(app, &headers, &realm, named).await?.for_writing()?;
   let change: SourceChange = body(&bytes)?;
   let brain = app.realm(&RealmKey::Platform, false).await?;
   let _writing = app.schedule_lock.lock().await;

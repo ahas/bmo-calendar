@@ -1,9 +1,11 @@
 <template>
   <!-- The administrator's choice of company (docs/design.md, 「The console」): every company and the platform's
        own among them, the administrator's own first chosen. The organization's calendars, events, schedules,
-       resources and bookings then read the company chosen. A member reads one company and sees no choice. -->
+       resources and bookings then read the company chosen. A member reads one company and sees no choice. Its
+       list stands open as the screen holds it, so another control may open it. -->
   <ChoiceSelect
     v-if="administrator"
+    v-model:open="open"
     :model-value="company ?? undefined"
     :items="items"
     value-key="value"
@@ -22,6 +24,7 @@ import { useI18n } from "vue-i18n";
 import { useCompanies } from "../../composables/useCompanies";
 
 const props = withDefaults(defineProps<{ size?: "sm" | "md" }>(), { size: "md" });
+const open = defineModel<boolean>("open", { default: false });
 
 const { t } = useI18n();
 const { companies, administrator, company, loadCompanies, chooseCompany } = useCompanies();

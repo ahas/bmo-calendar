@@ -65,6 +65,7 @@
       "kind": "Kind",
       "no_place": "No place",
       "own_company": "{name} (mine)",
+      "read_only": "Read-only",
       "place": "Place",
       "reason": "Reason (optional)",
       "refusal_reason": "Refused: {reason}",

@@ -12,8 +12,10 @@ tool it places, the calls it makes and its settings. Every other unit is reached
 
 `cargo test` (through the testbed) runs the crate's one harness, `tests/main.rs`, over stand-ins of the brain,
 the receiver, the account service and agency on a loopback port: the calendars made on first read and kept per
-realm (`calendars.rs`), each company's realm read by its own and the administrator alone, a tool session's
-holder acting for its owner's account, and the one move into companies (`companies.rs`), resources and
+realm (`calendars.rs`), the administrator reading a person's own realm and writing and making nothing there
+(`administrator.rs`), each company's realm read by its own and the administrator alone, his writes in another
+company's refused, a tool session's holder acting for its owner's account, and the one move into companies
+(`companies.rs`), resources and
 bookings, overlaps refused, approvals and their tellings (`bookings.rs`), whether two bookings ever meet
 (`overlap.rs`), received schedules kept in their companies (`schedules.rs`), events written, changed and
 cancelled with their labels, idempotent by id, refused as documented and refreshed by the brain's stream
@@ -39,6 +41,11 @@ The console bundle's screens are driven in a browser without the console or any 
    it), member `3` (keeper of the rooms that wait for approval), member `4` (another company) and `5` (none).
 3. A browser driver reads the screens' accessibility snapshot and measures them inside the page, at a
    desktop width and at a phone's (360 by 780).
+
+What a sweep measures is kept in the console bundle's browser tests, `client/tests/browser/` (declared under
+`bmo.browser` in `client/package.json` and run by the testbed): the screens built into one harness page with no
+console or service around them, opened in a real browser at a desktop's width and a Galaxy S25's (412 by 915), a
+stand-in answering the service as it answers the platform administrator.
 
 ## Layout
 

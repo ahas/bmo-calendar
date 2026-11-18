@@ -3,7 +3,8 @@
        foot. A draft's ghost follows the form as it is filled; an event changes only when it is saved.
        The date and time segments take every key but Tab, Escape among them, so Escape is caught on its
        way down and handed to whatever closes the form. Moving the start moves the end with it, so the
-       event keeps its length; the end alone changes its length. -->
+       event keeps its length; the end alone changes its length. An event of a realm the reader only reads,
+       another company's for the administrator, is shown read-only: every field held, no save, no delete. -->
   <UForm
     ref="form"
     :state="state"
@@ -16,44 +17,44 @@
     <div ref="fields" class="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-2" @focusout="onFieldsFocusout">
       <label :for="titleId" class="whitespace-nowrap text-sm text-muted">{{ $t("calendar.label.event_title") }}</label>
       <UFormField name="title">
-        <UInput :id="titleId" v-model="state.title" :placeholder="$t('calendar.label.untitled')" :maxlength="200" :autofocus="draft ? !redrawn : !narrow" :size="fieldSize" class="w-full" />
+        <UInput :id="titleId" v-model="state.title" :placeholder="$t('calendar.label.untitled')" :maxlength="200" :autofocus="draft ? !redrawn : !narrow" :disabled="readOnly" :size="fieldSize" class="w-full" />
       </UFormField>
 
       <label :for="calendarId" class="whitespace-nowrap text-sm text-muted">{{ $t("calendar.label.calendar") }}</label>
-      <ChoiceSelect :id="calendarId" v-model="state.calendar" :items="calendarItems" value-key="value" :size="fieldSize" class="w-full">
+      <ChoiceSelect :id="calendarId" v-model="state.calendar" :items="calendarItems" value-key="value" :disabled="readOnly" :size="fieldSize" class="w-full">
         <template #leading>
           <span class="m-0.5 block size-2.5 rounded-full" :class="CALENDAR_DOT[color]" />
         </template>
       </ChoiceSelect>
 
       <label :for="allDayId" class="whitespace-nowrap text-sm text-muted">{{ $t("calendar.label.all_day") }}</label>
-      <UCheckbox :id="allDayId" v-model="state.allDay" :size="fieldSize" class="justify-self-start" />
+      <UCheckbox :id="allDayId" v-model="state.allDay" :disabled="readOnly" :size="fieldSize" class="justify-self-start" />
 
       <span class="whitespace-nowrap text-sm text-muted">{{ $t("calendar.label.starts") }}</span>
       <div class="flex min-w-0 flex-wrap items-center gap-2">
-        <CalendarDateField v-model="state.startDate" :size="fieldSize" :label="$t('calendar.label.starts')" />
-        <UInputTime v-if="!state.allDay" v-model="state.startTime" :size="fieldSize" :hour-cycle="24" :aria-label="$t('calendar.aria.start_time')" />
+        <CalendarDateField v-model="state.startDate" :size="fieldSize" :disabled="readOnly" :label="$t('calendar.label.starts')" />
+        <UInputTime v-if="!state.allDay" v-model="state.startTime" :size="fieldSize" :hour-cycle="24" :disabled="readOnly" :aria-label="$t('calendar.aria.start_time')" />
       </div>
 
       <span class="self-start whitespace-nowrap pt-1.5 text-sm text-muted">{{ $t("calendar.label.ends") }}</span>
       <UFormField name="end" :ui="{ error: 'badge-ink' }">
         <div class="flex min-w-0 flex-wrap items-center gap-2">
-          <CalendarDateField :id="endDateId" v-model="state.endDate" :size="fieldSize" :label="$t('calendar.label.ends')" />
-          <UInputTime v-if="!state.allDay" :id="endTimeId" v-model="state.endTime" :size="fieldSize" :hour-cycle="24" :aria-label="$t('calendar.aria.end_time')" />
+          <CalendarDateField :id="endDateId" v-model="state.endDate" :size="fieldSize" :disabled="readOnly" :label="$t('calendar.label.ends')" />
+          <UInputTime v-if="!state.allDay" :id="endTimeId" v-model="state.endTime" :size="fieldSize" :hour-cycle="24" :disabled="readOnly" :aria-label="$t('calendar.aria.end_time')" />
         </div>
       </UFormField>
 
       <label :for="alarmId" class="whitespace-nowrap text-sm text-muted">{{ $t("calendar.label.alarm") }}</label>
-      <ChoiceSelect :id="alarmId" v-model="state.alarm" :items="alarmItems" value-key="value" :size="fieldSize" class="w-full" />
+      <ChoiceSelect :id="alarmId" v-model="state.alarm" :items="alarmItems" value-key="value" :disabled="readOnly" :size="fieldSize" class="w-full" />
 
       <label :for="repeatId" class="whitespace-nowrap text-sm text-muted">{{ $t("calendar.label.repeat") }}</label>
-      <ChoiceSelect :id="repeatId" v-model="state.repeat" :items="repeatItems" value-key="value" :size="fieldSize" class="w-full" />
+      <ChoiceSelect :id="repeatId" v-model="state.repeat" :items="repeatItems" value-key="value" :disabled="readOnly" :size="fieldSize" class="w-full" />
 
       <label :for="notesId" class="self-start whitespace-nowrap pt-1.5 text-sm text-muted">{{ $t("calendar.label.notes") }}</label>
-      <GrowingTextarea :id="notesId" v-model="state.description" class="w-full" />
+      <GrowingTextarea :id="notesId" v-model="state.description" :disabled="readOnly" class="w-full" />
     </div>
 
-    <div class="flex items-center justify-end gap-2">
+    <div v-if="!readOnly" class="flex items-center justify-end gap-2">
       <UButton v-if="event" :label="$t('calendar.action.delete')" color="error" variant="ghost" class="badge-ink" :size="fieldSize" :loading="removing" @click="remove" />
       <UButton type="submit" :label="$t('common.action.save')" :size="fieldSize" :disabled="!!event && !dirty" :loading="saving" />
     </div>
@@ -101,7 +102,10 @@ const emit = defineEmits<{
 const dirty = defineModel<boolean>("dirty", { default: false });
 
 const { t } = useI18n();
-const { groups, lastUsed, calendarByKey } = useCalendarEvents();
+const { groups, lastUsed, calendarByKey, writable } = useCalendarEvents();
+
+/** Whether the event stands in a realm the reader reads and writes nothing in. */
+const readOnly = computed(() => !!props.event && !writable(props.event.realm));
 const { changeEvent, cancelEvent } = useEventChange();
 
 const narrow = useNarrow();
@@ -244,13 +248,14 @@ function validate(data: FormState): FormError[] {
   return [];
 }
 
-// The calendars to put it in, a realm to a group, the last one used first. An event keeps its realm.
+// The calendars to put it in, a realm to a group, the last one used first. An event keeps its realm; a new
+// one goes in a realm the reader writes in.
 const calendarItems = computed(() => {
   const ordered = [...groups.value].sort((a, b) => Number(b.calendars.some((one) => calendarKey(one) === lastUsed.value)) - Number(a.calendars.some((one) => calendarKey(one) === lastUsed.value)));
   const item = (calendar: Calendar) => ({ label: calendar.name, value: calendarKey(calendar) });
 
   return ordered
-    .filter((group) => !props.event || group.realm === props.event.realm)
+    .filter((group) => (props.event ? group.realm === props.event.realm : writable(group.realm)))
     .filter((group) => group.calendars.length > 0)
     .map((group) => [
       { type: "label" as const, label: t(group.realm === "mine" ? "calendar.label.mine" : "calendar.label.organization") },
@@ -309,7 +314,7 @@ const removing = ref(false);
 function onEnter(event: KeyboardEvent): void {
   const target = event.target as HTMLElement;
 
-  if (target.tagName === "TEXTAREA" || target.closest('[role="combobox"],[role="checkbox"],button')) return;
+  if (readOnly.value || target.tagName === "TEXTAREA" || target.closest('[role="combobox"],[role="checkbox"],button')) return;
 
   event.preventDefault();
   event.stopPropagation();
@@ -320,7 +325,7 @@ async function save(): Promise<void> {
   const period = span(state);
   const calendar = calendarByKey(state.calendar);
 
-  if (!period || !calendar || saving.value) return;
+  if (!period || !calendar || saving.value || readOnly.value) return;
 
   const title = state.title.trim() || t("calendar.label.untitled");
 
@@ -354,7 +359,7 @@ async function save(): Promise<void> {
 }
 
 async function remove(): Promise<void> {
-  if (!props.event || removing.value) return;
+  if (!props.event || removing.value || readOnly.value) return;
 
   removing.value = true;
 

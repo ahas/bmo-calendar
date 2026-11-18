@@ -1,0 +1,9 @@
+/* The harness page's sheet: the layer's own stylesheet with the utility classes the bundle's pages, the layer's
+   components they draw, the layer's settings for the library's components and the harness's frame are drawn with. */
+@import "bmo-ui/app/assets/css/main.css";
+
+@source "../../app";
+@source "../../node_modules/bmo-ui/app/components";
+@source "../../node_modules/bmo-ui/app/domain";
+@source "../../node_modules/bmo-ui/app/app.config.ts";
+@source "./screens-harness.ts";

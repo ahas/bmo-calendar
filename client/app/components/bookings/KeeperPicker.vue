@@ -1,9 +1,9 @@
 <template>
   <!-- A resource's keepers, chosen among the company's people through the console's people directory and
        each drawn by the name it answers; a keeper is taken off by its own mark, and the field stands empty
-       again after each pick. The directory answers the reader's own company alone, so where the console
-       offers none, or the administrator keeps another company's resources, keepers are written by their
-       account keys in a tags field, which draws them itself. -->
+       again after each pick. The directory answers the reader's own company alone, the one whose resources
+       the reader keeps; where the console offers none, keepers are written by their account keys in a tags
+       field, which draws them itself. -->
   <div class="flex min-w-0 flex-col gap-2">
     <ul v-if="searchable && model.length" class="flex flex-wrap gap-1">
       <li v-for="user in model" :key="user">
@@ -30,9 +30,6 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
-
-import { useCompanies } from "../../composables/useCompanies";
 import { usePeople } from "../../composables/usePeople";
 
 import type { SelectMenuItem } from "@nuxt/ui";
@@ -43,9 +40,7 @@ const props = defineProps<{ id?: string }>();
 const model = defineModel<string[]>({ default: () => [] });
 
 const { found, nameOf, search } = usePeople();
-const { current } = useCompanies();
-
-const searchable = computed(() => found && (current.value?.own ?? true));
+const searchable = found;
 
 /** The people the directory finds for the words typed, those already keeping it left out. */
 async function find(words: string): Promise<SelectMenuItem[]> {

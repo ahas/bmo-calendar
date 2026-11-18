@@ -20,10 +20,13 @@ service-token call acts as the administrator.
 ## Realms
 
 A realm is `mine` or `organization`; any other word in its place is 404 `not-found`. A route that takes a
-realm reads it from the path. In the `mine` realm the account is the caller's `Owner-Key`; a service-token
-call names it with `account=<key>`, or with `holderName=<name>`, the holder of a tool session, the agent the
-session's record is held by. A holder acts for the account agency names as its owner: a supervisor's
-`ownerAccount` on agency's `GET /supervisors/{supervisorName}`, else a role agent's `ownerAccount` among
+realm reads it from the path. In the `mine` realm the account is the caller's `Owner-Key`. The `account` a
+console call names is not read, but for the platform administrator (a console reader whose role is
+`administrator`) in the `mine` realm: there it names the account whose realm he reads, as that account reads
+it, its `hidden` marks among it, and a write naming another account than his own is 403 `forbidden`
+(「What the administrator writes」). A service-token call names the account with `account=<key>`, or with
+`holderName=<name>`, the holder of a tool session, the agent the session's record is held by. A holder acts
+for the account agency names as its owner: a supervisor's `ownerAccount` on agency's `GET /supervisors/{supervisorName}`, else a role agent's `ownerAccount` among
 agency's `GET /role-agents`, so a supervisor of a person's account acts for that person. A holder agency names
 no account for, a supervisor of no account or a name agency does not hold, acts for the owner: the account the
 account service links to the owner's sender (the receiver's `GET /owner`). A service-token call in the `mine`
@@ -42,7 +45,8 @@ the company from the query's `company`: a company's unit id as the account servi
   asked of the account service (`GET /users/{user}/unit`) at every call. A service-token call that names no
   account and no holder has no company of its own.
 - **Who reads which.** An account reads its own company alone; the platform administrator (a console
-  reader whose role is `administrator`, and every service-token call) reads every company and `platform`.
+  reader whose role is `administrator`, and every service-token call) reads every company and `platform`,
+  and writes in his own alone (「What the administrator writes」).
   A `company` the caller does not read is answered as if nothing stood there: 404 `not-found`.
 - **No company.** A call with no company, named or its own, reads nothing: its lists are empty; its writes
   are 422 `no-company`.
@@ -51,11 +55,21 @@ the company from the query's `company`: a company's unit id as the account servi
 
 | Method | Path | Does |
 |---|---|---|
-| GET | `/organization/companies` | The companies the caller reads, each `id`, `name`, `own` (the caller's own) and `manages` (whether the caller makes, changes and retires its resources: the administrator for every company but `platform`, a head of the company for its own), the caller's own first, then by name, `platform` (named by the setting `[calendars] platform_name`) last for the administrator — `{items, more}` |
+| GET | `/organization/companies` | The companies the caller reads, each `id`, `name`, `own` (the caller's own), `writes` (whether the caller writes in its organization realm: every reader in its own company, the administrator also in `platform`, the service token in every one) and `manages` (whether the caller makes, changes and retires its resources: the administrator and a head of the company for their own company, the service token for every company but `platform`), the caller's own first, then by name, `platform` (named by the setting `[calendars] platform_name`) last for the administrator — `{items, more}` |
 
 The administrator's companies are the account service's every company (`GET /units`, asked with the
 caller's owner key and role) and every company whose brain the calendar holds; an id the account service
 no longer names is listed by its id.
+
+### What the administrator writes
+
+The platform administrator reads everything and changes nothing of another's (`docs/design.md`, 「Two
+realms, kept apart」). He reads every company's `organization` realm (「Companies」) and every account's
+`mine` realm (`account=<key>`), and writes in his own realms alone: his own `mine` realm, his own company's
+`organization` realm and the platform's own. Any write in another realm is 403 `forbidden`: a calendar, an
+event, a `hidden` mark on a calendar or a source, a resource, a booking and a decision alike. His read of a
+realm not his own makes nothing in it: no brain, no first calendar (「Calendars」) and no mark. The service
+token, the units' own credential, writes in whichever realm its call names.
 
 ## Health
 
@@ -74,11 +88,13 @@ no longer names is listed by its id.
 
 A calendar is `id`, `realm`, `company` (null in the `mine` realm), `name`, `color`, `writers`, `tell`,
 `hidden`, `creator`, `createdAt`; `writers` and `tell` are null in the `mine` realm. A realm whose brain holds
-no live calendar answers one made on the read: `mine` → 「내 일정」 `primary`, id `mine`; `organization` → 「조직 일정」
-`info`, id `organization`, in each company (the names are settings, 「Settings」, which the deployment sets to
-these words; the repository's defaults are English). `hidden` is the caller's own: a PATCH of it hides or
-shows the calendar for the caller's account alone and is open to every account that reads the realm. In the
-`organization` realm, making a calendar is the administrator's, and changing its `name`, `color`, `writers` or
+no live calendar answers one made on the read: `mine` → 「내 일정」 `primary`, id `mine`; `organization` →
+「조직 일정」 `info`, id `organization`, in each company (the names are settings, 「Settings」, which the
+deployment sets to these words; the repository's defaults are English). The administrator's read of a realm
+not his own makes none, and answers the calendars that stand there, none where none does (「What the
+administrator writes」). `hidden` is the caller's own: a PATCH of it hides or
+shows the calendar for the caller's account alone and is open to every account that writes in the realm. In
+the `organization` realm, making a calendar is the administrator's, and changing its `name`, `color`, `writers` or
 `tell` or retiring it the administrator's and its creator's; anyone else is 403 `not-a-writer`. A `color`,
 `writers` or `tell` outside its words, or a blank name, is 400 `bad-request`; a calendar the realm does not
 hold live is 404 `not-found`.
@@ -192,9 +208,9 @@ A company's resources and their bookings (`docs/design.md`, 「Resources and boo
 - **A resource** is `id`, `company`, `name`, `kind`, `place`, `seats`, `approval`, `keepers`, `creator`,
   `createdAt`, `changedAt`. `name`, `kind` and `place` are one line each, `name` and `kind` not blank;
   `seats` a whole number from 1 to 10000; `keepers` the account keys of people of the company, at least one
-  where `approval` is `true`. Making, changing and retiring a resource is the administrator's and a head of
-  the company's (the account service's `POST /checks/unit` on the company); anyone else is 403
-  `not-a-writer`. A keeper of another company, or standing in none, is 422 `not-in-company`.
+  where `approval` is `true`. Making, changing and retiring a resource is a head of the company's (the
+  account service's `POST /checks/unit` on the company) and, in his own company, the administrator's;
+  anyone else is 403 `not-a-writer`, and the administrator in another company 403 `forbidden`. A keeper of another company, or standing in none, is 422 `not-in-company`.
 - **A booking** is `id`, `realm`, `company`, `resourceId`, `title`, `start`, `end` (local ISO datetimes,
   `end` after `start`), `allDay`, `repeat` (as an event's), `occurrence` (as an event's), `booker`,
   `state` (`requested`, `booked` or `refused`), `decidedBy`, `decidedAt`, `reason` (each null where none),
@@ -203,8 +219,8 @@ A company's resources and their bookings (`docs/design.md`, 「Resources and boo
 - **Who books.** Any account of the company books, as the booker; the booker and a keeper of the resource
   change and cancel; a keeper alone decides. Anyone else is 403 `not-a-writer`, and a decision by one who
   keeps no such resource 403 `not-a-keeper`. A booking is made in its booker's own company: one written in
-  another is 403 `not-a-writer`, the administrator's as anyone's. The administrator reads every company's
-  bookings.
+  another is 403 `not-a-writer`. The administrator reads every company's bookings, and his every write in
+  another company is 403 `forbidden` (「What the administrator writes」).
 - **The state a write leaves.** On a resource whose `approval` is `true`, a booking made by anyone but a
   keeper stands `requested`, and a change of its `start`, `end`, `allDay`, `repeat` or `resourceId` by
   anyone but a keeper makes it `requested` again; otherwise it stands `booked`. A decision approving makes

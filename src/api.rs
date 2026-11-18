@@ -184,11 +184,25 @@ async fn account_of(app: &App, caller: &Caller) -> Answer<Option<String>> {
   }
 }
 
-/// A realm asked for: its key, the account the call acts for, and who calls.
+/// A realm asked for: its key, the account the call acts for, who calls, and whether the caller writes in it.
 pub(crate) struct Asked {
   pub(crate) realm: RealmKey,
   pub(crate) account: Option<String>,
   pub(crate) caller: Caller,
+  /// Whether the realm is one the caller writes in (`docs/api.md`, 「What the administrator writes」): every
+  /// realm a member or the service token reaches, and of the administrator's only his own.
+  pub(crate) writes: bool,
+}
+
+impl Asked {
+  /// The realm asked for a write: refused `forbidden` where the caller reads it and writes nothing in it.
+  pub(crate) fn for_writing(self) -> Answer<Self> {
+    if self.writes {
+      Ok(self)
+    } else {
+      Err(ApiError::forbidden("The administrator writes nothing in a realm not his own."))
+    }
+  }
 }
 
 /// Who a call names: the account, the tool session's holder and the company, each where it names one.
@@ -219,46 +233,77 @@ pub(crate) async fn own_company(app: &App, account: Option<&str>) -> Answer<Opti
   }
 }
 
-/// The organization realm a call reads (`docs/api.md`, 「Companies」): the company it names where the caller
-/// reads it, else the caller's own; a company the caller does not read is answered as if nothing stood there.
+/// The organization realm a call reads (`docs/api.md`, 「Companies」), and whether the caller writes in it: the
+/// company it names where the caller reads it, else the caller's own; a company the caller does not read is
+/// answered as if nothing stood there. The administrator writes in his own company's and the platform's own
+/// alone, the service token in every one.
 async fn organization_realm(
   app: &App,
   caller: &Caller,
   account: Option<&str>,
   named: Option<&str>,
-) -> Answer<RealmKey> {
+) -> Answer<(RealmKey, bool)> {
   let named = named.map(str::trim).filter(|company| !company.is_empty());
   let own = own_company(app, account).await?;
   let Some(named) = named else {
-    return Ok(own.map_or(RealmKey::NoCompany, RealmKey::Company));
+    return Ok((own.map_or(RealmKey::NoCompany, RealmKey::Company), true));
   };
   if !valid_id(named) {
     return Err(ApiError::bad_request("A company is 1 to 64 letters, digits, '-' and '_'."));
   }
-  if caller.administrator || own.as_deref() == Some(named) {
-    return Ok(RealmKey::of_company(named));
+  let realm = RealmKey::of_company(named);
+  if own.as_deref() == Some(named) {
+    return Ok((realm, true));
+  }
+  if caller.administrator {
+    let writes = caller.service || realm == RealmKey::Platform;
+    return Ok((realm, writes));
   }
   Err(ApiError::not_found(format!("No company {named} is read by this caller.")))
 }
 
+/// The account whose own realm the platform administrator's console call reads in place of his own
+/// (`docs/api.md`, 「Realms」): the `account` it names. None for any other caller: a member's `account` is not
+/// read, and a service-token call's names the account it acts for.
+fn read_for(caller: &Caller, named: Option<&str>) -> Option<String> {
+  if caller.service || !caller.administrator {
+    return None;
+  }
+  named.map(str::trim).filter(|account| !account.is_empty()).map(str::to_owned)
+}
+
 pub(crate) async fn asked(app: &App, headers: &HeaderMap, realm: &str, named: Named) -> Answer<Asked> {
-  let caller = caller(app, headers, named.account, named.holder)?;
+  let Named {
+    account: named_account,
+    holder,
+    company,
+  } = named;
+  let caller = caller(app, headers, named_account.clone(), holder)?;
   let realm =
     Realm::of(realm).ok_or_else(|| ApiError::not_found(format!("No realm is called {realm}.")))?;
   let account = account_of(app, &caller).await?;
-  let realm = match realm {
+  match realm {
     Realm::Mine => {
-      RealmKey::Mine(account.clone().ok_or_else(|| ApiError::no_account("The call names no account."))?)
+      let own = account.ok_or_else(|| ApiError::no_account("The call names no account."))?;
+      let read = read_for(&caller, named_account.as_deref()).unwrap_or_else(|| own.clone());
+      Ok(Asked {
+        writes: read == own,
+        realm: RealmKey::Mine(read.clone()),
+        account: Some(read),
+        caller,
+      })
     }
     Realm::Organization => {
-      organization_realm(app, &caller, account.as_deref(), named.company.as_deref()).await?
+      let (realm, writes) =
+        organization_realm(app, &caller, account.as_deref(), company.as_deref()).await?;
+      Ok(Asked {
+        realm,
+        account,
+        caller,
+        writes,
+      })
     }
-  };
-  Ok(Asked {
-    realm,
-    account,
-    caller,
-  })
+  }
 }
 
 /// An organization realm asked for, by a route that stands in it alone: a `mine` path is no such route.
@@ -419,11 +464,14 @@ async fn list_calendars(
       more: false,
     }));
   }
-  let brain = app
-    .realm(&asked.realm, true)
-    .await?
-    .ok_or_else(|| ApiError::failed("no brain was made"))?;
-  if held(app, &asked.realm)?.0.is_empty() {
+  // A realm the caller does not write in is read as it stands: nothing is made in it.
+  let Some(brain) = app.realm(&asked.realm, asked.writes).await? else {
+    return Ok(Json(Page {
+      items: Vec::new(),
+      more: false,
+    }));
+  };
+  if asked.writes && held(app, &asked.realm)?.0.is_empty() {
     first_calendar(app, &asked, brain).await?;
   }
   let mut calendars: Vec<Calendar> = held(app, &asked.realm)?
@@ -457,8 +505,8 @@ async fn create_calendar(
 ) -> Answer<Response> {
   let app = &served.app;
   let given = query(given)?;
-  let asked =
-    asked(app, &headers, &realm, Named::of(given.account, given.holder_name, given.company)).await?;
+  let named = Named::of(given.account, given.holder_name, given.company);
+  let asked = asked(app, &headers, &realm, named).await?.for_writing()?;
   let new: NewCalendar = body(&bytes)?;
   let organization = asked.realm.organization();
   if organization && !asked.caller.administrator {
@@ -494,8 +542,8 @@ async fn change_calendar(
 ) -> Answer<Json<Calendar>> {
   let app = &served.app;
   let given = query(given)?;
-  let asked =
-    asked(app, &headers, &realm, Named::of(given.account, given.holder_name, given.company)).await?;
+  let named = Named::of(given.account, given.holder_name, given.company);
+  let asked = asked(app, &headers, &realm, named).await?.for_writing()?;
   let change: CalendarChange = body(&bytes)?;
   let brain = app.realm(&asked.realm, false).await?;
   let (Some(brain), Some(memory)) = (brain, calendar_memory(app, &asked.realm, &id)?) else {
@@ -548,8 +596,8 @@ async fn retire_calendar(
 ) -> Answer<StatusCode> {
   let app = &served.app;
   let given = query(given)?;
-  let asked =
-    asked(app, &headers, &realm, Named::of(given.account, given.holder_name, given.company)).await?;
+  let named = Named::of(given.account, given.holder_name, given.company);
+  let asked = asked(app, &headers, &realm, named).await?.for_writing()?;
   let brain = app.realm(&asked.realm, false).await?;
   let (Some(brain), Some(memory)) = (brain, calendar_memory(app, &asked.realm, &id)?) else {
     return Err(ApiError::not_found(format!("The realm holds no live calendar {id}.")));
@@ -721,8 +769,8 @@ async fn create_event(
 ) -> Answer<Response> {
   let app = &served.app;
   let given = query(given)?;
-  let asked =
-    asked(app, &headers, &realm, Named::of(given.account, given.holder_name, given.company)).await?;
+  let named = Named::of(given.account, given.holder_name, given.company);
+  let asked = asked(app, &headers, &realm, named).await?.for_writing()?;
   let new: NewEvent = body(&bytes)?;
   let id = new.id.clone().unwrap_or_else(fresh_id);
   if !valid_id(&id) {
@@ -783,8 +831,8 @@ async fn change_event(
 ) -> Answer<Json<Event>> {
   let app = &served.app;
   let given = query(given)?;
-  let asked =
-    asked(app, &headers, &realm, Named::of(given.account, given.holder_name, given.company)).await?;
+  let named = Named::of(given.account, given.holder_name, given.company);
+  let asked = asked(app, &headers, &realm, named).await?.for_writing()?;
   let change: EventChange = body(&bytes)?;
   let brain = app.realm(&asked.realm, false).await?;
   let (Some(brain), Some(memory)) = (brain, event_memory(app, &asked.realm, &id)?) else {
@@ -846,8 +894,8 @@ async fn cancel_event(
 ) -> Answer<StatusCode> {
   let app = &served.app;
   let given = query(given)?;
-  let asked =
-    asked(app, &headers, &realm, Named::of(given.account, given.holder_name, given.company)).await?;
+  let named = Named::of(given.account, given.holder_name, given.company);
+  let asked = asked(app, &headers, &realm, named).await?.for_writing()?;
   let brain = app.realm(&asked.realm, false).await?;
   let (Some(brain), Some(memory)) = (brain, event_memory(app, &asked.realm, &id)?) else {
     return Err(ApiError::not_found(format!("The realm holds no live event {id}.")));

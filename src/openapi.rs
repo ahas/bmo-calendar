@@ -248,7 +248,7 @@ fn routes(g: &mut SchemaGenerator) -> Vec<Route> {
       path: "/{realm}/calendars",
       id: "listCalendars",
       tag: "calendars",
-      summary: "The realm's calendars, the caller's hidden mark on each; one is made where the realm holds none.",
+      summary: "The realm's calendars, the caller's hidden mark on each; one is made where the realm holds none and the caller writes in it.",
       parameters: with(vec![realm(g)], query::<AccountQuery>(g)),
       body: None,
       answers: vec![(200, content::<Page<Calendar>>(g))],

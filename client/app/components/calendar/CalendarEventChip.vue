@@ -2,7 +2,8 @@
   <!-- An event in a month cell or the all-day row: a bar for an all-day event, a dot and a title for a
        timed one, its words in the page's own text colour. Dragged a day at a time by a mouse; pressed to
        open its form. A received schedule is a link to the item it stands for instead, and is never moved; the
-       reader's own booking is never moved either, and opens its booking's form.
+       reader's own booking is never moved either, and opens its booking's form, nor is an event of a realm the
+       reader only reads, another company's for the administrator, which opens its form read-only.
        Named whole for a reader who does not see it, however much of it is cut. -->
   <CalendarEventPopover v-slot="{ open }" :event="event" :disabled="suppressed" :anchored="anchored">
     <component
@@ -14,7 +15,7 @@
       :data-active="open || moving || undefined"
       :aria-label="name"
       @click.stop
-      v-on="fixed(event) ? {} : { pointerdown: (pointer: PointerEvent) => onPointerdown(pointer, event) }"
+      v-on="!movable(event) ? {} : { pointerdown: (pointer: PointerEvent) => onPointerdown(pointer, event) }"
     >
       <span v-if="!event.allDay" class="size-2 shrink-0 rounded-full max-lg:hidden" :class="CALENDAR_DOT[color]" />
       <UIcon :name="REALM_ICON[event.realm]" class="size-3.5 shrink-0 text-muted" :class="event.realm === 'mine' && 'max-sm:hidden'" />
@@ -35,7 +36,6 @@ import { eventName } from "../../domain/a11y";
 import { CALENDAR_DOT, CHIP_COMPACT_FILL, EVENT_FILL, RECEIVED_ICON, REALM_ICON } from "../../domain/colors";
 import { originLink } from "../../domain/origin";
 import { BOOKING_ICON } from "../../domain/bookings";
-import { fixed } from "../../domain/store";
 import { formatTime, fromLocalISO } from "../../domain/dates";
 import { useCalendarEvents } from "../../composables/useCalendarEvents";
 import { useEventMove } from "../../composables/useEventMove";
@@ -47,7 +47,7 @@ defineOptions({ inheritAttrs: false });
 const props = withDefaults(defineProps<{ event: CalendarEvent; showTime?: boolean; anchored?: boolean }>(), { anchored: true });
 
 const { t } = useI18n();
-const { layerOf } = useCalendarEvents();
+const { layerOf, movable } = useCalendarEvents();
 const { movingKey, suppressed, onPointerdown } = useEventMove();
 
 const color = computed(() => layerOf(props.event)?.color ?? "primary");

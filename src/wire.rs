@@ -257,7 +257,8 @@ pub struct Page<T> {
 #[derive(Clone, Debug, Default, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AccountQuery {
-  /// The account, by its key.
+  /// The account, by its key: the one a service-token call acts for, or the one whose mine realm the
+  /// administrator's console call reads; a member's is not read.
   #[serde(default)]
   pub account: Option<String>,
   /// The holder of a tool session, which acts for the account agency names as its owner.
@@ -597,7 +598,10 @@ pub struct Company {
   pub name: String,
   /// Whether it is the caller's own.
   pub own: bool,
-  /// Whether the caller makes, changes and retires its resources: the administrator, and a head of the company.
+  /// Whether the caller writes in its organization realm: its own, and for the administrator the platform's own.
+  pub writes: bool,
+  /// Whether the caller makes, changes and retires its resources: the administrator and a head of the company,
+  /// each in their own company.
   pub manages: bool,
 }
 

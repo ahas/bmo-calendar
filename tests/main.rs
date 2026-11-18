@@ -3,6 +3,7 @@
 
 mod support;
 
+mod administrator;
 mod alarms;
 mod bookings;
 mod calendars;

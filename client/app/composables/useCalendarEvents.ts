@@ -5,7 +5,7 @@ import { useI18n } from "vue-i18n";
 import { useIsland } from "bmo-ui/app/domain/island";
 
 import { dayKey, fromLocalISO } from "../domain/dates";
-import { createCalendarStore } from "../domain/store";
+import { createCalendarStore, fixed } from "../domain/store";
 import { createAppComposable } from "./shared";
 import { useCalendarApi } from "./useCalendarApi";
 import { useCompanies } from "./useCompanies";
@@ -45,8 +45,21 @@ const _useCalendarEvents = () => {
 
   watch(browserOnline, (isOnline) => (store.browserOnline.value = isOnline), { immediate: true });
 
+  const companies = useCompanies();
+
   // Another company chosen, on whichever screen: the grid lets go of the last one's rows and reads the new one's.
-  watch(useCompanies().switches, () => void store.companyChanged());
+  watch(companies.switches, () => void store.companyChanged());
+
+  /** Whether the reader writes in a realm as the screen reads it: its own always, the organization's in the
+   *  company read where the reader writes there (`writesIn`), so another company's stands read-only. */
+  function writable(realm: Realm): boolean {
+    return realm === "mine" || companies.writes.value;
+  }
+
+  /** Whether a row is the reader's to move and change: a row of the calendar's own in a realm it writes in. */
+  function movable(row: Pick<CalendarEvent, "realm" | "origin" | "booking">): boolean {
+    return !fixed(row) && writable(row.realm);
+  }
 
   function calendarFor(event: Pick<CalendarEvent, "realm" | "calendarId">): Calendar | undefined {
     return store.calendarOf(event.realm, event.calendarId);
@@ -105,9 +118,10 @@ const _useCalendarEvents = () => {
     }
   }
 
-  /** The calendar a new event goes in first: the last one used where it is still shown, else the first shown. */
+  /** The calendar a new event goes in first, of those the reader writes in: the last one used where it is still
+   *  shown, else the first shown. */
   const firstCalendar = computed<Calendar | undefined>(() => {
-    const all = [...store.calendars.value.mine, ...store.calendars.value.organization];
+    const all = [...store.calendars.value.mine, ...store.calendars.value.organization].filter((calendar) => writable(calendar.realm));
     const shown = all.filter((calendar) => !calendar.hidden);
 
     return shown.find((calendar) => calendarKey(calendar) === lastUsed.value) ?? shown[0] ?? all[0];
@@ -119,7 +133,7 @@ const _useCalendarEvents = () => {
     return store.calendarOf(realm as Realm, rest.join(":"));
   }
 
-  return { ...store, calendarFor, eventsForDay, eventsForDays, lastUsed, rememberCalendar, firstCalendar, calendarByKey };
+  return { ...store, calendarFor, eventsForDay, eventsForDays, lastUsed, rememberCalendar, firstCalendar, calendarByKey, writable, movable };
 };
 
 export const useCalendarEvents = createAppComposable(_useCalendarEvents);

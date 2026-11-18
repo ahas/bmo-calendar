@@ -13,8 +13,8 @@ The owner's words: 「일정은 조직 공유가 가능했으면 함」 and 「�
 the unit of isolation (`STRUCTURE.md`, 「Accounts, companies and units」): nothing of one company is read
 from another.
 
-- **Mine (`mine`):** each console account's own calendars. Only that account reads and writes them; its
-  alarms reach that person.
+- **Mine (`mine`):** each console account's own calendars. Only that account writes them, and none but it
+  and the platform administrator reads them; its alarms reach that person.
 - **Organization (`organization`):** one for each company: its calendars, the schedules received for it,
   its resources and their bookings. Every account standing in the company reads it, and an account of
   another company reads nothing of it; who may write and who is told are settings of each calendar (by
@@ -27,7 +27,13 @@ from another.
   received with no company, and what the move into companies found no company for (「The move into
   companies」). The platform administrator alone reads it.
 - **The platform administrator reads every company's realm,** naming the company; a read that names none is
-  the administrator's own company's, as anyone's is.
+  the administrator's own company's, as anyone's is. He reads an account's own realm the same way, naming
+  the account.
+- **The administrator changes nothing of another's** (`STRUCTURE.md`, 「Accounts, companies and units」).
+  He writes in his own realms alone: his own account's, his own company's and the platform's own, which
+  belongs to no company and no person. A write of his in another account's realm or another company's is
+  refused, and his read of one makes nothing in it — no brain, no first calendar, no mark — so the person
+  or the company is shown nothing of having been read.
 
 The realms are kinds of brain in the brain service, never one, each with `agentKey = calendar`: an
 account's realm is the brain keyed `accountKey = account:<Owner-Key>`; a company's organization realm the
@@ -154,8 +160,8 @@ A company books what it shares by the hour or the day: meeting rooms, reception 
 week or month, all day or repeating, some of them only once a keeper approves.
 
 - **A resource is the company's.** It has a name, a kind, a place, its seats, whether a booking of it needs
-  approval, and its keepers, accounts of the company. The administrator and a head of the company make,
-  change and retire resources; retiring one cancels its standing bookings with it.
+  approval, and its keepers, accounts of the company. A head of the company and, in his own company, the
+  administrator make, change and retire resources; retiring one cancels its standing bookings with it.
 - **A booking is an event on a resource:** a title, a start, an end, all day or not, a repeat as an event
   repeats with its skipped occurrences, and its booker. Anyone of the company books, in that company alone;
   the booker and a keeper of the resource change or cancel it, a whole booking or one occurrence of a
@@ -227,7 +233,11 @@ mini calendar), stood as a console bundle under the sidebar entry 캘린더 (bmo
 `docs/api.md`, 「Console」). The sidebar lists 내 일정 and 조직 일정 calendars apart; one grid shows both.
 The 조직 일정 are the reader's company's. For the administrator the sidebar's 조직 일정 heading carries a
 choice of company, every company and the platform's own among them, the administrator's own company first
-chosen; the grid, the layers and the bookings then read the company chosen.
+chosen; the grid, the layers and the bookings then read the company chosen. With another company than his
+own chosen, its 조직 일정 are read-only, the heading marked 읽기 전용, a mark that opens the choice of company when
+pressed: its calendars are neither added, set nor hidden, nor its sources hidden, its events are neither drawn,
+moved nor changed, an event's form shows it with no save and no delete, and a new event goes into his own
+calendars alone. The platform's own stays his to write.
 
 Booking stands on its own screen in the same bundle, 예약, reached from the calendar screen's sidebar and
 back again:
@@ -253,11 +263,10 @@ back again:
   year as four spans, and a booking further ahead is listed once it comes within the year.
 - **Requests.** For a keeper, the bookings waiting on the resources they keep, oldest first, each with its
   booker, its span and its resource, approved with one press or refused with a reason.
-- **Resources.** The administrator and the company's heads make, change and retire resources from the same
-  screen, the screen's one create button adding a resource while this part is shown, choosing the keepers
-  among the company's people through the console's people directory. The directory answers the reader's own
-  company alone, so the administrator keeping another company's resources names their keepers by their account
-  keys.
+- **Resources.** The company's heads and the administrator make, change and retire the resources of their own
+  company from the same screen, the screen's one create button adding a resource while this part is shown,
+  choosing the keepers among the company's people through the console's people directory. With another
+  company chosen, the administrator reads its resources and is offered no change to them.
 
 Received schedules stand on the same grid as layers, one for each source in each realm:
 

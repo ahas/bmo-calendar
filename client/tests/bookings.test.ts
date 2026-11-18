@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 
 import { dayBookings, dayCounts, dragSpan, firstFreeHour, freeGap, kindsOf, meets, metBooking, nextOfEach, placesOf, pressSpan, rowBlocks, shiftedSeries } from "../app/domain/bookings";
 import { Refusal, createCalendarApi as apiOver } from "../app/domain/api";
-import { administers, booksIn, firstCompany } from "../app/domain/companies";
+import { administers, booksIn, firstCompany, writesIn } from "../app/domain/companies";
 import { createCalendarStore, fixed, held, refusalText } from "../app/domain/store";
 import { COMPANY, booking, calendar, eventRow, resource, settle, startStandIn, until } from "./stand-in";
 import { translator } from "./words";
@@ -144,9 +144,9 @@ describe("a repeating booking moved whole", () => {
 });
 
 describe("the companies", () => {
-  const own = { id: "company-a", name: "Company A", own: true, manages: true };
-  const other = { id: "company-b", name: "Company B", own: false, manages: true };
-  const platform = { id: "platform", name: "Platform", own: false, manages: false };
+  const own = { id: "company-a", name: "Company A", own: true, writes: true, manages: true };
+  const other = { id: "company-b", name: "Company B", own: false, writes: false, manages: false };
+  const platform = { id: "platform", name: "Platform", own: false, writes: true, manages: false };
 
   test("are the administrator's where the platform's own realm is listed, the own one first chosen", () => {
     expect(administers([own])).toBe(false);
@@ -160,6 +160,13 @@ describe("the companies", () => {
     expect(booksIn([own, other, platform], "company-a")).toBe(true);
     expect(booksIn([own, other, platform], "company-b")).toBe(false);
     expect(booksIn([], null)).toBe(true);
+  });
+
+  test("are written in where the service says so: another's read alone, and where they could not be read, what a read naming none reads", () => {
+    expect(writesIn([own, other, platform], "company-a")).toBe(true);
+    expect(writesIn([own, other, platform], "company-b")).toBe(false);
+    expect(writesIn([own, other, platform], "platform")).toBe(true);
+    expect(writesIn([], null)).toBe(true);
   });
 
   test("a call names the chosen company for the administrator alone, a row's write its own row's", async () => {

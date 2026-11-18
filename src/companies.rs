@@ -58,6 +58,7 @@ async fn list_companies(
       id: own.id.clone(),
       name: own.name.clone(),
       own: true,
+      writes: true,
       manages,
     });
   }
@@ -81,6 +82,8 @@ async fn list_companies(
       }
     }
   }
+  // Another company's realm the administrator reads and writes nothing in; the service token writes in each.
+  let elsewhere = asked.caller.service;
   let mut rest: Vec<Company> = others
     .into_iter()
     .filter(|(id, _)| own.as_ref().is_none_or(|own| own.id != *id))
@@ -88,7 +91,8 @@ async fn list_companies(
       id,
       name,
       own: false,
-      manages: true,
+      writes: elsewhere,
+      manages: elsewhere,
     })
     .collect();
   rest.sort_by(|a, b| (&a.name, &a.id).cmp(&(&b.name, &b.id)));
@@ -97,6 +101,7 @@ async fn list_companies(
     id: PLATFORM.to_owned(),
     name: app.settings.calendars.platform_name.clone(),
     own: false,
+    writes: true,
     manages: false,
   });
   Ok(Json(Page { items, more: false }))

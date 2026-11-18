@@ -4,11 +4,12 @@
        mouse points, neither is made until the event is first pointed at, since the month view puts hundreds
        of events up at once; on a touch screen they stand from the first. A received schedule opens neither:
        it is a link to the item it stands for. The reader's own booking opens its booking's form, and its menu
-       offers its cancellation. -->
+       offers its cancellation. An event of a realm the reader only reads opens its form read-only, and offers
+       no menu. -->
   <div ref="root" class="contents" @pointerover="arm" @focusin="arm" @contextmenu="arm">
     <slot v-if="!active" :open="false" />
 
-    <UContextMenu v-else :items="items" :disabled="disabled">
+    <UContextMenu v-else :items="items" :disabled="disabled || !writable(event.realm)">
       <div class="contents">
         <CalendarFormFloat :open="open" :title="event.title || $t('calendar.label.untitled')" :content="{ side: formSide, collisionPadding: 16 }" @update:open="onUpdateOpen">
           <slot :open="open" />
@@ -37,6 +38,7 @@ import { refusalText } from "../../domain/store";
 import { useBookingChange } from "../../composables/useBookingChange";
 import { useBookings } from "../../composables/useBookings";
 import { useCalendar } from "../../composables/useCalendar";
+import { useCalendarEvents } from "../../composables/useCalendarEvents";
 import { useEventChange } from "../../composables/useEventChange";
 import { useEventEditor } from "../../composables/useEventEditor";
 
@@ -50,6 +52,7 @@ const { formSide } = useCalendar();
 const { editingKey, openEvent, closeEvent } = useEventEditor();
 const { cancelEvent } = useEventChange();
 const { resourcesFor } = useBookings();
+const { writable } = useCalendarEvents();
 const bookingChange = useBookingChange();
 const island = useIsland(t);
 

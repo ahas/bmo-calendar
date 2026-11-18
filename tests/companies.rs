@@ -1,5 +1,5 @@
-//! Companies: each company's organization realm read by its own accounts alone and by the administrator, a
-//! caller in no company reading nothing, the companies a caller reads, the account a tool session's holder acts
+//! Companies: each company's organization realm read by its own accounts alone and by the administrator, who
+//! writes nothing in another company's, a caller in no company reading nothing, the companies a caller reads, the account a tool session's holder acts
 //! for, and the one move of the organization's calendars and events into their companies.
 
 use bmo_calendar::store::Store;
@@ -76,6 +76,53 @@ async fn another_company_reads_no_organization_calendar_or_event_of_the_first() 
 }
 
 #[tokio::test]
+async fn the_administrator_reads_another_companys_realm_and_writes_nothing_in_it() {
+  let service = Service::fresh().await;
+  service.console(Method::GET, "/organization/calendars", "4", "member", None).await;
+  let (_, theirs) = service
+    .console(Method::POST, "/organization/events", "4", "member", Some(event("Theirs")))
+    .await;
+  let path = format!("/organization/events/{}?company=20", theirs["id"].as_str().unwrap());
+
+  let (status, read) = service.console(Method::GET, &path, "1", "administrator", None).await;
+  assert_eq!((status, read["title"].as_str()), (200, Some("Theirs")));
+  let calendar = json!({ "name": "Board", "color": "error" });
+  let room = json!({ "name": "Room Z", "kind": "meeting room", "seats": 4 });
+  let booking = json!({ "resourceId": "room-z", "title": "Ours", "start": "2026-03-04T10:00:00",
+    "end": "2026-03-04T11:00:00" });
+  let writes = [
+    (Method::PATCH, path.clone(), Some(json!({ "title": "Ours" }))),
+    (Method::DELETE, path.clone(), None),
+    (Method::POST, "/organization/events?company=20".to_owned(), Some(event("Ours"))),
+    (Method::POST, "/organization/calendars?company=20".to_owned(), Some(calendar.clone())),
+    (
+      Method::PATCH,
+      "/organization/calendars/organization?company=20".to_owned(),
+      Some(json!({ "hidden": true })),
+    ),
+    (Method::POST, "/organization/resources?company=20".to_owned(), Some(room)),
+    (Method::POST, "/organization/bookings?company=20".to_owned(), Some(booking)),
+  ];
+  for (method, path, body) in writes {
+    let (status, refusal) = service.console(method.clone(), &path, "1", "administrator", body).await;
+    assert_eq!((status, refusal["code"].as_str()), (403, Some("forbidden")), "{method} {path}");
+  }
+  let key = format!("event:{}", theirs["id"].as_str().unwrap());
+  assert_eq!(service.stand.lineage(&key).len(), 1, "the event stands as it was written");
+
+  let (status, _) = service
+    .console(
+      Method::POST,
+      "/organization/calendars?company=platform",
+      "1",
+      "administrator",
+      Some(calendar),
+    )
+    .await;
+  assert_eq!(status, 201, "the platform's own realm is his to write");
+}
+
+#[tokio::test]
 async fn a_caller_in_no_company_reads_nothing_and_writes_nothing() {
   let service = Service::fresh().await;
   let (status, calendars) =
@@ -99,22 +146,25 @@ async fn the_companies_a_caller_reads() {
       .as_array()
       .unwrap()
       .iter()
-      .map(|one| format!("{} own:{} manages:{}", one["id"].as_str().unwrap(), one["own"], one["manages"]))
+      .map(|one| {
+        let id = one["id"].as_str().unwrap();
+        format!("{id} own:{} writes:{} manages:{}", one["own"], one["writes"], one["manages"])
+      })
       .collect::<Vec<_>>()
   };
   assert_eq!(
     read("2", "member").await,
-    ["10 own:true manages:true"],
+    ["10 own:true writes:true manages:true"],
     "a head of the company manages it"
   );
-  assert_eq!(read("3", "member").await, ["10 own:true manages:false"]);
+  assert_eq!(read("3", "member").await, ["10 own:true writes:true manages:false"]);
   assert_eq!(read("5", "member").await, Vec::<String>::new());
   assert_eq!(
     read("1", "administrator").await,
     [
-      "10 own:true manages:true",
-      "20 own:false manages:true",
-      "platform own:false manages:false"
+      "10 own:true writes:true manages:true",
+      "20 own:false writes:false manages:false",
+      "platform own:false writes:true manages:false"
     ]
   );
   let (status, _) = service.console(Method::GET, "/mine/companies", "2", "member", None).await;

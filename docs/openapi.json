@@ -506,7 +506,7 @@
             "type": "string"
           },
           "manages": {
-            "description": "Whether the caller makes, changes and retires its resources: the administrator, and a head of the company.",
+            "description": "Whether the caller makes, changes and retires its resources: the administrator and a head of the company,\neach in their own company.",
             "type": "boolean"
           },
           "name": {
@@ -515,12 +515,17 @@
           "own": {
             "description": "Whether it is the caller's own.",
             "type": "boolean"
+          },
+          "writes": {
+            "description": "Whether the caller writes in its organization realm: its own, and for the administrator the platform's own.",
+            "type": "boolean"
           }
         },
         "required": [
           "id",
           "name",
           "own",
+          "writes",
           "manages"
         ],
         "type": "object"
@@ -3021,13 +3026,13 @@
             }
           },
           {
-            "description": "The account, by its key.",
+            "description": "The account, by its key: the one a service-token call acts for, or the one whose mine realm the\nadministrator's console call reads; a member's is not read.",
             "in": "query",
             "name": "account",
             "required": true,
             "schema": {
               "default": null,
-              "description": "The account, by its key.",
+              "description": "The account, by its key: the one a service-token call acts for, or the one whose mine realm the\nadministrator's console call reads; a member's is not read.",
               "type": [
                 "string",
                 "null"
@@ -3213,13 +3218,13 @@
             }
           },
           {
-            "description": "The account, by its key.",
+            "description": "The account, by its key: the one a service-token call acts for, or the one whose mine realm the\nadministrator's console call reads; a member's is not read.",
             "in": "query",
             "name": "account",
             "required": true,
             "schema": {
               "default": null,
-              "description": "The account, by its key.",
+              "description": "The account, by its key: the one a service-token call acts for, or the one whose mine realm the\nadministrator's console call reads; a member's is not read.",
               "type": [
                 "string",
                 "null"
@@ -3546,13 +3551,13 @@
             }
           },
           {
-            "description": "The account, by its key.",
+            "description": "The account, by its key: the one a service-token call acts for, or the one whose mine realm the\nadministrator's console call reads; a member's is not read.",
             "in": "query",
             "name": "account",
             "required": true,
             "schema": {
               "default": null,
-              "description": "The account, by its key.",
+              "description": "The account, by its key: the one a service-token call acts for, or the one whose mine realm the\nadministrator's console call reads; a member's is not read.",
               "type": [
                 "string",
                 "null"
@@ -3710,13 +3715,13 @@
             }
           },
           {
-            "description": "The account, by its key.",
+            "description": "The account, by its key: the one a service-token call acts for, or the one whose mine realm the\nadministrator's console call reads; a member's is not read.",
             "in": "query",
             "name": "account",
             "required": true,
             "schema": {
               "default": null,
-              "description": "The account, by its key.",
+              "description": "The account, by its key: the one a service-token call acts for, or the one whose mine realm the\nadministrator's console call reads; a member's is not read.",
               "type": [
                 "string",
                 "null"
@@ -3901,13 +3906,13 @@
             }
           },
           {
-            "description": "The account, by its key.",
+            "description": "The account, by its key: the one a service-token call acts for, or the one whose mine realm the\nadministrator's console call reads; a member's is not read.",
             "in": "query",
             "name": "account",
             "required": true,
             "schema": {
               "default": null,
-              "description": "The account, by its key.",
+              "description": "The account, by its key: the one a service-token call acts for, or the one whose mine realm the\nadministrator's console call reads; a member's is not read.",
               "type": [
                 "string",
                 "null"
@@ -4080,13 +4085,13 @@
             }
           },
           {
-            "description": "The account, by its key.",
+            "description": "The account, by its key: the one a service-token call acts for, or the one whose mine realm the\nadministrator's console call reads; a member's is not read.",
             "in": "query",
             "name": "account",
             "required": true,
             "schema": {
               "default": null,
-              "description": "The account, by its key.",
+              "description": "The account, by its key: the one a service-token call acts for, or the one whose mine realm the\nadministrator's console call reads; a member's is not read.",
               "type": [
                 "string",
                 "null"
@@ -4204,7 +4209,7 @@
             "description": "`not-ready`: the service has not read the brain and moved it into companies yet"
           }
         },
-        "summary": "The realm's calendars, the caller's hidden mark on each; one is made where the realm holds none.",
+        "summary": "The realm's calendars, the caller's hidden mark on each; one is made where the realm holds none and the caller writes in it.",
         "tags": [
           "calendars"
         ],
@@ -4235,13 +4240,13 @@
             }
           },
           {
-            "description": "The account, by its key.",
+            "description": "The account, by its key: the one a service-token call acts for, or the one whose mine realm the\nadministrator's console call reads; a member's is not read.",
             "in": "query",
             "name": "account",
             "required": true,
             "schema": {
               "default": null,
-              "description": "The account, by its key.",
+              "description": "The account, by its key: the one a service-token call acts for, or the one whose mine realm the\nadministrator's console call reads; a member's is not read.",
               "type": [
                 "string",
                 "null"
@@ -4413,13 +4418,13 @@
             }
           },
           {
-            "description": "The account, by its key.",
+            "description": "The account, by its key: the one a service-token call acts for, or the one whose mine realm the\nadministrator's console call reads; a member's is not read.",
             "in": "query",
             "name": "account",
             "required": true,
             "schema": {
               "default": null,
-              "description": "The account, by its key.",
+              "description": "The account, by its key: the one a service-token call acts for, or the one whose mine realm the\nadministrator's console call reads; a member's is not read.",
               "type": [
                 "string",
                 "null"
@@ -4572,13 +4577,13 @@
             }
           },
           {
-            "description": "The account, by its key.",
+            "description": "The account, by its key: the one a service-token call acts for, or the one whose mine realm the\nadministrator's console call reads; a member's is not read.",
             "in": "query",
             "name": "account",
             "required": true,
             "schema": {
               "default": null,
-              "description": "The account, by its key.",
+              "description": "The account, by its key: the one a service-token call acts for, or the one whose mine realm the\nadministrator's console call reads; a member's is not read.",
               "type": [
                 "string",
                 "null"
@@ -4741,13 +4746,13 @@
             }
           },
           {
-            "description": "The account, by its key.",
+            "description": "The account, by its key: the one a service-token call acts for, or the one whose mine realm the\nadministrator's console call reads; a member's is not read.",
             "in": "query",
             "name": "account",
             "required": true,
             "schema": {
               "default": null,
-              "description": "The account, by its key.",
+              "description": "The account, by its key: the one a service-token call acts for, or the one whose mine realm the\nadministrator's console call reads; a member's is not read.",
               "type": [
                 "string",
                 "null"
@@ -5068,13 +5073,13 @@
             }
           },
           {
-            "description": "The account, by its key.",
+            "description": "The account, by its key: the one a service-token call acts for, or the one whose mine realm the\nadministrator's console call reads; a member's is not read.",
             "in": "query",
             "name": "account",
             "required": true,
             "schema": {
               "default": null,
-              "description": "The account, by its key.",
+              "description": "The account, by its key: the one a service-token call acts for, or the one whose mine realm the\nadministrator's console call reads; a member's is not read.",
               "type": [
                 "string",
                 "null"
@@ -5425,13 +5430,13 @@
             }
           },
           {
-            "description": "The account, by its key.",
+            "description": "The account, by its key: the one a service-token call acts for, or the one whose mine realm the\nadministrator's console call reads; a member's is not read.",
             "in": "query",
             "name": "account",
             "required": true,
             "schema": {
               "default": null,
-              "description": "The account, by its key.",
+              "description": "The account, by its key: the one a service-token call acts for, or the one whose mine realm the\nadministrator's console call reads; a member's is not read.",
               "type": [
                 "string",
                 "null"
@@ -5589,13 +5594,13 @@
             }
           },
           {
-            "description": "The account, by its key.",
+            "description": "The account, by its key: the one a service-token call acts for, or the one whose mine realm the\nadministrator's console call reads; a member's is not read.",
             "in": "query",
             "name": "account",
             "required": true,
             "schema": {
               "default": null,
-              "description": "The account, by its key.",
+              "description": "The account, by its key: the one a service-token call acts for, or the one whose mine realm the\nadministrator's console call reads; a member's is not read.",
               "type": [
                 "string",
                 "null"
@@ -5923,13 +5928,13 @@
             }
           },
           {
-            "description": "The account, by its key.",
+            "description": "The account, by its key: the one a service-token call acts for, or the one whose mine realm the\nadministrator's console call reads; a member's is not read.",
             "in": "query",
             "name": "account",
             "required": true,
             "schema": {
               "default": null,
-              "description": "The account, by its key.",
+              "description": "The account, by its key: the one a service-token call acts for, or the one whose mine realm the\nadministrator's console call reads; a member's is not read.",
               "type": [
                 "string",
                 "null"
@@ -6330,13 +6335,13 @@
             }
           },
           {
-            "description": "The account, by its key.",
+            "description": "The account, by its key: the one a service-token call acts for, or the one whose mine realm the\nadministrator's console call reads; a member's is not read.",
             "in": "query",
             "name": "account",
             "required": true,
             "schema": {
               "default": null,
-              "description": "The account, by its key.",
+              "description": "The account, by its key: the one a service-token call acts for, or the one whose mine realm the\nadministrator's console call reads; a member's is not read.",
               "type": [
                 "string",
                 "null"
@@ -6489,13 +6494,13 @@
             }
           },
           {
-            "description": "The account, by its key.",
+            "description": "The account, by its key: the one a service-token call acts for, or the one whose mine realm the\nadministrator's console call reads; a member's is not read.",
             "in": "query",
             "name": "account",
             "required": true,
             "schema": {
               "default": null,
-              "description": "The account, by its key.",
+              "description": "The account, by its key: the one a service-token call acts for, or the one whose mine realm the\nadministrator's console call reads; a member's is not read.",
               "type": [
                 "string",
                 "null"
@@ -6831,13 +6836,13 @@
             }
           },
           {
-            "description": "The account, by its key.",
+            "description": "The account, by its key: the one a service-token call acts for, or the one whose mine realm the\nadministrator's console call reads; a member's is not read.",
             "in": "query",
             "name": "account",
             "required": true,
             "schema": {
               "default": null,
-              "description": "The account, by its key.",
+              "description": "The account, by its key: the one a service-token call acts for, or the one whose mine realm the\nadministrator's console call reads; a member's is not read.",
               "type": [
                 "string",
                 "null"
@@ -6997,13 +7002,13 @@
             }
           },
           {
-            "description": "The account, by its key.",
+            "description": "The account, by its key: the one a service-token call acts for, or the one whose mine realm the\nadministrator's console call reads; a member's is not read.",
             "in": "query",
             "name": "account",
             "required": true,
             "schema": {
               "default": null,
-              "description": "The account, by its key.",
+              "description": "The account, by its key: the one a service-token call acts for, or the one whose mine realm the\nadministrator's console call reads; a member's is not read.",
               "type": [
                 "string",
                 "null"

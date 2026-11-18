@@ -65,6 +65,7 @@
       "kind": "종류",
       "no_place": "위치 없음",
       "own_company": "{name} (내 회사)",
+      "read_only": "읽기 전용",
       "place": "위치",
       "reason": "사유 (선택)",
       "refusal_reason": "거부 사유: {reason}",

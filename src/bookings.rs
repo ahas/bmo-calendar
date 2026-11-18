@@ -142,8 +142,8 @@ fn tell_soon(app: &Arc<App>) {
 // ---------------------------------------------------------------------------------------------------------
 // Resources
 
-/// Whether the caller makes, changes and retires a company's resources: the administrator and a head of the
-/// company. Resources stand in a company's realm alone.
+/// Whether the caller makes, changes and retires a company's resources: the administrator, whose write reaches
+/// his own company alone, and a head of the company. Resources stand in a company's realm alone.
 async fn may_keep_resources(app: &App, asked: &Asked) -> Answer<String> {
   let RealmKey::Company(company) = &asked.realm else {
     return Err(ApiError::no_company());
@@ -240,7 +240,7 @@ async fn create_resource(
   let app = &served.app;
   let given = query(given)?;
   let named = Named::of(given.account, given.holder_name, given.company);
-  let asked = asked_organization(app, &headers, &realm, named).await?;
+  let asked = asked_organization(app, &headers, &realm, named).await?.for_writing()?;
   let company = may_keep_resources(app, &asked).await?;
   let new: NewResource = body(&bytes)?;
   let id = new.id.clone().unwrap_or_else(fresh_id);
@@ -282,7 +282,7 @@ async fn change_resource(
   let app = &served.app;
   let given = query(given)?;
   let named = Named::of(given.account, given.holder_name, given.company);
-  let asked = asked_organization(app, &headers, &realm, named).await?;
+  let asked = asked_organization(app, &headers, &realm, named).await?.for_writing()?;
   let change: ResourceChange = body(&bytes)?;
   app.realm(&asked.realm, false).await?;
   let Some(memory) = resource_memory(app, &asked.realm, &id)? else {
@@ -310,7 +310,7 @@ async fn retire_resource(
   let app = &served.app;
   let given = query(given)?;
   let named = Named::of(given.account, given.holder_name, given.company);
-  let asked = asked_organization(app, &headers, &realm, named).await?;
+  let asked = asked_organization(app, &headers, &realm, named).await?.for_writing()?;
   let brain = app.realm(&asked.realm, false).await?;
   let (Some(brain), Some(memory)) = (brain, resource_memory(app, &asked.realm, &id)?) else {
     return Err(ApiError::not_found(format!("The company holds no live resource {id}.")));
@@ -498,7 +498,7 @@ async fn create_booking(
   let app = &served.app;
   let given = query(given)?;
   let named = Named::of(given.account, given.holder_name, given.company);
-  let asked = asked_organization(app, &headers, &realm, named).await?;
+  let asked = asked_organization(app, &headers, &realm, named).await?.for_writing()?;
   let new: NewBooking = body(&bytes)?;
   let id = new.id.clone().unwrap_or_else(fresh_id);
   if !valid_id(&id) {
@@ -582,7 +582,7 @@ async fn change_booking(
   let app = &served.app;
   let given = query(given)?;
   let named = Named::of(given.account, given.holder_name, given.company);
-  let asked = asked_organization(app, &headers, &realm, named).await?;
+  let asked = asked_organization(app, &headers, &realm, named).await?.for_writing()?;
   let change: BookingChange = body(&bytes)?;
   let brain = app.realm(&asked.realm, false).await?;
   let account = account(&asked)?;
@@ -675,7 +675,7 @@ async fn cancel_booking(
   let app = &served.app;
   let given = query(given)?;
   let named = Named::of(given.account, given.holder_name, given.company);
-  let asked = asked_organization(app, &headers, &realm, named).await?;
+  let asked = asked_organization(app, &headers, &realm, named).await?.for_writing()?;
   let brain = app.realm(&asked.realm, false).await?;
   let account = account(&asked)?;
   let _writing = app.booking_lock.lock().await;
@@ -714,7 +714,7 @@ async fn decide(
   let app = &served.app;
   let given = query(given)?;
   let named = Named::of(given.account, given.holder_name, given.company);
-  let asked = asked_organization(app, &headers, &realm, named).await?;
+  let asked = asked_organization(app, &headers, &realm, named).await?.for_writing()?;
   let decision: Decision = body(&bytes)?;
   let brain = app.realm(&asked.realm, false).await?;
   let account = account(&asked)?;
