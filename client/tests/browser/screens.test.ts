@@ -204,7 +204,11 @@ describe.each(WIDTHS)("at a %s's width", (width) => {
       const { context, page } = await openOther(width);
 
       try {
-        await page.evaluate((dark) => document.documentElement.classList.toggle("dark", dark), scheme === "dark");
+        // The screen's colours ease into the mode, so the mark is read once every colour transition has ended.
+        await page.evaluate(async (dark) => {
+          document.documentElement.classList.toggle("dark", dark);
+          await Promise.allSettled(document.getAnimations().filter((motion) => motion instanceof CSSTransition).map((motion) => motion.finished));
+        }, scheme === "dark");
         expect(await contrast(button(page, words.label.read_only).locator("span").first())).toBeGreaterThanOrEqual(4.5);
       } finally {
         await context.close();
