@@ -401,10 +401,14 @@ async fn units(headers: axum::http::HeaderMap) -> Response {
   .into_response()
 }
 
-/// Member 2 heads company 10.
-async fn unit_check(Json(body): Json<Value>) -> Json<Value> {
-  let allowed = body["unit"] == 10 && body["user"] == 2;
-  Json(json!({ "allowed": allowed, "grant": "organization:10#manage" }))
+/// Member 2 heads company 10. The ask is held to the account service's shape, `unit` a number and `user` a
+/// string, and any other is refused 400 `bad-request` as the account service refuses it.
+async fn unit_check(Json(body): Json<Value>) -> Response {
+  let (Some(unit), Some(user)) = (body["unit"].as_i64(), body["user"].as_str()) else {
+    return refused(StatusCode::BAD_REQUEST, "bad-request");
+  };
+  let allowed = unit == 10 && user == "2";
+  Json(json!({ "allowed": allowed, "grant": format!("organization:{unit}#manage") })).into_response()
 }
 
 async fn supervisor(Path(name): Path<String>) -> Response {

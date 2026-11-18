@@ -625,7 +625,8 @@ pub async fn companies(
   )
 }
 
-/// Whether an account heads a unit, or one above it.
+/// Whether an account heads a unit, or one above it. The account service takes the unit as a number and the
+/// account key as a string.
 pub async fn heads(
   http: &reqwest::Client,
   settings: &Settings,
@@ -633,7 +634,6 @@ pub async fn heads(
   user: &str,
 ) -> Result<bool, CallFault> {
   let unit = unit.parse::<i64>().map_or_else(|_| json!(unit), |number| json!(number));
-  let user = user.parse::<i64>().map_or_else(|_| json!(user), |number| json!(number));
   let body = json!({ "unit": unit, "user": user });
   match call::<Value>(http, &accounts(settings)?, Method::POST, "/checks/unit", &[], Some(&body)).await {
     Ok(answer) => Ok(answer["allowed"].as_bool().unwrap_or(false)),

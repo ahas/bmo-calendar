@@ -344,7 +344,7 @@ deployment writes before the flip with `bmo-calendar tool-env`.
 | whose account is whose | the account service `GET /senders/{sender}/user` (the owner's account), `GET /users/{user}` (a member's name and senders) |
 | an account's company | the account service `GET /users/{user}/unit` (its `company`; a 404 is no company) |
 | the companies the administrator reads | the account service `GET /units`, with the caller's owner key and role |
-| whether an account heads its company | the account service `POST /checks/unit` (`unit` the company, `user` the account) |
+| whether an account heads its company | the account service `POST /checks/unit` (`unit` the company's unit id as a number, `user` the account key as a string, as the account service's contract types them) |
 
 The brain's address and token are `BRAIN_ADDRESS` and `BRAIN_TOKEN` from `env/brain.env`; the receiver's
 `listen` from `env/receiver.toml` and its token from `env/receiver.token`; the account service's `[server]
