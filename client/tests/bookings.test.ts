@@ -4,7 +4,7 @@ import { dayBookings, dayCounts, dragSpan, firstFreeHour, freeGap, kindsOf, meet
 import { Refusal, createCalendarApi as apiOver } from "../app/domain/api";
 import { administers, booksIn, firstCompany } from "../app/domain/companies";
 import { createCalendarStore, fixed, held, refusalText } from "../app/domain/store";
-import { COMPANY, booking, calendar, eventRow, resource, settle, startStandIn } from "./stand-in";
+import { COMPANY, booking, calendar, eventRow, resource, settle, startStandIn, until } from "./stand-in";
 import { translator } from "./words";
 
 import type { Call } from "../app/domain/api";
@@ -369,7 +369,7 @@ describe("a write on a row", () => {
     chosen = "company-b";
     service.offline(false);
 
-    while (store.queue.value.length) await settle();
+    await until(() => service.asked.filter((one) => one.startsWith("POST")).length === 2);
 
     expect(service.asked.filter((one) => !one.startsWith("GET"))).toEqual([
       "PATCH /organization/events/b-review company-b",

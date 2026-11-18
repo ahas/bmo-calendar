@@ -263,3 +263,10 @@ export const unreachable: Call = () => ofetch("http://[::1]:1/");
 export function settle(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 30));
 }
+
+/** Waits until the condition holds, a few milliseconds at a time and two seconds at most, so a test asserts
+ *  what it waited for rather than a moment in between: a store sending its line of changes has emptied the
+ *  line before the service answers the first of them. */
+export async function until(condition: () => boolean): Promise<void> {
+  for (let beat = 0; beat < 400 && !condition(); beat++) await new Promise((resolve) => setTimeout(resolve, 5));
+}

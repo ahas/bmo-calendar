@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 
 import { createCalendarApi } from "../app/domain/api";
 import { createCalendarStore, held } from "../app/domain/store";
-import { calendar, eventRow, scheduleRow, settle, source, startStandIn, unreachable } from "./stand-in";
+import { calendar, eventRow, scheduleRow, source, startStandIn, unreachable, until } from "./stand-in";
 
 import type { Call } from "../app/domain/api";
 import type { Notice } from "../app/domain/store";
@@ -208,7 +208,7 @@ describe("the line of changes waiting for the network", () => {
     expect(store.events.value.map((event) => event.id)).toEqual(["dentist"]);
 
     // The service answers again: the line is sent, and the write it already holds is answered as it stands.
-    while (store.queue.value.length) await settle();
+    await until(() => notices.length > 0);
 
     expect(standIn.calls.filter((one) => one === "POST /mine/events")).toHaveLength(2);
     expect(standIn.events.mine.map((row) => row.id)).toEqual(["dentist"]);
@@ -222,11 +222,13 @@ describe("the line of changes waiting for the network", () => {
     standIn = startStandIn({ calendars: { mine: [calendar("mine", "mine", "Mine")] } });
 
     const service = standIn;
-    let down = true;
-    const call: Call = (path, options) => (down && options?.method ? unreachable(path, options) : service.call(path, options));
+    let down = false;
+    // With no network nothing answers, the store's probe of the service among it.
+    const call: Call = (path, options) => (down ? unreachable(path, options) : service.call(path, options));
     const { store } = storeOver(call);
 
     await store.loadCalendars();
+    down = true;
 
     const first = held(eventRow("mine", "one", "mine", "2026-11-04T09:00:00", "2026-11-04T10:00:00"));
 
@@ -238,7 +240,7 @@ describe("the line of changes waiting for the network", () => {
 
     down = false;
 
-    while (store.queue.value.length) await settle();
+    await until(() => service.events.mine.some((row) => row.title === "renamed"));
 
     expect(standIn.events.mine.map((row) => [row.id, row.title])).toEqual([["one", "renamed"]]);
 
