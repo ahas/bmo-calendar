@@ -53,6 +53,9 @@ pub struct Peers {
   pub memories: Vec<Value>,
   pub events: Vec<Value>,
   pub instructions: Vec<Value>,
+  /// The rooms the receiver lists for an account, and the account each private room among them is kept for.
+  pub account_rooms: BTreeMap<String, Vec<i64>>,
+  pub private_rooms: BTreeMap<i64, i64>,
   pub next: i64,
   /// A `createdAt` the next memory written takes in place of now.
   pub written_at: Option<i64>,
@@ -331,8 +334,16 @@ async fn owner() -> Json<Value> {
   Json(json!({ "senderId": OWNER_SENDER, "room": OWNER_ROOM }))
 }
 
-async fn room(Path(room): Path<i64>) -> Json<Value> {
-  Json(json!({ "id": room, "registered": room == MEMBER_ROOM || room == OWNER_ROOM }))
+async fn room(State(stand): State<Stand>, Path(room): Path<i64>) -> Json<Value> {
+  let private_of = stand.peers.lock().unwrap().private_rooms.get(&room).copied();
+  Json(
+    json!({ "id": room, "registered": room == MEMBER_ROOM || room == OWNER_ROOM, "privateOf": private_of }),
+  )
+}
+
+async fn account_rooms(State(stand): State<Stand>, Path(account): Path<String>) -> Json<Value> {
+  let rooms = stand.peers.lock().unwrap().account_rooms.get(&account).cloned().unwrap_or_default();
+  Json(json!({ "rooms": rooms }))
 }
 
 async fn instruct(State(stand): State<Stand>, Json(body): Json<Value>) -> Response {
@@ -425,6 +436,7 @@ pub async fn stand() -> Stand {
     .route("/events", get(brain_events))
     .route("/owner", get(owner))
     .route("/rooms/{room}", get(room))
+    .route("/accounts/{account}/rooms", get(account_rooms))
     .route("/instructions", post(instruct))
     .route("/senders/{sender}/user", get(sender_user))
     .route("/users/{user}", get(user))
