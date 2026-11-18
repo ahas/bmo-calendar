@@ -279,6 +279,13 @@ a wide screen the button is the grey icon at the toolbar's right end; on a phone
 bottom right over the foot bar's right end, and each view's scrolling grid keeps the layer's create room
 (`--bmo-create-room`) after its last hour, week or month, so what ends the grid stands clear of it. The add
 beside the calendars' group heading is that list's own control and not the screen's create button.
+A new event's ghost follows its form as the form is filled. A date or a time is typed segment by segment,
+so the ghost follows it once the focus leaves its segments. A ghost moved to another day is drawn there
+again with its form, and the focus stays on the same field of the form drawn there; only the first form
+of a new event puts the focus on its title. A new event holds a change while it differs from what it was
+drawn as, read through bmo-ui's opened-with snapshot of the draft itself, or while its form holds one the
+draft cannot take, such as an end before its start. So the form still asks before a change is thrown
+away, wherever it was drawn again, by Esc, by a press outside or by back, one question at a time.
 
 The screen is used by finger and by ear as well as by mouse:
 

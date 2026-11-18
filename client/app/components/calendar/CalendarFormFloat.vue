@@ -5,7 +5,7 @@
   <template v-if="narrow">
     <slot v-if="props.anchor" />
 
-    <UModal :open="props.open" :dismissible="props.dismissible" :title="props.title" @update:open="emit('update:open', $event)" @close:prevent="emit('close:prevent')">
+    <UModal :open="props.open" :dismissible="props.dismissible" :title="props.title" :content="opening" @update:open="emit('update:open', $event)" @close:prevent="emit('close:prevent')">
       <template v-if="!props.anchor" #default>
         <slot />
       </template>
@@ -23,7 +23,7 @@
     v-else
     :open="props.open"
     :dismissible="props.dismissible"
-    :content="props.content"
+    :content="popoverContent"
     :ui="{ content: `${props.width} max-w-[calc(100vw-2rem)] p-4` }"
     @update:open="emit('update:open', $event)"
     @close:prevent="emit('close:prevent')"
@@ -42,6 +42,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from "vue";
 import ShellClose from "bmo-ui/app/components/ShellClose.vue";
 import { useNarrow } from "bmo-ui/app/domain/screen";
 
@@ -59,9 +60,11 @@ interface Props {
   width?: string;
   /** The default slot is an anchor it stands by, not a trigger that opens it. */
   anchor?: boolean;
+  /** Opening leaves the focus to the form inside rather than moving it to the form's first field. */
+  keepFocus?: boolean;
 }
 
-const props = withDefaults(defineProps<Props>(), { content: undefined, width: "w-[26rem]", anchor: false });
+const props = withDefaults(defineProps<Props>(), { content: undefined, width: "w-[26rem]", anchor: false, keepFocus: false });
 
 const emit = defineEmits<{
   "update:open": [open: boolean];
@@ -69,6 +72,14 @@ const emit = defineEmits<{
 }>();
 
 const narrow = useNarrow();
+
+// What opening does with the focus, handed to the dialog and the popover alike.
+const opening = computed(() => ({
+  onOpenAutoFocus(event: Event) {
+    if (props.keepFocus) event.preventDefault();
+  }
+}));
+const popoverContent = computed(() => ({ ...props.content, ...opening.value }));
 
 function close(): void {
   if (props.dismissible) emit("update:open", false);

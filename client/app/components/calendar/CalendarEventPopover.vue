@@ -10,7 +10,7 @@
 
     <UContextMenu v-else :items="items" :disabled="disabled">
       <div class="contents">
-        <CalendarFormFloat :open="open" :dismissible="!dirty" :title="event.title || $t('calendar.label.untitled')" :content="{ side: formSide, collisionPadding: 16 }" @update:open="onUpdateOpen" @close:prevent="leave">
+        <CalendarFormFloat :open="open" :dismissible="dismissible" :title="event.title || $t('calendar.label.untitled')" :content="{ side: formSide, collisionPadding: 16 }" @update:open="onUpdateOpen" @close:prevent="leave">
           <slot :open="open" />
 
           <template #content>
@@ -27,7 +27,7 @@
 import { useMediaQuery } from "@vueuse/core";
 import { computed, nextTick, ref, useTemplateRef } from "vue";
 import { useI18n } from "vue-i18n";
-import { askDiscard } from "bmo-ui/app/domain/form-save";
+import { useCloseGuard } from "bmo-ui/app/domain/form-save";
 import { useIsland } from "bmo-ui/app/domain/island";
 
 import BookingForm from "../bookings/BookingForm.vue";
@@ -82,13 +82,17 @@ function onUpdateOpen(value: boolean): void {
   else closeEvent(props.event.key);
 }
 
-// Closing a form that holds a change asks first whether to throw it away.
-async function leave(): Promise<void> {
-  if (!dirty.value || (await askDiscard(t))) {
+// Closing a form that holds a change asks first whether to throw it away, one question at a time.
+const shown = computed({
+  get: () => open.value,
+  set(value: boolean) {
+    if (value) return;
+
     dirty.value = false;
     closeEvent(props.event.key);
   }
-}
+});
+const { dismissible, leave } = useCloseGuard(shown, () => dirty.value, t);
 
 // A booking is cancelled rather than deleted, and a refusal of it is told where the reader is.
 async function cancelBooking(): Promise<void> {

@@ -1,7 +1,7 @@
 <template>
   <!-- The ghost of an event being made, dressed as the event it would be, its form open beside it, or on
        a phone as a centred dialog over it. Only the segment holding its start carries the form. -->
-  <CalendarFormFloat anchor :open="!!anchored && open" :dismissible="!dirty" :title="$t('calendar.action.new_event')" :content="content" @update:open="onUpdateOpen" @close:prevent="leave">
+  <CalendarFormFloat anchor :open="shown" :dismissible="dismissible" :keep-focus="redrawn" :title="$t('calendar.action.new_event')" :content="content" @update:open="shown = $event" @close:prevent="leave">
     <div
       ref="el"
       v-bind="$attrs"
@@ -26,7 +26,7 @@
     </div>
 
     <template #content>
-      <CalendarEventForm v-if="draft" v-model:dirty="dirty" :draft="draft" @update="updateDraft" @commit="commitDraft" @escape="leave" />
+      <CalendarEventForm v-if="draft" v-model:dirty="formDirty" :draft="draft" :redrawn="redrawn" @update="updateDraft" @commit="commitDraft" @escape="leave" />
     </template>
   </CalendarFormFloat>
 </template>
@@ -34,7 +34,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, useTemplateRef, watch } from "vue";
 import { useI18n } from "vue-i18n";
-import { askDiscard } from "bmo-ui/app/domain/form-save";
+import { useCloseGuard } from "bmo-ui/app/domain/form-save";
 
 import CalendarEventForm from "./CalendarEventForm.vue";
 import CalendarFormFloat from "./CalendarFormFloat.vue";
@@ -51,13 +51,17 @@ const props = defineProps<{ variant: "block" | "chip"; anchored?: boolean; conti
 
 const { t } = useI18n();
 const { formSide } = useCalendar();
-const { draft, open, pendingScroll, updateDraft, discardDraft, commitDraft, registerAnchor } = useEventDraft();
+const { draft, open, changed, pendingScroll, updateDraft, discardDraft, commitDraft, standForm, registerAnchor } = useEventDraft();
 const { calendarByKey } = useCalendarEvents();
 const { scrollBehavior } = useMotion();
 
 registerAnchor();
 
-const dirty = ref(false);
+// The form standing here reads its changes against the draft it was drawn with here; the draft reads
+// them against what it was drawn as, wherever it has moved since, and the form alone holds what the
+// draft cannot take, an end before its start among them.
+const formDirty = ref(false);
+const dirty = computed(() => formDirty.value || changed.value);
 const color = computed(() => (draft.value ? calendarByKey(draft.value.calendar)?.color : undefined) ?? "primary");
 const title = computed(() => draft.value?.title || t("calendar.label.untitled"));
 const times = computed(() => {
@@ -68,18 +72,31 @@ const times = computed(() => {
 
 const content = computed(() => ({ side: formSide.value, sideOffset: 8, collisionPadding: 16 }));
 
-// A draft is no event until it is saved: closing it throws it away, asking first where the form holds a
-// change.
-function onUpdateOpen(value: boolean): void {
-  if (!value) discardDraft(true);
-}
+// A draft is no event until it is saved: closing it throws it away, asking first where it holds a change,
+// one question at a time.
+const shown = computed({
+  get: () => !!props.anchored && open.value,
+  set(value: boolean) {
+    if (value) return;
 
-async function leave(): Promise<void> {
-  if (!dirty.value || (await askDiscard(t))) {
-    dirty.value = false;
+    formDirty.value = false;
     discardDraft(true);
   }
-}
+});
+const { dismissible, leave } = useCloseGuard(shown, () => dirty.value, t);
+
+// The form standing here is the draft's first, or one drawn again where the draft moved to, which leaves
+// the focus to the form rather than to its first field (CalendarEventForm). Read as it opens, before the
+// form stands.
+const redrawn = ref(false);
+
+watch(
+  shown,
+  (value) => {
+    if (value) redrawn.value = standForm();
+  },
+  { immediate: true, flush: "sync" }
+);
 
 const el = useTemplateRef("el");
 

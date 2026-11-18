@@ -13,10 +13,10 @@
     @keydown.enter.capture="onEnter"
     @keydown.escape.capture.stop="emit('escape')"
   >
-    <div class="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-2">
+    <div ref="fields" class="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-2" @focusout="onFieldsFocusout">
       <label :for="titleId" class="whitespace-nowrap text-sm text-muted">{{ $t("calendar.label.event_title") }}</label>
       <UFormField name="title">
-        <UInput :id="titleId" v-model="state.title" :placeholder="$t('calendar.label.untitled')" :maxlength="200" :autofocus="!!draft || !narrow" :size="fieldSize" class="w-full" />
+        <UInput :id="titleId" v-model="state.title" :placeholder="$t('calendar.label.untitled')" :maxlength="200" :autofocus="draft ? !redrawn : !narrow" :size="fieldSize" class="w-full" />
       </UFormField>
 
       <label :for="calendarId" class="whitespace-nowrap text-sm text-muted">{{ $t("calendar.label.calendar") }}</label>
@@ -64,7 +64,7 @@
 import { CalendarDate, Time } from "@internationalized/date";
 import { useMediaQuery } from "@vueuse/core";
 import { addDays, subMilliseconds } from "date-fns";
-import { computed, onBeforeUnmount, ref, shallowReactive, useId, useTemplateRef, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, shallowReactive, useId, useTemplateRef, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import GrowingTextarea from "bmo-ui/app/components/GrowingTextarea.vue";
 import { useNarrow } from "bmo-ui/app/domain/screen";
@@ -76,13 +76,19 @@ import { fromLocalISO, toCalendarDate, toDate, toDateTime, toLocalISO, toTime } 
 import { ALARM_CHOICES, DEFAULT_ALARM, DEFAULT_REPEAT, REPEAT_CHOICES, choiceItems } from "../../../shared/choices";
 import { calendarKey, useCalendarEvents } from "../../composables/useCalendarEvents";
 import { useEventChange } from "../../composables/useEventChange";
+import { useEventDraft } from "../../composables/useEventDraft";
 import { useEventEditor } from "../../composables/useEventEditor";
 
 import type { FormError } from "@nuxt/ui";
 import type { EventDraft } from "../../composables/useEventDraft";
 import type { Alarm, Calendar, CalendarEvent, Repeat } from "../../../shared/types";
 
-const props = defineProps<{ event?: CalendarEvent; draft?: EventDraft }>();
+const props = defineProps<{
+  event?: CalendarEvent;
+  draft?: EventDraft;
+  /** The draft's form drawn again where the draft moved to, rather than its first. */
+  redrawn?: boolean;
+}>();
 
 const emit = defineEmits<{
   update: [patch: Partial<EventDraft>];
@@ -112,6 +118,36 @@ const repeatId = useId();
 const notesId = useId();
 
 if (props.event) useEventEditor().registerAnchor();
+
+// A draft moved to another day by its start is drawn there again, form and all: the field that held the
+// focus here gives it to the same field there, so a date typed segment by segment goes on being typed.
+// Only the draft's first form takes the focus on its own, at its title; one drawn again takes none of
+// its own, and since it may stand before the form it follows is taken down, it gives the focus once the
+// whole redraw is over: to the field that held it, else to the title where the focus went with the form.
+const drafts = props.draft ? useEventDraft() : null;
+const fields = useTemplateRef<HTMLElement>("fields");
+
+/** The fields' controls the keyboard reaches, in the order it reaches them. */
+function controls(): HTMLElement[] {
+  return [...(fields.value?.querySelectorAll<HTMLElement>('input:not([type="hidden"]), textarea, button, [tabindex]:not([tabindex="-1"])') ?? [])];
+}
+
+onMounted(() => {
+  if (!drafts || !props.redrawn) return;
+
+  setTimeout(() => {
+    const place = drafts.takeCarriedFocus();
+
+    if (place !== null) controls()[place]?.focus();
+    else if (document.activeElement === document.body) document.getElementById(titleId)?.focus();
+  });
+});
+
+onBeforeUnmount(() => {
+  const place = controls().indexOf(document.activeElement as HTMLElement);
+
+  if (drafts && place >= 0) drafts.carryFocus(place);
+});
 
 interface FormState {
   title: string;
@@ -228,17 +264,40 @@ const fieldSize = computed(() => (coarse.value ? "xl" : "md"));
 const alarmItems = computed(() => choiceItems(t, ALARM_CHOICES, DEFAULT_ALARM));
 const repeatItems = computed(() => choiceItems(t, REPEAT_CHOICES, DEFAULT_REPEAT));
 
-// A draft's ghost walks to where the form puts it as it is filled.
+// A draft's ghost walks to where the form puts it as it is filled. A date or a time is typed segment by
+// segment, and a segment keeps the digits typed so far for the next one, so while the focus stands on a
+// segment the ghost waits for the focus to leave them: a ghost walked to another day is drawn there again
+// with its form, and the digits waiting would be lost.
+const SEGMENT = "[data-reka-date-field-segment], [data-reka-time-field-segment]";
+let waiting = false;
+
+function onSegment(target: EventTarget | null): boolean {
+  return target instanceof Element && target.matches(SEGMENT) && !!fields.value?.contains(target);
+}
+
+function walkGhost(): void {
+  waiting = false;
+
+  const period = span(state);
+
+  if (!period || period.end <= period.start) return;
+
+  emit("update", { title: state.title, calendar: state.calendar, description: state.description, allDay: state.allDay, alarm: state.alarm, repeat: state.repeat, ...period });
+}
+
+// The focus lands on its new control only after the focus leaving has been told, so the ghost walks once
+// it has: the form drawn on the day it walks to gives the focus to the control it went to.
+function onFieldsFocusout(event: FocusEvent): void {
+  if (waiting && !onSegment(event.relatedTarget)) setTimeout(walkGhost);
+}
+
 watch(
   () => signature(state),
   () => {
     if (props.event) return;
 
-    const period = span(state);
-
-    if (!period || period.end <= period.start) return;
-
-    emit("update", { title: state.title, calendar: state.calendar, description: state.description, allDay: state.allDay, alarm: state.alarm, repeat: state.repeat, ...period });
+    if (onSegment(document.activeElement)) waiting = true;
+    else walkGhost();
   }
 );
 

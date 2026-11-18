@@ -1,7 +1,8 @@
 import { addDays, addMinutes, startOfDay } from "date-fns";
 import { useEventListener } from "@vueuse/core";
-import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
+import { computed, effectScope, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
 import { navigateTo } from "nuxt/app";
+import { useOpenedWith } from "bmo-ui/app/domain/form-save";
 
 import { dateAtPoint, toCalendarDate, toDate, toLocalISO } from "../domain/dates";
 import { DRAFT_EVENT_KEY, DRAG_THRESHOLD, SNAP_MINUTES, minutesInColumn } from "../domain/layout";
@@ -9,6 +10,9 @@ import { DEFAULT_ALARM, DEFAULT_REPEAT } from "../../shared/choices";
 import { createAppComposable } from "./shared";
 import { calendarKey, useCalendarEvents } from "./useCalendarEvents";
 import { useCalendar } from "./useCalendar";
+
+import type { EffectScope } from "vue";
+import type { OpenedWith } from "bmo-ui/app/domain/form-save";
 
 import type { QuickEvent } from "../domain/quick";
 import type { Alarm, CalendarEvent, Realm, Repeat } from "../../shared/types";
@@ -60,6 +64,51 @@ const _useEventDraft = () => {
   const drawing = ref(false);
   const open = computed(() => !!draft.value && !drawing.value);
 
+  // What the standing draft opened with, one snapshot to a draft: its form is drawn again wherever the
+  // draft moves, so the draft rather than the form holds what it was drawn as.
+  const openedWith = shallowRef<{ scope: EffectScope; read: OpenedWith } | null>(null);
+  const changed = computed(() => openedWith.value?.read.dirty.value ?? false);
+
+  function forgetOpenedWith(): void {
+    openedWith.value?.scope.stop();
+    openedWith.value = null;
+  }
+
+  // Where among its fields the draft's form held the focus as it was taken down to be drawn again on the
+  // day the draft moved to, so the form drawn there gives it back rather than to its title.
+  let carriedFocus: number | null = null;
+  // Whether the draft's form has stood yet: only its first takes the focus on its own.
+  let formStood = false;
+
+  /** Whether a form of the draft stood before the one standing from now. */
+  function standForm(): boolean {
+    const stood = formStood;
+
+    formStood = true;
+
+    return stood;
+  }
+
+  function carryFocus(place: number): void {
+    carriedFocus = place;
+  }
+
+  function takeCarriedFocus(): number | null {
+    const place = carriedFocus;
+
+    carriedFocus = null;
+
+    return place;
+  }
+
+  function takeOpenedWith(): void {
+    forgetOpenedWith();
+
+    const scope = effectScope(true);
+
+    openedWith.value = { scope, read: scope.run(() => useOpenedWith(() => draft.value, { open }))! };
+  }
+
   const hosts = ref(0);
   const anchors = ref(0);
   let everAnchored = false;
@@ -110,6 +159,9 @@ const _useEventDraft = () => {
       repeat: DEFAULT_REPEAT
     };
 
+    takeOpenedWith();
+    carriedFocus = null;
+    formStood = false;
     everAnchored = false;
     pendingScroll.value = input.scroll ?? false;
     origin = document.activeElement as HTMLElement | null;
@@ -124,6 +176,8 @@ const _useEventDraft = () => {
     if (!draft.value) return;
 
     draft.value = null;
+    forgetOpenedWith();
+    carriedFocus = null;
     drawing.value = false;
     pendingScroll.value = false;
     everAnchored = false;
@@ -337,12 +391,16 @@ const _useEventDraft = () => {
     draft,
     drawing,
     open,
+    changed,
     draftEvent,
     pendingScroll,
     createDraft,
     updateDraft,
     discardDraft,
     commitDraft,
+    carryFocus,
+    takeCarriedFocus,
+    standForm,
     createAtAnchor,
     createFromQuick,
     onGridPointerdown,
