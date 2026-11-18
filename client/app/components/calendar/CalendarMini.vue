@@ -1,6 +1,6 @@
 <template>
   <!-- The small month beside the grid: a day pressed is where the screen goes. -->
-  <UCalendar v-model="model" :week-starts-on="WEEK_STARTS_ON" :year-controls="false" fixed-weeks class="px-2" />
+  <DateCalendar v-model="model" :week-starts-on="WEEK_STARTS_ON" :year-controls="false" fixed-weeks class="px-2" />
 </template>
 
 <script setup lang="ts">

@@ -30,7 +30,7 @@
             </UButton>
 
             <template #content>
-              <UCalendar v-model="pickedDay" :week-starts-on="WEEK_STARTS_ON" class="p-2" />
+              <DateCalendar v-model="pickedDay" :week-starts-on="WEEK_STARTS_ON" class="p-2" />
             </template>
           </UPopover>
         </div>

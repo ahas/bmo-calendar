@@ -6,7 +6,7 @@
       <IconButton :size="props.size" icon="i-material-symbols-calendar-today-outline" :disabled="props.disabled" :label="$t('calendar.action.pick_day')" />
 
       <template #content>
-        <UCalendar v-model="model" :week-starts-on="WEEK_STARTS_ON" class="p-2" />
+        <DateCalendar v-model="model" :week-starts-on="WEEK_STARTS_ON" class="p-2" />
       </template>
     </UPopover>
   </div>
