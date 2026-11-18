@@ -436,15 +436,51 @@ pub async fn owner(http: &reqwest::Client, settings: &Settings) -> Result<Owner,
   call(http, &receiver(settings)?, Method::GET, "/owner", &[], None).await
 }
 
-/// Whether the receiver holds a room registered under this number.
-pub async fn registered_room(
+/// What the receiver says of one room it holds: whether it is registered, and whose private room it is.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Room {
+  #[serde(default)]
+  pub registered: bool,
+  #[serde(default)]
+  pub private_of: Option<i64>,
+}
+
+impl Room {
+  /// Whether this is the private room of the account under this key.
+  pub fn is_private_to(&self, account: &str) -> bool {
+    self.private_of.is_some_and(|private_of| private_of.to_string() == account)
+  }
+}
+
+/// One room the receiver holds, where it holds one under this number.
+pub async fn room(
   http: &reqwest::Client,
   settings: &Settings,
   room: i64,
-) -> Result<bool, CallFault> {
-  match call::<Value>(http, &receiver(settings)?, Method::GET, &format!("/rooms/{room}"), &[], None).await {
-    Ok(room) => Ok(room["registered"].as_bool().unwrap_or(false)),
-    Err(fault) if fault.status() == Some(404) => Ok(false),
+) -> Result<Option<Room>, CallFault> {
+  match call::<Room>(http, &receiver(settings)?, Method::GET, &format!("/rooms/{room}"), &[], None).await {
+    Ok(room) => Ok(Some(room)),
+    Err(fault) if fault.status() == Some(404) => Ok(None),
+    Err(fault) => Err(fault),
+  }
+}
+
+/// The numbers of the rooms the receiver lists for a console account, its private rooms among them.
+pub async fn account_rooms(
+  http: &reqwest::Client,
+  settings: &Settings,
+  account: &str,
+) -> Result<Vec<i64>, CallFault> {
+  #[derive(Deserialize)]
+  struct Rooms {
+    #[serde(default)]
+    rooms: Vec<i64>,
+  }
+  let path = format!("/accounts/{account}/rooms");
+  match call::<Rooms>(http, &receiver(settings)?, Method::GET, &path, &[], None).await {
+    Ok(listed) => Ok(listed.rooms),
+    Err(fault) if fault.status() == Some(404) => Ok(Vec::new()),
     Err(fault) => Err(fault),
   }
 }

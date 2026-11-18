@@ -159,6 +159,39 @@ async fn each_account_is_told_in_the_room_it_reaches() {
 }
 
 #[tokio::test]
+async fn a_member_with_no_registered_room_is_told_in_their_own_bmo_room() {
+  let service = Service::fresh().await;
+  {
+    let mut peers = service.stand.peers.lock().unwrap();
+    // Member 2's registered sender room comes before the BMO room kept for them.
+    peers.account_rooms.insert("2".to_owned(), vec![210]);
+    peers.private_rooms.insert(210, 2);
+    // Member 3's rooms: another account's private room, a shared room and two of their own BMO's.
+    peers.account_rooms.insert("3".to_owned(), vec![730, 720, 710, 705]);
+    peers.private_rooms.extend([(720, 3), (710, 3), (705, 2)]);
+  }
+  due_event(&service, "2", "Member with a room").await;
+  due_event(&service, "3", "Member with a BMO").await;
+
+  let (_, beat) = service.post("/beats", json!({})).await;
+  assert_eq!(beat["told"].as_array().unwrap().len(), 2, "{beat}");
+  let rooms: Vec<(i64, String)> = service
+    .stand
+    .instructions()
+    .iter()
+    .map(|one| (one["room"].as_i64().unwrap(), one["summary"].as_str().unwrap().to_owned()))
+    .collect();
+  assert!(rooms.contains(&(MEMBER_ROOM, "Member with a room".to_owned())), "{rooms:?}");
+  assert!(rooms.contains(&(710, "Member with a BMO".to_owned())), "{rooms:?}");
+  let own = service.stand.instructions().into_iter().find(|one| one["room"] == 710).unwrap();
+  let order = own["said"]["order"].as_str().unwrap();
+  assert!(
+    order.contains("It is for member-b (account 3)."),
+    "told in a room of their own: {order}"
+  );
+}
+
+#[tokio::test]
 async fn the_organizations_tell_reaches_everyone_it_names() {
   let service = Service::fresh().await;
   for account in ["2", "3"] {

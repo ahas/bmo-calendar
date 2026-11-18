@@ -274,15 +274,11 @@ pub async fn tell(
       continue;
     }
     let user = peers::user(&app.http, &app.settings, &account).await.ok().flatten();
-    let mut room = None;
-    for sender in user.as_ref().map(|user| user.senders.clone()).unwrap_or_default() {
-      if sender != owner.room
-        && peers::registered_room(&app.http, &app.settings, sender).await.unwrap_or(false)
-      {
-        room = Some(sender);
-        break;
-      }
-    }
+    let senders = user.as_ref().map(|user| user.senders.clone()).unwrap_or_default();
+    let room = match sender_room(app, &owner, &senders).await {
+      Some(room) => Some(room),
+      None => own_bmo_room(app, &owner, &account).await,
+    };
     let listener = Listener {
       account,
       name: user.and_then(|user| user.name),
@@ -314,6 +310,31 @@ pub async fn tell(
     told.push(room);
   }
   Ok(told)
+}
+
+/// The first room one of a member's senders numbers that the receiver holds registered, leaving
+/// out the owner's room.
+async fn sender_room(app: &App, owner: &peers::Owner, senders: &[i64]) -> Option<i64> {
+  for &sender in senders.iter().filter(|sender| **sender != owner.room) {
+    if matches!(peers::room(&app.http, &app.settings, sender).await, Ok(Some(room)) if room.registered) {
+      return Some(sender);
+    }
+  }
+  None
+}
+
+/// The private room the receiver keeps for the account's own BMO: the lowest numbered of the account's rooms
+/// whose record names it the account's private room, leaving out the owner's room.
+async fn own_bmo_room(app: &App, owner: &peers::Owner, account: &str) -> Option<i64> {
+  let mut rooms = peers::account_rooms(&app.http, &app.settings, account).await.ok()?;
+  rooms.sort_unstable();
+  for room in rooms.into_iter().filter(|room| *room != owner.room) {
+    if matches!(peers::room(&app.http, &app.settings, room).await, Ok(Some(held)) if held.is_private_to(account))
+    {
+      return Some(room);
+    }
+  }
+  None
 }
 
 /// The order a room's supervisor is handed, in English: a marker naming the alarm, the event, its start, its

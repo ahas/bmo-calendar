@@ -257,7 +257,9 @@ in the calendar's company (the owner alone in the `platform` company), `nobody` 
 owner's private room (the receiver's `GET /owner`) for the owner's account (the account the account service
 links to the owner's sender); for a member, the room numbered as one of the senders the account service links
 to the member's account (`GET /users/{user}`) that the receiver holds registered (`GET /rooms/{roomId}`), else
-the owner's private room naming the member. One room is told once, naming every account it is told for. A
+the private room the receiver keeps for the member's own BMO (of the rooms `GET /accounts/{account}/rooms`
+lists, the lowest numbered whose `GET /rooms/{roomId}` names the account as its `privateOf`), else the owner's
+private room naming the member. One room is told once, naming every account it is told for. A
 telling the receiver refuses or does not answer keeps no mark, and the next beat tells it again.
 
 ## Console
@@ -337,7 +339,7 @@ deployment writes before the flip with `bmo-calendar tool-env`.
 | the realm's brain, made on first write | brain `GET /brains?accountKey=&agentKey=`, `POST /brains` |
 | calendars, events, sources, schedules, resources, bookings and the move's record read, written, versioned, retired | brain `GET /memories`, `POST /memories`, `POST /memories/{id}/versions`, `PATCH /memories/{id}` |
 | the brain's changes followed | brain `GET /events` (`memory.written`, `memory.moved`, `scope=brain:<id>`) |
-| an alarm told | receiver `POST /instructions`; the owner's sender and room from `GET /owner`; a member's room by `GET /rooms/{roomId}` |
+| an alarm told | receiver `POST /instructions`; the owner's sender and room from `GET /owner`; a member's room by `GET /rooms/{roomId}`, else their own BMO's by `GET /accounts/{account}/rooms` |
 | whose account a tool session's holder acts for | agency `GET /supervisors/{supervisorName}`, then `GET /role-agents` (each `ownerAccount`) |
 | whose account is whose | the account service `GET /senders/{sender}/user` (the owner's account), `GET /users/{user}` (a member's name and senders) |
 | an account's company | the account service `GET /users/{user}/unit` (its `company`; a 404 is no company) |

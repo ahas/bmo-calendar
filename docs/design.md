@@ -188,14 +188,23 @@ unit beats once a minute and reads the due alarms from its cache; the moment it 
 due while it was down, once each, naming how late. Beside the marks the store keeps the moment of the last
 beat, which is how far back a beat looks; an event written after its alarm's moment and before its start is
 told at the next beat. The telling is the receiver's instruction route: an order for the
-supervisor in the recipient's room — the owner's private room for the owner; for a member, the room numbered
-as one of the senders the account service links to the member's account, where the receiver holds it
-registered, and the owner's private room naming the member where it holds none. The order opens on the
-marker `CALENDAR ALARM.` and carries the alarm's data alone — the event, its start, its calendar and realm,
-how late it is and whom it is for — never an instruction; how a quiet instruction is answered stands in the
-receiving session's own rules, so the supervisor says it in its own words (「비모가 알려준다」). A
-repeating event's next occurrence is told when its moment comes; a cancelled event's pending alarm is told
-no more. An organization calendar that tells everyone tells the accounts of its own company; one in the
+supervisor in the recipient's room, the first of these that stands, as bmo-project's notices are (bmo-project
+`docs/design.md`, 「Notices」):
+
+1. the owner's private room, for the owner;
+2. for a member, the room numbered as one of the senders the account service links to the member's account,
+   where the receiver holds it registered;
+3. else the private room the receiver keeps for the member's own BMO: of the rooms the receiver lists for
+   their account, the lowest numbered whose record names it that account's private room. A member who stands
+   in the console alone is told here, since their one linked sender is their record identity, which numbers
+   no room;
+4. else the owner's private room, naming the member.
+
+The order opens on the marker `CALENDAR ALARM.` and carries the alarm's data alone — the event, its start,
+its calendar and realm, how late it is and whom it is for — never an instruction; how a quiet instruction is
+answered stands in the receiving session's own rules, so the supervisor says it in its own words
+(「비모가 알려준다」). A repeating event's next occurrence is told when its moment comes; a cancelled event's
+pending alarm is told no more. An organization calendar that tells everyone tells the accounts of its own company; one in the
 platform's own realm tells the owner.
 
 ## The tool
