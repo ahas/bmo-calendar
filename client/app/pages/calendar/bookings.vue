@@ -86,7 +86,7 @@
 
         <!-- The company is chosen beside the views where there is room; on a phone, on the calendar's sidebar. -->
         <div v-if="administrator && !(narrow && tab === 'all')" :class="tab !== 'all' && 'min-w-0 flex-1'">
-          <CompanySelect size="sm" />
+          <CompanySelect size="sm" color="neutral" variant="ghost" trailing-icon="i-material-symbols-arrow-drop-down" />
         </div>
         <div v-else-if="tab !== 'all'" class="min-w-0 flex-1" />
 

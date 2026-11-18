@@ -55,10 +55,18 @@ describe("a value chosen from a list", () => {
     expect([select.tag, attribute(select, "value-key")]).toEqual(["ChoiceSelect", "value"]);
   });
 
-  test("the keepers are found through the people directory as their names are typed", () => {
+  test("the keepers are found through the people directory as their names are typed, the field empty again after each pick", () => {
     const picker = templateElements(at("components/bookings/KeeperPicker.vue")).find((element) => element.tag === "ChoiceSelect")!;
 
-    expect(attribute(picker, "find")).toBe("find");
+    // A value of null holds the select to the screen's value, so a pick leaves no key standing in the field.
+    expect([attribute(picker, "find"), attribute(picker, "model-value")]).toEqual(["find", "null"]);
+  });
+
+  test("the keepers are drawn once: as names beside the search, or by the tags field that holds their keys", () => {
+    const shown = templateElements(at("components/bookings/KeeperPicker.vue")).find((element) => element.tag === "ul")!;
+    const condition = shown.props.find((prop) => prop.name === "if" && "exp" in prop);
+
+    expect(condition && "exp" in condition ? condition.exp?.loc.source : undefined).toContain("searchable");
   });
 });
 

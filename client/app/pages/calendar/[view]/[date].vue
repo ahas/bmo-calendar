@@ -53,8 +53,9 @@
             :aria-label="$t('calendar.aria.view_named', { view: $t(VIEW_LABELS[view]) })"
             @update:model-value="(one: CalendarView) => void navigateTo(pathFor(date, one))"
           >
+            <!-- The key stands last on every row, past the chosen row's check, so the keys line up down the list. -->
             <template #item-trailing="{ item }">
-              <UKbd :value="VIEW_KEYS[(item as { value: CalendarView }).value]" />
+              <UKbd :value="VIEW_KEYS[(item as { value: CalendarView }).value]" class="order-last" />
             </template>
           </ChoiceSelect>
         </div>

@@ -1,10 +1,11 @@
 <template>
   <!-- A resource's keepers, chosen among the company's people through the console's people directory and
-       each drawn by the name it answers; a keeper is taken off by its own mark. The directory answers the
-       reader's own company alone, so where the console offers none, or the administrator keeps another
-       company's resources, keepers are written by their account keys. -->
+       each drawn by the name it answers; a keeper is taken off by its own mark, and the field stands empty
+       again after each pick. The directory answers the reader's own company alone, so where the console
+       offers none, or the administrator keeps another company's resources, keepers are written by their
+       account keys in a tags field, which draws them itself. -->
   <div class="flex min-w-0 flex-col gap-2">
-    <ul v-if="model.length" class="flex flex-wrap gap-1">
+    <ul v-if="searchable && model.length" class="flex flex-wrap gap-1">
       <li v-for="user in model" :key="user">
         <UBadge color="neutral" variant="soft" size="lg" class="gap-0.5 py-0 pe-0">
           <span class="truncate">{{ nameOf(user) }}</span>
@@ -16,7 +17,7 @@
     <ChoiceSelect
       v-if="searchable"
       :id="props.id"
-      :model-value="undefined"
+      :model-value="null"
       :items="[]"
       :find="find"
       value-key="value"
