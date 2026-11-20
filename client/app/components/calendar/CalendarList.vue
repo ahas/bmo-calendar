@@ -2,23 +2,21 @@
   <!-- The calendars, the account's own and the organization's apart: each with its colour, shown or hidden on the grid for
        this account, and its settings a press away; a mark spins beside one while its change is sent. Under each
        realm's calendars stand the sources other units push schedules under, one layer each, shown or hidden
-       the same way and marked as received. Under the organization's heading the administrator chooses the
-       company it reads; another company's calendars and sources he reads alone, the heading marked read-only
-       and no calendar offered to add, set or hide, nor a source to hide. The mark is pressed to open the choice
-       of company, where the reading is changed. At the foot stands the way to the booking screen. -->
+       the same way and marked as received. The organization's are the company read, which the administrator
+       chooses in the screen's list of companies; another company's calendars and sources he reads alone, the
+       heading marked read-only and no calendar offered to add, set or hide, nor a source to hide. At the foot
+       stands the way to the booking screen, on the same company. -->
   <div class="flex flex-col gap-4">
     <section v-for="group in groups" :key="group.realm" class="flex flex-col gap-1">
       <div class="flex h-8 items-center justify-between gap-2 ps-2">
-        <h2 class="flex items-center gap-1.5 text-sm font-semibold text-highlighted">
-          <UIcon :name="REALM_ICON[group.realm]" class="size-4 text-muted" />
-          {{ $t(group.realm === "mine" ? "calendar.label.mine" : "calendar.label.organization") }}
+        <!-- Short of room the heading's words give way, read whole in the shared tooltip of a cut line, and what
+             stands at its trailing edge stays there. -->
+        <h2 class="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-highlighted">
+          <UIcon :name="REALM_ICON[group.realm]" class="size-4 shrink-0 text-muted" />
+          <span class="truncate">{{ $t(group.realm === "mine" ? "calendar.label.mine" : "calendar.label.organization") }}</span>
         </h2>
         <CalendarSettingsPopover v-if="writable(group.realm)" :realm="group.realm" />
-        <UButton v-else :label="$t('calendar.label.read_only')" color="neutral" variant="soft" size="xs" class="shrink-0" @click="choosingCompany = true" />
-      </div>
-
-      <div v-if="group.realm === 'organization' && administrator" class="flex ps-2 pb-1">
-        <CompanySelect v-model:open="choosingCompany" class="w-full" />
+        <UBadge v-else :label="$t('calendar.label.read_only')" color="neutral" variant="soft" size="sm" class="shrink-0" />
       </div>
 
       <template v-if="calendarsRead">
@@ -63,24 +61,19 @@
       {{ $t("calendar.error.calendars_failed") }}
     </p>
 
-    <UButton :to="BOOKINGS_PATH" :icon="BOOKING_ICON" :label="$t('calendar.label.bookings')" color="neutral" variant="ghost" block class="justify-start pointer-coarse:min-h-11" />
+    <UButton :to="{ path: BOOKINGS_PATH, query: companyQuery(company) }" :icon="BOOKING_ICON" :label="$t('calendar.label.bookings')" color="neutral" variant="ghost" block class="justify-start pointer-coarse:min-h-11" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
-
 import CalendarSettingsPopover from "./CalendarSettingsPopover.vue";
-import CompanySelect from "../bookings/CompanySelect.vue";
 import { BOOKING_ICON } from "../../domain/bookings";
+import { companyQuery } from "../../domain/companies";
 import { RECEIVED_ICON, REALM_ICON, SENDING_ICON } from "../../domain/colors";
 import { BOOKINGS_PATH } from "../../composables/useBookingScreen";
+import { useCalendar } from "../../composables/useCalendar";
 import { useCalendarEvents } from "../../composables/useCalendarEvents";
-import { useCompanies } from "../../composables/useCompanies";
 
 const { groups, calendarsRead, calendarsFailed, setHidden, setSourceHidden, sendingLayers, writable } = useCalendarEvents();
-const { administrator } = useCompanies();
-
-// Whether the choice of company stands open, as its list or as the read-only mark opened it.
-const choosingCompany = ref(false);
+const { company } = useCalendar();
 </script>

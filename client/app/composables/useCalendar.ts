@@ -3,6 +3,7 @@ import { computed, ref, shallowRef } from "vue";
 import { navigateTo, useRoute } from "nuxt/app";
 import { useI18n } from "vue-i18n";
 
+import { addressedCompany } from "../domain/companies";
 import { formatMonth, formatRangeTitle, formatYear, rangeFor, setDateLocale, toDate, todayDate } from "../domain/dates";
 import { CALENDAR_VIEWS } from "../../shared/types";
 import { createAppComposable } from "./shared";
@@ -12,11 +13,14 @@ import type { RangeTitle } from "../domain/dates";
 import type { CalendarView, DateRange } from "../../shared/types";
 
 // Where the screen stands: the view and the day in its address (`/calendar/week/2026-11-03`), the span
-// they cover, the title naming it, and the steps back and forward.
+// they cover, the title naming it, and the steps back and forward, each keeping the company the address names
+// (`?company=<id>`).
 
-/** The screen's path for a day in a view. */
-export function calendarPath(target: CalendarDate, view: CalendarView): string {
-  return `/calendar/${view}/${target.toString()}`;
+/** The screen's path for a day in a view, naming the company where one is named. */
+export function calendarPath(target: CalendarDate, view: CalendarView, company: string | null = null): string {
+  const path = `/calendar/${view}/${target.toString()}`;
+
+  return company === null ? path : `${path}?${new URLSearchParams({ company }).toString()}`;
 }
 
 const _useCalendar = () => {
@@ -40,6 +44,9 @@ const _useCalendar = () => {
   });
 
   const range = computed<DateRange>(() => rangeFor(view.value, date.value));
+
+  /** The company the address names, which every step keeps; none where it names none. */
+  const company = computed(() => addressedCompany(route.query));
 
   // The month standing at the top of the month view's scroll, which the title follows while it scrolls.
   const visibleMonth = shallowRef<CalendarDate | null>(null);
@@ -76,7 +83,7 @@ const _useCalendar = () => {
   const nextDate = computed(() => date.value.add(step.value));
 
   function pathFor(target: CalendarDate, targetView: CalendarView = view.value): string {
-    return calendarPath(target, targetView);
+    return calendarPath(target, targetView, company.value);
   }
 
   function go(direction: "left" | "right"): void {
@@ -86,7 +93,7 @@ const _useCalendar = () => {
   // The calendars, as a side region beside the grid where there is room and a drawer on a phone.
   const isSidebarOpen = ref(false);
 
-  return { view, date, range, title, visibleMonth, formSide, prevDate, nextDate, pathFor, go, isSidebarOpen };
+  return { view, date, range, company, title, visibleMonth, formSide, prevDate, nextDate, pathFor, go, isSidebarOpen };
 };
 
 export const useCalendar = createAppComposable(_useCalendar);

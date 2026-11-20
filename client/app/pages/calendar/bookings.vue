@@ -4,8 +4,9 @@
        bookings from today on, the requests waiting on what the reader keeps, and the resources themselves.
        The way back, the parts of the screen and the toolbar acting on the part shown stand in the screen's
        own rows; the one create button makes a new booking, and a resource while the resources stand. On a
-       phone the row keeps one line: the title takes its short form and the kind is cut to its room. Where it
-       stands is the address. -->
+       phone the row keeps one line: the title takes its short form and the kind is cut to its room. For the
+       administrator the part shown stands beside the list of companies under those rows. Where it stands, the
+       company with it, is the address. -->
   <UDashboardPanel id="calendar-bookings" :ui="{ body: 'p-0 sm:p-0 gap-0 sm:gap-0 overflow-y-hidden [&>*]:max-w-none' }">
     <template v-if="!consoleBar" #header>
       <UDashboardNavbar :title="$t('calendar.label.bookings')" :icon="BOOKING_ICON" />
@@ -84,11 +85,7 @@
           </div>
         </template>
 
-        <!-- The company is chosen beside the views where there is room; on a phone, on the calendar's sidebar. -->
-        <div v-if="administrator && !(narrow && tab === 'all')" :class="tab !== 'all' && 'min-w-0 flex-1'">
-          <CompanySelect size="sm" color="neutral" variant="ghost" trailing-icon="i-material-symbols-arrow-drop-down" />
-        </div>
-        <div v-else-if="tab !== 'all'" class="min-w-0 flex-1" />
+        <div v-if="tab !== 'all'" class="min-w-0 flex-1" />
 
         <div>
           <IconButton size="sm" icon="i-material-symbols-refresh" :label="$t('calendar.action.refresh')" :loading="refreshing" @click="refresh" />
@@ -102,52 +99,64 @@
         <CreateButton v-else :key="tab" :label="$t('calendar.action.new_booking')" :disabled="!resources.length || !books" @click="bookAnew" />
       </ToolBar>
 
-      <template v-if="tab === 'all'">
-        <p v-if="bookingsFailed" role="alert" class="badge-ink shrink-0 border-b border-default px-4 py-2 text-sm text-error">{{ $t("calendar.error.bookings_failed") }}</p>
+      <!-- For the administrator the companies stand beside the part shown; a member reads one company and is
+           shown the part alone. -->
+      <ChoiceSidebar
+        :label="$t('calendar.label.organizations')"
+        :entries="companyEntries"
+        :chosen="chosenCompany"
+        :listed="companiesListed"
+        save-id="calendar-bookings-companies"
+        :no-match-text="$t('calendar.status.no_organization_match')"
+        @choose="chooseCompany"
+      >
+        <template v-if="tab === 'all'">
+          <p v-if="bookingsFailed" role="alert" class="badge-ink shrink-0 border-b border-default px-4 py-2 text-sm text-error">{{ $t("calendar.error.bookings_failed") }}</p>
 
-        <p v-if="resourcesRead && !resources.length" class="px-4 py-3 text-sm" :class="resourcesFailed ? 'badge-ink text-error' : 'text-muted'" :role="resourcesFailed ? 'alert' : undefined">
-          {{ $t(resourcesFailed ? "calendar.error.resources_failed" : "calendar.message.no_resources") }}
-        </p>
-        <BookingMonth
-          v-else-if="view === 'month'"
-          :days="days"
-          :month="toDate(date)"
-          :resources="kindResources"
-          :bookings="bookings"
-          :loading="!bookingsRead"
-          :day-path="(day: Date) => pathFor({ view: 'day', date: toCalendarDate(day) })"
-        />
-        <BookingWeek v-else-if="view === 'week'" :days="days" :groups="groups" :bookings="bookings" :loading="!resourcesRead" :bookable="books" @book="bookOn" @open="openBooking" />
-        <BookingTimeline
-          v-else
-          :day="days[0]!"
-          :groups="groups"
-          :bookings="bookings"
-          :loading="!resourcesRead"
-          :bookable="books"
-          :draft="dialogOpen ? draft : null"
-          @book="bookOn"
-          @open="openBooking"
-        />
-      </template>
+          <p v-if="resourcesRead && !resources.length" class="px-4 py-3 text-sm" :class="resourcesFailed ? 'badge-ink text-error' : 'text-muted'" :role="resourcesFailed ? 'alert' : undefined">
+            {{ $t(resourcesFailed ? "calendar.error.resources_failed" : "calendar.message.no_resources") }}
+          </p>
+          <BookingMonth
+            v-else-if="view === 'month'"
+            :days="days"
+            :month="toDate(date)"
+            :resources="kindResources"
+            :bookings="bookings"
+            :loading="!bookingsRead"
+            :day-path="(day: Date) => pathFor({ view: 'day', date: toCalendarDate(day) })"
+          />
+          <BookingWeek v-else-if="view === 'week'" :days="days" :groups="groups" :bookings="bookings" :loading="!resourcesRead" :bookable="books" @book="bookOn" @open="openBooking" />
+          <BookingTimeline
+            v-else
+            :day="days[0]!"
+            :groups="groups"
+            :bookings="bookings"
+            :loading="!resourcesRead"
+            :bookable="books"
+            :draft="dialogOpen ? draft : null"
+            @book="bookOn"
+            @open="openBooking"
+          />
+        </template>
 
-      <BookingList v-else-if="tab === 'mine'" :bookings="mine" :read="mineRead" :failed="mineFailed" :empty="$t('calendar.message.no_bookings')">
-        <template #actions="{ booking }">
-          <template v-if="booking.state !== 'refused'">
-            <IconButton icon="i-material-symbols-edit-outline" :label="$t('calendar.aria.edit_named', { name: booking.title })" @click="openBooking(booking, true)" />
-            <IconButton icon="i-material-symbols-event-busy-outline" :label="$t('calendar.aria.cancel_named', { name: booking.title })" :loading="acting === bookingKey(booking)" @click="cancelOne(booking)" />
+        <BookingList v-else-if="tab === 'mine'" :bookings="mine" :read="mineRead" :failed="mineFailed" :empty="$t('calendar.message.no_bookings')">
+          <template #actions="{ booking }">
+            <template v-if="booking.state !== 'refused'">
+              <IconButton icon="i-material-symbols-edit-outline" :label="$t('calendar.aria.edit_named', { name: booking.title })" @click="openBooking(booking, true)" />
+              <IconButton icon="i-material-symbols-event-busy-outline" :label="$t('calendar.aria.cancel_named', { name: booking.title })" :loading="acting === bookingKey(booking)" @click="cancelOne(booking)" />
+            </template>
           </template>
-        </template>
-      </BookingList>
+        </BookingList>
 
-      <BookingList v-else-if="tab === 'requests'" :bookings="requests" :read="requestsRead" :failed="requestsFailed" :empty="$t('calendar.message.no_requests')" booker>
-        <template #actions="{ booking }">
-          <IconButton icon="i-material-symbols-check" :label="$t('calendar.aria.approve_named', { name: booking.title })" :loading="acting === bookingKey(booking)" @click="approve(booking)" />
-          <IconButton icon="i-material-symbols-close" :label="$t('calendar.aria.refuse_named', { name: booking.title })" @click="refuse(booking)" />
-        </template>
-      </BookingList>
+        <BookingList v-else-if="tab === 'requests'" :bookings="requests" :read="requestsRead" :failed="requestsFailed" :empty="$t('calendar.message.no_requests')" booker>
+          <template #actions="{ booking }">
+            <IconButton icon="i-material-symbols-check" :label="$t('calendar.aria.approve_named', { name: booking.title })" :loading="acting === bookingKey(booking)" @click="approve(booking)" />
+            <IconButton icon="i-material-symbols-close" :label="$t('calendar.aria.refuse_named', { name: booking.title })" @click="refuse(booking)" />
+          </template>
+        </BookingList>
 
-      <ResourceList v-else ref="resourceList" :kind="shownKind" />
+        <ResourceList v-else ref="resourceList" :kind="shownKind" />
+      </ChoiceSidebar>
 
       <BookingDialog v-model:open="dialogOpen" :booking="dialogBooking" :draft="draft" :whole="dialogWhole" />
     </template>
@@ -160,6 +169,7 @@ import { useOverlay } from "@nuxt/ui/composables/useOverlay";
 import { computed, inject, onBeforeUnmount, onMounted, ref, shallowRef, useTemplateRef, watch } from "vue";
 import { navigateTo, useRouter } from "nuxt/app";
 import { useI18n } from "vue-i18n";
+import ChoiceSidebar from "bmo-ui/app/components/ChoiceSidebar.vue";
 import CreateButton from "bmo-ui/app/components/CreateButton.vue";
 import ToolBar from "bmo-ui/app/components/ToolBar.vue";
 import { useIsland } from "bmo-ui/app/domain/island";
@@ -173,9 +183,9 @@ import BookingMonth from "../../components/bookings/BookingMonth.vue";
 import BookingRefuseDialog from "../../components/bookings/BookingRefuseDialog.vue";
 import BookingTimeline from "../../components/bookings/BookingTimeline.vue";
 import BookingWeek from "../../components/bookings/BookingWeek.vue";
-import CompanySelect from "../../components/bookings/CompanySelect.vue";
 import ResourceList from "../../components/bookings/ResourceList.vue";
 import { BOOKING_ICON, bookingKey, kindsOf, placesOf } from "../../domain/bookings";
+import { companyQuery } from "../../domain/companies";
 import { WEEK_STARTS_ON, eachDay, toCalendarDate, toDate, todayDate } from "../../domain/dates";
 import { refusalText } from "../../domain/store";
 import { useCalendarStream } from "../../domain/stream";
@@ -184,6 +194,7 @@ import { BOOKING_VIEWS, useBookingScreen } from "../../composables/useBookingScr
 import { useBookings } from "../../composables/useBookings";
 import { SERVICE } from "../../composables/useCalendarApi";
 import { useCompanies } from "../../composables/useCompanies";
+import { useCompanyChoice } from "../../composables/useCompanyChoice";
 import { usePeople } from "../../composables/usePeople";
 
 import type { CalendarDate } from "@internationalized/date";
@@ -204,6 +215,9 @@ const DEFAULT_HOUR = 9;
 /** A burst of changes the stream tells of is gathered before what is shown is read again. */
 const GATHER_MS = 400;
 
+// The company the address names is followed first, so nothing of the organization realm is read before it.
+const { entries: companyEntries, chosen: chosenCompany, listed: companiesListed, choose: chooseCompany } = useCompanyChoice();
+
 const resourceListRef = useTemplateRef<InstanceType<typeof ResourceList>>("resourceList");
 
 const { t } = useI18n();
@@ -214,8 +228,8 @@ const narrow = useNarrow();
 // Whether a console draws its title bar over the screen, as the calendar screen reads it.
 const consoleBar = inject<object | null>("bmo-console-title-bar", null) !== null;
 
-const { tab, view, kind, date, range, title, shortTitle, prevDate, nextDate, pathFor, go } = useBookingScreen();
-const { administrator, books, manages, loadCompanies } = useCompanies();
+const { tab, view, kind, company, date, range, title, shortTitle, prevDate, nextDate, pathFor, go } = useBookingScreen();
+const { books, manages, loadCompanies } = useCompanies();
 const { loadMe } = usePeople();
 const {
   resources,
@@ -293,7 +307,7 @@ watch(range, (span) => void loadSpan(span), { immediate: true });
 
 function back(): void {
   if (typeof window !== "undefined" && window.history.state?.back) router.back();
-  else void navigateTo("/calendar");
+  else void navigateTo({ path: "/calendar", query: companyQuery(company.value) });
 }
 
 async function refresh(): Promise<void> {

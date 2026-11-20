@@ -37,7 +37,6 @@ describe("a value chosen from a list", () => {
   const LISTS = [
     { path: "components/bookings/BookingForm.vue", items: "resourceItems" },
     { path: "components/bookings/BookingForm.vue", items: "repeatItems" },
-    { path: "components/bookings/CompanySelect.vue", items: "items" },
     { path: "components/calendar/CalendarEventForm.vue", items: "calendarItems" },
     { path: "components/calendar/CalendarEventForm.vue", items: "alarmItems" },
     { path: "components/calendar/CalendarEventForm.vue", items: "repeatItems" },

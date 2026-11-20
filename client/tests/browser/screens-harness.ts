@@ -33,8 +33,8 @@ import type { Ref } from "vue";
 export const RELAY_BASE = "/relay";
 
 // The console's own words the layer's components and the screens read: a skeleton's status, a close button, the
-// question asked before changes are thrown away, a form's save, a date picker's paging, and a select's search field
-// and the lines its list shows when nothing stands in it. The page is read in English, the language a test is
+// question asked before changes are thrown away, a form's save, a date picker's paging, a select's search field
+// and the lines its list shows when nothing stands in it, and a side list's search and refresh. The page is read in English, the language a test is
 // written in.
 const COMMON = {
   status: { loading: "Loading", no_match: "No match", no_choices: "No items" },
@@ -47,8 +47,10 @@ const COMMON = {
     previous_month: "Previous month",
     next_month: "Next month",
     previous_year: "Previous year",
-    next_year: "Next year"
+    next_year: "Next year",
+    refresh: "Refresh"
   },
+  aria: { search_named: "Search {name}" },
   placeholder: { search: "Search" }
 };
 

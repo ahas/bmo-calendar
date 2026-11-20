@@ -291,13 +291,19 @@ The console screen follows the Nuxt UI calendar template (day, week, month and y
 and resize, a popover to edit, a quick natural-language entry, colour-coded calendars with visibility, a
 mini calendar), stood as a console bundle under the sidebar entry 캘린더 (bmo-ui's console plugin contract;
 `docs/api.md`, 「Console」). The sidebar lists 내 일정 and 조직 일정 calendars apart; one grid shows both.
-The 조직 일정 are the reader's company's. For the administrator the sidebar's 조직 일정 heading carries a
-choice of company, every company and the platform's own among them, the administrator's own company first
-chosen; the grid, the layers and the bookings then read the company chosen. With another company than his
-own chosen, its 조직 일정 are read-only, the heading marked 읽기 전용, a mark that opens the choice of company when
-pressed: its calendars are neither added, set nor hidden, nor its sources hidden, its events are neither drawn,
-moved nor changed, an event's form shows it with no save and no delete, and a new event goes into his own
-calendars alone. The platform's own stays his to write.
+The 조직 일정 are the reader's company's. For the administrator both of the bundle's screens stand beside a
+list of the companies he reads, 조직 목록, every company and the platform's own among them, his own named as
+his (bmo-ui's `ChoiceSidebar`, its components document, 「Choosing from a side list」): under the screen's
+toolbar, which keeps the whole width, the list stands beside the rest of the screen behind a splitter, searched
+as it is typed; on a phone the rest of the screen fills it and the list opens as a bottom drawer from a button
+at its head carrying the company chosen. The company chosen is the address's `company` (`?company=<id>`),
+kept as either screen moves through its views, days and parts and from one screen to the other, so a choice
+is a step of the history and a kept link opens the same company; an address naming none, or one he does not
+read, reads his own company. The grid, the layers and the bookings read the company chosen. A member reads his
+own company alone and is shown no list. With another company than his own chosen, its 조직 일정 are read-only,
+the heading marked 읽기 전용: its calendars are neither added, set nor hidden, nor its sources hidden, its events
+are neither drawn, moved nor changed, an event's form shows it with no save and no delete, and a new event goes
+into his own calendars alone. The platform's own stays his to write.
 
 Booking stands on its own screen in the same bundle, 예약, reached from the calendar screen's sidebar and
 back again:

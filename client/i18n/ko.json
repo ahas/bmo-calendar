@@ -30,6 +30,7 @@
       "offline_hint": "변경 사항은 연결되면 반영됩니다.",
       "offline_waiting": "오프라인 · {n}건 대기",
       "organization": "조직 일정",
+      "organizations": "조직 목록",
       "quick_entry": "빠른 입력",
       "received": "외부 일정",
       "repeat": "반복",
@@ -59,7 +60,6 @@
       "bookings": "예약",
       "bookings_all": "전체",
       "bookings_mine": "내 예약",
-      "company": "회사",
       "keepers": "담당자",
       "keepers_named": "담당자 {names}",
       "kind": "종류",
@@ -133,7 +133,8 @@
       "kind": "회의실"
     },
     "status": {
-      "loading": "불러오는 중…"
+      "loading": "불러오는 중…",
+      "no_organization_match": "찾은 조직 없음"
     },
     "message": {
       "delete_calendar": "캘린더를 삭제할까요?",

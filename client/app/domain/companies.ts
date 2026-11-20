@@ -43,3 +43,16 @@ export function writesIn(companies: readonly Company[], chosen: string | null): 
 
   return current ? current.writes : chosen === null;
 }
+
+/** The company an address names in its `company` query, or none where it names none (`docs/design.md`, 「The
+ *  console」). */
+export function addressedCompany(query: Record<string, unknown>): string | null {
+  const named = query.company;
+
+  return typeof named === "string" && named !== "" ? named : null;
+}
+
+/** The query naming a company, empty where none is named, for an address kept on the same company. */
+export function companyQuery(company: string | null): Record<string, string> {
+  return company === null ? {} : { company };
+}

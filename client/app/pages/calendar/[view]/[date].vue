@@ -2,7 +2,8 @@
   <!-- The calendar screen (docs/design.md, 「The console」): the calendars of both realms beside one grid. Where
        there is room the calendars stand beside the grid behind a splitter; on a phone the grid is the body,
        the calendars rise from the bottom edge, the way to today stands in a bar at its foot and a new event
-       floats over that bar. The view and the day are the address. -->
+       floats over that bar. For the administrator both stand beside the list of companies under the toolbar.
+       The view, the day and the company are the address. -->
   <UDashboardPanel id="calendar" :ui="{ body: 'p-0 sm:p-0 gap-0 sm:gap-0 overflow-y-hidden [&>*]:max-w-none' }">
     <!-- Beside the title stands only the screen's name and mark; what acts on the screen stands in its toolbar. -->
     <template v-if="!consoleBar" #header>
@@ -80,53 +81,65 @@
       <!-- The span a step lands on, said once it has landed. -->
       <p class="sr-only" aria-live="polite" aria-atomic="true">{{ announced }}</p>
 
-      <p v-if="failed" role="alert" class="badge-ink flex shrink-0 items-center gap-3 border-b border-default px-4 py-2 text-sm text-error">
-        {{ $t("calendar.error.events_failed") }}
-      </p>
+      <!-- For the administrator the companies stand beside the rest of the screen, the calendars' own side
+           region inside it; a member reads one company and is shown the rest alone. -->
+      <ChoiceSidebar
+        :label="$t('calendar.label.organizations')"
+        :entries="companyEntries"
+        :chosen="chosenCompany"
+        :listed="companiesListed"
+        save-id="calendar-companies"
+        :no-match-text="$t('calendar.status.no_organization_match')"
+        @choose="chooseCompany"
+      >
+        <p v-if="failed" role="alert" class="badge-ink flex shrink-0 items-center gap-3 border-b border-default px-4 py-2 text-sm text-error">
+          {{ $t("calendar.error.events_failed") }}
+        </p>
 
-      <template v-if="narrow">
-        <div class="flex min-h-0 flex-1 flex-col">
-          <CalendarMonthView v-if="view === 'month'" />
-          <CalendarYearView v-else-if="view === 'year'" />
-          <CalendarWeekView v-else :key="view" />
-        </div>
-
-        <ToolBar :label="$t('calendar.aria.foot_bar')" data-screen-foot class="box-content border-t border-default pb-[var(--bmo-safe-bottom)]">
-          <div>
-            <UButton color="neutral" variant="ghost" size="sm" :label="$t('calendar.action.today')" :to="pathFor(todayDate())" />
-          </div>
-        </ToolBar>
-
-        <UDrawer v-model:open="isSidebarOpen" :title="$t('calendar.action.calendars')" :ui="SHEET">
-          <template #body>
-            <UScrollArea ref="sheetBody" class="min-h-0 flex-1">
-              <div class="flex flex-col gap-4 p-4">
-                <CalendarList />
-              </div>
-            </UScrollArea>
-          </template>
-        </UDrawer>
-      </template>
-
-      <USplitter v-else id="calendar-splitter" auto-save-id="calendar-splitter" :items="SIDES" :ui="{ handle: SPLIT_HANDLE }" class="min-h-0 flex-1">
-        <template #side>
-          <UScrollArea class="min-h-0 min-w-0 flex-1">
-            <div class="flex flex-col gap-4 p-4">
-              <CalendarList />
-              <USeparator />
-              <CalendarMini />
-            </div>
-          </UScrollArea>
-        </template>
-
-        <template #grid>
-          <div class="flex min-h-0 min-w-0 flex-1 flex-col">
+        <template v-if="narrow">
+          <div class="flex min-h-0 flex-1 flex-col">
             <CalendarMonthView v-if="view === 'month'" />
             <CalendarYearView v-else-if="view === 'year'" />
             <CalendarWeekView v-else :key="view" />
           </div>
+
+          <ToolBar :label="$t('calendar.aria.foot_bar')" data-screen-foot class="box-content border-t border-default pb-[var(--bmo-safe-bottom)]">
+            <div>
+              <UButton color="neutral" variant="ghost" size="sm" :label="$t('calendar.action.today')" :to="pathFor(todayDate())" />
+            </div>
+          </ToolBar>
+
+          <UDrawer v-model:open="isSidebarOpen" :title="$t('calendar.action.calendars')" :ui="SHEET">
+            <template #body>
+              <UScrollArea ref="sheetBody" class="min-h-0 flex-1">
+                <div class="flex flex-col gap-4 p-4">
+                  <CalendarList />
+                </div>
+              </UScrollArea>
+            </template>
+          </UDrawer>
         </template>
-      </USplitter>
+
+        <USplitter v-else id="calendar-splitter" auto-save-id="calendar-splitter" :items="SIDES" :ui="{ handle: SPLIT_HANDLE }" class="min-h-0 flex-1">
+          <template #side>
+            <UScrollArea class="min-h-0 min-w-0 flex-1">
+              <div class="flex flex-col gap-4 p-4">
+                <CalendarList />
+                <USeparator />
+                <CalendarMini />
+              </div>
+            </UScrollArea>
+          </template>
+
+          <template #grid>
+            <div class="flex min-h-0 min-w-0 flex-1 flex-col">
+              <CalendarMonthView v-if="view === 'month'" />
+              <CalendarYearView v-else-if="view === 'year'" />
+              <CalendarWeekView v-else :key="view" />
+            </div>
+          </template>
+        </USplitter>
+      </ChoiceSidebar>
     </template>
   </UDashboardPanel>
 </template>
@@ -136,6 +149,7 @@ import { defineShortcuts } from "@nuxt/ui/composables/defineShortcuts";
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from "vue";
 import { navigateTo } from "nuxt/app";
 import { useI18n } from "vue-i18n";
+import ChoiceSidebar from "bmo-ui/app/components/ChoiceSidebar.vue";
 import ToolBar from "bmo-ui/app/components/ToolBar.vue";
 import { useIsland } from "bmo-ui/app/domain/island";
 import { countText } from "bmo-ui/app/domain/numbers";
@@ -156,6 +170,7 @@ import { SERVICE } from "../../../composables/useCalendarApi";
 import { useCalendarEvents } from "../../../composables/useCalendarEvents";
 import { useCalendar } from "../../../composables/useCalendar";
 import { useCompanies } from "../../../composables/useCompanies";
+import { useCompanyChoice } from "../../../composables/useCompanyChoice";
 import { useEventDraft } from "../../../composables/useEventDraft";
 import { useEventEditor } from "../../../composables/useEventEditor";
 
@@ -187,6 +202,8 @@ const SHEET = { ...FULL_SHEET, content: `${FULL_SHEET.content} focus-visible:out
 
 const sheetBodyRef = useTemplateRef<{ $el: HTMLElement }>("sheetBody");
 
+// The company the address names is followed first, so nothing of the organization realm is read before it.
+const { entries: companyEntries, chosen: chosenCompany, listed: companiesListed, choose: chooseCompany } = useCompanyChoice();
 const { t, locale } = useI18n();
 const island = useIsland(t);
 const narrow = useNarrow();

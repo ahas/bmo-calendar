@@ -30,6 +30,7 @@
       "offline_hint": "Changes are sent once the connection is back.",
       "offline_waiting": "Offline · {n} waiting",
       "organization": "Organization",
+      "organizations": "Organizations",
       "quick_entry": "Quick entry",
       "received": "Received",
       "repeat": "Repeat",
@@ -59,7 +60,6 @@
       "bookings": "Bookings",
       "bookings_all": "All",
       "bookings_mine": "My bookings",
-      "company": "Company",
       "keepers": "Keepers",
       "keepers_named": "Keepers {names}",
       "kind": "Kind",
@@ -133,7 +133,8 @@
       "kind": "Meeting room"
     },
     "status": {
-      "loading": "Loading…"
+      "loading": "Loading…",
+      "no_organization_match": "No organization found"
     },
     "message": {
       "delete_calendar": "Delete the calendar?",

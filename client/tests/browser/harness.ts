@@ -19,14 +19,16 @@ const PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta n
 
 const TYPES: Record<string, string> = { ".js": "text/javascript", ".css": "text/css", ".woff2": "font/woff2" };
 
-export type Width = "desktop" | "phone";
+export type Width = "desktop" | "phone" | "narrow";
 
 export const WIDTHS: Width[] = ["desktop", "phone"];
 
-// A desktop's window, and a Galaxy S25 held upright, the phone the screens are designed against.
+// A desktop's window, a Galaxy S25 held upright, the phone the screens are designed against, and the narrowest phone
+// a screen is laid out for, 360 pixels wide.
 const CONTEXTS = {
   desktop: { viewport: { width: 1280, height: 800 } },
-  phone: { viewport: { width: 412, height: 915 }, deviceScaleFactor: 2.625, isMobile: true, hasTouch: true }
+  phone: { viewport: { width: 412, height: 915 }, deviceScaleFactor: 2.625, isMobile: true, hasTouch: true },
+  narrow: { viewport: { width: 360, height: 780 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true }
 };
 
 /** The built page: the folder its files stand in, and the way to take it away. */

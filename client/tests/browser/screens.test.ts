@@ -5,17 +5,19 @@ import { chromium } from "playwright-core";
 
 import en from "../../i18n/en.json";
 import { WIDTHS, buildHarness, openScreen } from "./harness";
-import { COMPANIES, DAY } from "./stand-in";
+import { COMPANIES, DAY, OTHER_COMPANY, OWN_COMPANY } from "./stand-in";
 
 import type { Browser, Locator, Page } from "playwright-core";
 import type { Built, Width } from "./harness";
 
-// The calendar screen drawn by a real browser at a desktop's width and a phone's, read by the platform administrator
-// with another company chosen (`docs/design.md`, 「The console」): its organization heading marked read-only by a mark that
-// opens the choice of company, no calendar offered to add or set, nor a calendar or a source to hide, and an event's
-// form holding every field and offering no save and no delete, standing inside the screen and closed with nothing
-// asked. The mark's words read at 4.5:1 in both modes. The screen stands on the harness page, the stand-in answering
-// the service. Skipped where the browser build is not on the machine.
+// The bundle's screens drawn by a real browser, read by the platform administrator (`docs/design.md`, 「The console」).
+// Both screens stand beside the list of companies: at a desktop's width beside the body, searched as it is typed and
+// chosen into the address, and at the narrowest phone's in a drawer opened from the button carrying the company chosen;
+// the company the address names is kept as the screens move. At a desktop's width and a phone's, the calendar screen
+// opened on another company: its organization heading marked read-only, no calendar offered to add or set, nor a
+// calendar or a source to hide, and an event's form holding every field and offering no save and no delete, standing
+// inside the screen and closed with nothing asked; the mark's words read at 4.5:1 in both modes. The screens stand on
+// the harness page, the stand-in answering the service. Skipped where the browser build is not on the machine.
 
 function browserReady(): boolean {
   try {
@@ -35,7 +37,10 @@ const words = en.calendar;
 // The console's words the layer's question and the form's save are drawn in (`screens-harness.ts`).
 const QUESTION = "Discard unsaved changes?";
 const SAVE = "Save";
-const OTHER = COMPANIES.find((company) => !company.writes)!;
+const OWN = COMPANIES.find((company) => company.id === OWN_COMPANY)!;
+const OTHER = COMPANIES.find((company) => company.id === OTHER_COMPANY)!;
+// The own company's row, named as the reader's own.
+const OWN_LABEL = words.label.own_company.replace("{name}", OWN.name);
 
 let built: Built;
 let browser: Browser;
@@ -54,22 +59,24 @@ afterAll(async () => {
 
 const button = (page: Page, name: string): Locator => page.getByRole("button", { name, exact: true });
 const checkbox = (page: Page, name: string): Locator => page.getByRole("checkbox", { name, exact: true });
+// The read-only mark's words, and the mark itself around them.
+const readOnly = (page: Page): Locator => page.getByText(words.label.read_only, { exact: true });
+const company = (page: Page): string | null => new URL(page.url()).searchParams.get("company");
 
-/** Opens the week the stand-in's events stand in, with the calendars in view and the other company chosen. */
+/** Opens the week the stand-in's events stand in on the other company, as an address naming it opens it, with the
+ *  calendars in view. */
 async function openOther(width: Width) {
-  const opened = await openScreen(browser, built, width, `/calendar/week/${DAY}`);
+  const opened = await openScreen(browser, built, width, `/calendar/week/${DAY}?company=${OTHER.id}`);
   const { page } = opened;
 
   await page.getByText("Dentist").first().waitFor();
 
-  if (width === "phone") {
+  if (width !== "desktop") {
     await button(page, words.action.calendars).click();
     await page.getByRole("dialog").waitFor();
   }
 
-  await page.getByLabel(words.label.company, { exact: true }).click();
-  await page.getByRole("option", { name: OTHER.name, exact: true }).click();
-  await button(page, words.label.read_only).waitFor();
+  await readOnly(page).waitFor();
   await page.getByText("Project schedules").first().waitFor();
 
   return opened;
@@ -108,7 +115,7 @@ async function contrast(node: Locator): Promise<number> {
 
 describe.each(WIDTHS)("at a %s's width", (width) => {
   test.skipIf(!ready)(
-    "another company's calendars stand read-only, the mark opening the choice of company",
+    "another company's calendars stand read-only, marked so at the heading's trailing edge",
     async () => {
       const { context, page } = await openOther(width);
 
@@ -124,7 +131,8 @@ describe.each(WIDTHS)("at a %s's width", (width) => {
         expect(await checkbox(page, "Personal").isDisabled()).toBe(false);
 
         // The mark stands at the heading's trailing edge, on its centre line.
-        const placed = await button(page, words.label.read_only).evaluate((mark) => {
+        const placed = await readOnly(page).evaluate((ink) => {
+          const mark = ink.parentElement!;
           const row = mark.parentElement!.getBoundingClientRect();
           const heading = mark.parentElement!.querySelector("h2")!.getBoundingClientRect();
           const own = mark.getBoundingClientRect();
@@ -134,11 +142,6 @@ describe.each(WIDTHS)("at a %s's width", (width) => {
 
         expect(Math.abs(placed.trailing)).toBeLessThan(0.5);
         expect(Math.abs(placed.centre)).toBeLessThan(0.5);
-
-        // Pressed, it opens the choice of company, where the reader goes back to a company he writes in.
-        await button(page, words.label.read_only).click();
-        await page.getByRole("listbox").waitFor();
-        expect(await page.getByRole("option").count()).toBe(COMPANIES.length);
       } finally {
         await context.close();
       }
@@ -152,7 +155,7 @@ describe.each(WIDTHS)("at a %s's width", (width) => {
       const { context, page } = await openOther(width);
 
       try {
-        if (width === "phone") {
+        if (width !== "desktop") {
           await page.goBack();
           await page.getByRole("dialog").waitFor({ state: "hidden" });
         }
@@ -209,7 +212,129 @@ describe.each(WIDTHS)("at a %s's width", (width) => {
           document.documentElement.classList.toggle("dark", dark);
           await Promise.allSettled(document.getAnimations().filter((motion) => motion instanceof CSSTransition).map((motion) => motion.finished));
         }, scheme === "dark");
-        expect(await contrast(button(page, words.label.read_only).locator("span").first())).toBeGreaterThanOrEqual(4.5);
+        expect(await contrast(readOnly(page))).toBeGreaterThanOrEqual(4.5);
+      } finally {
+        await context.close();
+      }
+    },
+    TEST_MS
+  );
+});
+
+// Each screen the list of companies stands on, by the address it is opened on and what its body reads of the
+// reader's own company and of the other: the calendar screen an organization event, the booking screen a resource.
+const SCREENS = [
+  { screen: "calendar", address: `/calendar/week/${DAY}`, own: "Hanbit review", other: "Nuri weekly meeting" },
+  { screen: "booking", address: `/calendar/bookings?date=${DAY}`, own: "Hanbit board room", other: "Nuri hall" }
+];
+
+const row = (scope: Page | Locator, value: string): Locator => scope.locator(`[data-choice-sidebar-row="${value}"]`);
+
+/** The values of the rows the list shows, in its order. */
+async function rowValues(page: Page): Promise<string[]> {
+  return page.locator("[data-choice-sidebar-row]").evaluateAll((rows) => rows.map((one) => one.getAttribute("data-choice-sidebar-row")!));
+}
+
+describe("the list of companies", () => {
+  test.each(SCREENS)(
+    "at 1280 stands beside the $screen screen's body, narrows as it is searched, and a choice reads the company and names it in the address",
+    async ({ address, own, other }) => {
+      if (!ready) return;
+
+      const { context, page } = await openScreen(browser, built, "desktop", address);
+
+      try {
+        const list = page.locator("[data-choice-sidebar-list]");
+        const body = page.locator("[data-choice-sidebar-body]");
+
+        await body.getByText(own).first().waitFor();
+        await list.waitFor();
+
+        const [listBox, bodyBox] = [(await list.boundingBox())!, (await body.boundingBox())!];
+
+        expect(listBox.x + listBox.width).toBeLessThanOrEqual(bodyBox.x + 1);
+        expect(await page.locator("[data-choice-sidebar-open]").count()).toBe(0);
+        expect(await rowValues(page)).toEqual(COMPANIES.map((one) => one.id));
+        expect((await row(page, OWN.id).innerText()).trim()).toBe(OWN_LABEL);
+        expect(await row(page, OWN.id).getAttribute("aria-current")).toBe("page");
+
+        await page.locator("[data-choice-sidebar-search]").fill(OTHER.name.slice(0, 2));
+        await row(page, OWN.id).waitFor({ state: "detached" });
+        expect(await rowValues(page)).toEqual([OTHER.id]);
+
+        await row(page, OTHER.id).click();
+        await body.getByText(other).first().waitFor();
+        expect(await body.getByText(own).count()).toBe(0);
+        expect(company(page)).toBe(OTHER.id);
+        expect(await row(page, OTHER.id).getAttribute("aria-current")).toBe("page");
+      } finally {
+        await context.close();
+      }
+    },
+    TEST_MS
+  );
+
+  test.each(SCREENS)(
+    "at 360 stands in a drawer the $screen screen's button opens, carrying the company chosen, and a choice closes it and reads the company",
+    async ({ address, own, other }) => {
+      if (!ready) return;
+
+      const { context, page } = await openScreen(browser, built, "narrow", address);
+
+      try {
+        const body = page.locator("[data-choice-sidebar-body]");
+        const opener = page.locator("[data-choice-sidebar-open]");
+
+        await body.getByText(own).first().waitFor();
+        await opener.waitFor();
+        expect(await page.locator("[data-choice-sidebar-list]").count()).toBe(0);
+        expect((await opener.innerText()).trim()).toBe(OWN_LABEL);
+
+        await opener.click();
+
+        const drawer = page.getByRole("dialog", { name: words.label.organizations });
+
+        await drawer.locator("[data-choice-sidebar-list]").waitFor();
+        await row(drawer, OTHER.id).click();
+        await drawer.waitFor({ state: "hidden" });
+        await body.getByText(other).first().waitFor();
+        expect(await body.getByText(own).count()).toBe(0);
+        expect((await opener.innerText()).trim()).toBe(OTHER.name);
+        expect(company(page)).toBe(OTHER.id);
+      } finally {
+        await context.close();
+      }
+    },
+    TEST_MS
+  );
+
+  test.skipIf(!ready)(
+    "keeps the company the address names through the calendar's steps and views, onto the booking screen and back",
+    async () => {
+      const { context, page } = await openScreen(browser, built, "desktop", `/calendar/week/${DAY}?company=${OTHER.id}`);
+
+      try {
+        const body = page.locator("[data-choice-sidebar-body]");
+
+        await body.getByText("Nuri weekly meeting").first().waitFor();
+        expect(await row(page, OTHER.id).getAttribute("aria-current")).toBe("page");
+
+        await page.getByRole("link", { name: words.action.next, exact: true }).click();
+        await page.waitForURL((url) => url.pathname !== `/calendar/week/${DAY}`);
+        expect(company(page)).toBe(OTHER.id);
+
+        await page.keyboard.press("m");
+        await page.waitForURL((url) => url.pathname.startsWith("/calendar/month/"));
+        expect(company(page)).toBe(OTHER.id);
+
+        await page.getByRole("link", { name: words.label.bookings, exact: true }).click();
+        await body.getByText("Nuri hall").first().waitFor();
+        expect([new URL(page.url()).pathname, company(page)]).toEqual(["/calendar/bookings", OTHER.id]);
+        expect(await row(page, OTHER.id).getAttribute("aria-current")).toBe("page");
+
+        await button(page, words.action.back).click();
+        await page.waitForURL((url) => url.pathname.startsWith("/calendar/month/"));
+        expect(company(page)).toBe(OTHER.id);
       } finally {
         await context.close();
       }

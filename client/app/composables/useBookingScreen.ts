@@ -3,6 +3,7 @@ import { computed } from "vue";
 import { navigateTo, useRoute } from "nuxt/app";
 import { useI18n } from "vue-i18n";
 
+import { addressedCompany } from "../domain/companies";
 import { formatFullDate, formatMonth, formatMonthDay, formatRangeTitle, formatWeekday, formatYear, monthRange, setDateLocale, toDate, todayDate, weekRange } from "../domain/dates";
 
 import type { CalendarDate } from "@internationalized/date";
@@ -11,7 +12,8 @@ import type { DateRange } from "../../shared/types";
 
 // Where the booking screen stands, kept in its address (`/calendar/bookings?view=week&date=2026-11-03`), so a
 // step, a view, a kind and a tab are each a step of the history and a kept link opens the same view: the
-// part of the screen open, the view and the day of the resources' rows, and the kind of resource shown.
+// part of the screen open, the view and the day of the resources' rows, and the kind of resource shown. Every
+// move keeps the company the address names (`company`).
 
 export const BOOKINGS_PATH = "/calendar/bookings";
 
@@ -46,6 +48,7 @@ export function useBookingScreen() {
   const tab = computed<BookingTab>(() => oneOf(route.query.tab, BOOKING_TABS, "all"));
   const view = computed<BookingView>(() => oneOf(route.query.view, BOOKING_VIEWS, "day"));
   const kind = computed<string | null>(() => (typeof route.query.kind === "string" && route.query.kind ? route.query.kind : null));
+  const company = computed(() => addressedCompany(route.query));
 
   const date = computed<CalendarDate>(() => {
     try {
@@ -92,6 +95,7 @@ export function useBookingScreen() {
     if (next.view !== "day") query.view = next.view;
     if (next.date !== todayDate().toString()) query.date = next.date;
     if (next.kind) query.kind = next.kind;
+    if (company.value !== null) query.company = company.value;
 
     return { path: BOOKINGS_PATH, query };
   }
@@ -100,5 +104,5 @@ export function useBookingScreen() {
     void navigateTo(pathFor(change));
   }
 
-  return { tab, view, kind, date, range, title, shortTitle, prevDate, nextDate, pathFor, go };
+  return { tab, view, kind, company, date, range, title, shortTitle, prevDate, nextDate, pathFor, go };
 }
