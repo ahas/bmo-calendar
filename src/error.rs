@@ -6,7 +6,7 @@ use axum::response::{IntoResponse, Response};
 use crate::wire::WireError;
 
 /// Every code the service answers, each with its status and what it means.
-pub const CODES: [(&str, u16, &str); 21] = [
+pub const CODES: [(&str, u16, &str); 23] = [
   ("bad-request", 400, "the body or the query is not the shape the route takes"),
   ("unauthorized", 401, "the token is missing or wrong"),
   ("forbidden", 403, "the token is right but the caller may not do this"),
@@ -37,11 +37,18 @@ pub const CODES: [(&str, u16, &str); 21] = [
   ),
   ("span-too-long", 422, "a span over 92 days, or one ending before it starts"),
   ("not-an-occurrence", 422, "an occurrence that is not one of the event's"),
+  ("no-node", 422, "an Outlook day asked for an account with no node of its own"),
+  (
+    "no-road",
+    422,
+    "an Outlook day whose node runs no Outlook, where the Teams page gives no token or Graph refuses the read",
+  ),
   ("failed", 500, "the service failed"),
   (
     "upstream-failed",
     502,
-    "the brain, the receiver, the account service or agency answered a failure",
+    "the brain, the receiver, the account service, agency or the node service answered a failure, \
+     or a node's command answered nothing that reads",
   ),
   ("not-ready", 503, "the service has not read the brain and moved it into companies yet"),
 ];
@@ -139,6 +146,14 @@ impl ApiError {
 
   pub fn not_an_occurrence(occurrence: &str) -> Self {
     Self::of("not-an-occurrence", format!("{occurrence} is not an occurrence of the event."))
+  }
+
+  pub fn no_node(error: impl Into<String>) -> Self {
+    Self::of("no-node", error)
+  }
+
+  pub fn no_road(error: impl Into<String>) -> Self {
+    Self::of("no-road", error)
   }
 
   pub fn failed(error: impl Into<String>) -> Self {

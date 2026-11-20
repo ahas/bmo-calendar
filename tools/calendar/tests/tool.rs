@@ -88,6 +88,18 @@ async fn answer_for(
       (StatusCode::CREATED, Json(made)).into_response()
     }
     ("DELETE", ["organization", "bookings", _]) => StatusCode::NO_CONTENT.into_response(),
+    ("GET", ["outlook", "day"]) => Json(json!({
+      "date": "2026-03-04", "zone": "Korea Standard Time", "road": "graph", "node": "u9",
+      "items": [
+        { "title": "1010211I_A [Platform] Weekly review", "start": "2026-03-04T09:00:00", "end": "2026-03-04T10:00:00",
+          "allDay": false, "organizer": "Kim", "attendees": 3, "room": "Room 7",
+          "titleParts": { "levels": ["1", "01", "02", "11", "I", "A"], "group": "Platform", "task": "Weekly review" } },
+        { "title": "Holiday", "start": "2026-03-04T00:00:00", "end": "2026-03-05T00:00:00", "allDay": true,
+          "organizer": "", "attendees": 0, "room": "",
+          "titleParts": { "levels": [], "group": null, "task": "Holiday" } }
+      ],
+    }))
+    .into_response(),
     _ => (StatusCode::NOT_FOUND, Json(json!({ "code": "no-route", "error": "No route." }))).into_response(),
   }
 }
@@ -145,12 +157,12 @@ fn the_manifest_declares_every_entry_the_executable_answers() {
     let schema: Value =
       serde_json::from_str(&std::fs::read_to_string(Path::new(DIR).join(file)).unwrap()).unwrap();
     assert_eq!(schema["type"], "object", "{file}");
-    let realmed = !entry["name"].as_str().unwrap().contains("resource")
-      && !entry["name"].as_str().unwrap().contains("book");
+    let name = entry["name"].as_str().unwrap();
+    let realmed = !name.contains("resource") && !name.contains("book") && !name.contains("outlook");
     assert_eq!(
-      schema["required"].as_array().unwrap().contains(&json!("realm")),
+      schema["required"].as_array().is_some_and(|required| required.contains(&json!("realm"))),
       realmed,
-      "{file}: an event entry names a realm, a booking entry stands in the company"
+      "{file}: an event entry names a realm, a booking entry stands in the company, an Outlook day is the person's"
     );
     assert!(Path::new(DIR).join(entry["manual"].as_str().unwrap()).is_file());
   }
@@ -316,4 +328,22 @@ async fn a_free_room_is_found_and_booked_for_the_holder() {
   assert_eq!(query_of(&asked[1].2)["holderName"], "agent-a");
   assert_eq!((asked[2].0.as_str(), asked[2].1.as_str()), ("DELETE", "/organization/bookings/booked"));
   assert_eq!(query_of(&asked[2].2)["occurrence"], "2026-03-11T10:00:00");
+}
+
+#[tokio::test]
+async fn an_outlook_day_is_read_for_the_holder_one_line_an_event() {
+  let (stand, service) = stand().await;
+  let day = answer(&handed("calendar_outlook_day", json!({ "date": "2026-03-04" })), &service).await;
+  assert!(!day.is_error, "{}", day.text());
+  assert_eq!(
+    day.text(),
+    "2026-03-04 on u9 (Korea Standard Time), read from Microsoft Graph:\n\
+     09:00 to 10:00 · 1010211I_A [Platform] Weekly review · work code levels 1 01 02 11 I A · group Platform · task \
+     Weekly review · organized by Kim · 3 attendees · at Room 7\n\
+     all day · Holiday · 0 attendees"
+  );
+  let asked = stand.asked.lock().unwrap().clone();
+  assert_eq!((asked[0].0.as_str(), asked[0].1.as_str()), ("GET", "/outlook/day"));
+  let query = query_of(&asked[0].2);
+  assert_eq!((query["date"].as_str(), query["holderName"].as_str()), ("2026-03-04", "agent-a"));
 }

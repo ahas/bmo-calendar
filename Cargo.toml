@@ -12,6 +12,7 @@ license = "MIT"
 
 [workspace.dependencies]
 axum = { version = "0.8.9", features = ["macros", "multipart", "ws"] }
+base64 = "0.22.1"
 chrono = { version = "0.4.45", default-features = false, features = ["clock", "std"] }
 clap = { version = "4.6.7", features = ["derive", "env"] }
 config = { version = "0.15", default-features = false, features = ["toml"] }
@@ -47,6 +48,8 @@ test = false
 [dependencies]
 # The routes the service answers on.
 axum.workspace = true
+# The answer a node's PowerShell command writes, its UTF-8 bytes in base64 so no console code page touches them.
+base64.workspace = true
 # The console face: the manifest, the bundle's files and their guard, by bmo-ui's console plugin contract.
 bmo-console-face = { path = "../../base/chat/console-face" }
 # Local datetimes, the host's time zone, and the repeating events' months and days.
@@ -57,6 +60,8 @@ clap.workspace = true
 config.workspace = true
 # The brain's event stream, read as it comes, and the service's own.
 futures-util.workspace = true
+# The work-code form an Outlook event's title is read in.
+regex.workspace = true
 # The calls to the brain, the receiver and the account service.
 reqwest.workspace = true
 # The told marks, one SQLite file.
@@ -70,8 +75,6 @@ tokio.workspace = true
 toml.workspace = true
 
 [dev-dependencies]
-# The personal-data forms the repository's check reads.
-regex.workspace = true
 # The service's unit file, read in its INI shape by the repository's checks.
 rust-ini.workspace = true
 

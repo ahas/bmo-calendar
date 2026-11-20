@@ -68,7 +68,10 @@ pub fn router(served: Served) -> Router {
     .merge(schedules::routes())
     .merge(crate::bookings::routes())
     .merge(crate::companies::routes());
-  let mut routes = Router::new().route("/health", get(health)).route("/beats", post(beats));
+  let mut routes = Router::new()
+    .route("/health", get(health))
+    .route("/beats", post(beats))
+    .merge(crate::outlook::routes());
   match &served.face {
     Some(face) => routes = routes.merge(face.guard_screens(screens)).merge(face.router()),
     None => routes = routes.merge(screens),
@@ -167,7 +170,7 @@ pub(crate) fn caller(
 
 /// The account a call acts for: its key, else the account agency names as its holder's owner, else, for a
 /// holder agency names none for, the owner's; none where the call names neither.
-async fn account_of(app: &App, caller: &Caller) -> Answer<Option<String>> {
+pub(crate) async fn account_of(app: &App, caller: &Caller) -> Answer<Option<String>> {
   if let Some(key) = &caller.key {
     return Ok(Some(key.clone()));
   }

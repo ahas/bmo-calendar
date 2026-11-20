@@ -8,7 +8,7 @@ use bmo_calendar::openapi::{openapi, openapi_json};
 const ROOT: &str = env!("CARGO_MANIFEST_DIR");
 
 /// The routes docs/api.md states, by method and path.
-const ROUTES: [&str; 35] = [
+const ROUTES: [&str; 36] = [
   "get /health",
   "put /sources/{sourceId}",
   "put /sources/{sourceId}/schedules",
@@ -41,6 +41,7 @@ const ROUTES: [&str; 35] = [
   "post /{realm}/bookings/{bookingId}/decision",
   "get /{realm}/alarms",
   "post /beats",
+  "get /outlook/day",
   "get /events",
   "get /console-manifest",
   "get /console/{file}",

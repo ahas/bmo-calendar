@@ -30,6 +30,20 @@ pub struct Settings {
   pub receiver: Peer,
   pub accounts: Peer,
   pub agency: Peer,
+  /// The node service, reached with the calendar's own caller token.
+  pub node: Peer,
+  /// bmo-ms-teams's page token road, reached with the calendar's own caller token.
+  pub teams: Peer,
+  pub outlook: Outlook,
+}
+
+/// Where a person's Outlook day is read (`docs/design.md`, 「A person's Outlook day」).
+#[derive(Clone, Debug, Deserialize)]
+pub struct Outlook {
+  /// The node the deployment's own account's day is read on; empty, its agency record is read as any account's.
+  pub owner_node: String,
+  /// Microsoft Graph's base address.
+  pub graph_address: String,
 }
 
 /// The HTTP server.

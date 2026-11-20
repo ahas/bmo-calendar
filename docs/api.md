@@ -278,6 +278,35 @@ lists, the lowest numbered whose `GET /rooms/{roomId}` names the account as its 
 private room naming the member. One room is told once, naming every account it is told for. A
 telling the receiver refuses or does not answer keeps no mark, and the next beat tells it again.
 
+## A person's Outlook day
+
+One day of the Outlook calendar of the person a tool session serves, read on that person's own node
+(`docs/design.md`, 「A person's Outlook day」). The service token alone calls it; the console's credential is 403
+`forbidden`.
+
+| Method | Path | Does |
+|---|---|---|
+| GET | `/outlook/day?holderName=&date=` | The day's events, by start — `{date, zone, road, node, items}` |
+
+- **Whose.** `holderName`, the tool session's holder, names the account as the tool's calls name it (「The tool」);
+  the route takes no `account`, so it reads no person's day but the holder's. A call naming no holder, or one
+  whose account cannot be found, is 422 `no-account`.
+- **The day.** `date`, `YYYY-MM-DD`, a date of the PC's own wall clock; today on the PC where none is given. A
+  date of another shape is 400 `bad-request`.
+- **The node.** The account's record in agency's `GET /person-nodes`, where it is not marked `shared`; for the
+  deployment's own account, the account linked to the receiver's owner, the node `[outlook] owner_node` names
+  where it names one. An account with neither is 422 `no-node`.
+- **The answer:** `date`; `zone`, the PC's time zone as Windows names it; `road`, `outlook` where the running
+  Outlook was read and `graph` where Microsoft Graph was; `node`; and `items`, each `title`, `start` and `end`
+  (local ISO datetimes on the PC's wall clock), `allDay`, `organizer` (a name, empty where none), `attendees` (how
+  many required and optional attendees, the organizer and the rooms aside), `room` (the location, empty where
+  none) and `titleParts`: `levels`, the work code's levels one to seven where the title opens on one (each as
+  written, the first five always together), else none; `group`, the bracketed group, or null; and `task`, the
+  rest of the title, the whole title where it is in no such form.
+- **Failures.** A node service that refuses the run, a node out of reach, or a command that ends with no answer
+  that reads is 502 `upstream-failed`, saying which. A node whose Outlook is not running, where bmo-ms-teams gives
+  no token or Graph refuses the read, is 422 `no-road`, saying why. No answer is kept, and nothing is published.
+
 ## Console
 
 The calendar's screen is a console bundle under bmo-ui's console plugin contract (bmo-ui
@@ -338,6 +367,7 @@ output schema in `docs/openapi.json` under `x-tools`:
 | `calendar_free_resources` | The resources free for a span: `start`, `end?` (an hour where none), `seats?`, `repeat?`, `kind?` |
 | `calendar_book` | Books a resource: `resourceId`, `title`, `start`, `end?` (an hour where none, the day where `allDay`), `allDay?`, `repeat?`; answers the booking with its `state` |
 | `calendar_cancel_booking` | Cancels a booking or one occurrence: `bookingId`, `occurrence?` |
+| `calendar_outlook_day` | One day of the session's person's own Outlook calendar, read on their own node: `date?`, today on the PC where none (「A person's Outlook day」) |
 
 The `mine` realm of a tool call is the account the session's holder acts for: the tool hands the session's
 `holderName` to the service, which answers it with the account agency names as the holder's owner, else the
@@ -361,13 +391,20 @@ deployment writes before the flip with `bmo-calendar tool-env`.
 | an account's company | the account service `GET /users/{user}/unit` (its `company`; a 404 is no company) |
 | the companies the administrator reads | the account service `GET /units`, with the caller's owner key and role |
 | whether an account heads its company | the account service `POST /checks/unit` (`unit` the company's unit id as a number, `user` the account key as a string, as the account service's contract types them) |
+| which node is an account's own | agency `GET /person-nodes` (each `ownerAccount`, `node`, `shared`) |
+| a person's Outlook day read on their node | the node service `POST /nodes/{nodeName}/runs` (`account`, `command`, `shell` `powershell`, `env`), as the caller its own token names |
+| a person's Teams page token | bmo-ms-teams `POST /page-tokens` (`account` as a number, `scopes` `Calendars.Read`, `Calendars.ReadWrite`, `Calendars.Read.Shared`, `Calendars.ReadWrite.Shared`), as the caller its own token names |
+| a person's day from Microsoft Graph | Graph `GET /me/calendarView` (`startDateTime`, `endDateTime`, the fields read alone, `Prefer: outlook.timezone`), with the person's page token, following `@odata.nextLink` |
 
 The brain's address and token are `BRAIN_ADDRESS` and `BRAIN_TOKEN` from `env/brain.env`; the receiver's
 `listen` from `env/receiver.toml` and its token from `env/receiver.token`; the account service's `[server]
 listen` and `token` from `env/web.toml`; agency's control port from `env/agency.env` (`AGENCY_CONTROL_PORT`,
 3220 where it names none, on the loopback) and its token from the same file (`AGENCY_CONTROL_TOKEN`, or the
-file `AGENCY_CONTROL_TOKEN_FILE` names); each under the data root, read afresh for every call, and each
-overridden by the settings where they name one (「Settings」). Every call waits for its answer; no clock cuts
+file `AGENCY_CONTROL_TOKEN_FILE` names); the node service's `listen` from `env/node.toml` and the calendar's own
+caller token from `env/calendar-node.token`; bmo-ms-teams's port from `env/ms-teams.env` (`BMO_MS_TEAMS_PORT`, 3240
+where it names none, on the loopback) and the calendar's own caller token from `env/ms-teams-calendar-caller.token`;
+each under the data root, read afresh for every call, and each overridden by the settings where they name one
+(「Settings」). Graph is reached at `[outlook] graph_address`. Every call waits for its answer; no clock cuts
 one. A brain or receiver that refuses the connection is asked again two seconds later; the brain's event
 stream, once broken, is opened again from its last event two seconds later, and a resume the brain answers
 410 `gone` reads the realm's memories whole again.
@@ -391,8 +428,11 @@ Beside the common codes of bmo-chat's `docs/conventions.md` (`bad-request`, `una
 | `unknown-calendar` | an event written under a calendar the realm does not hold live |
 | `span-too-long` | a span over 92 days, or one ending before it starts |
 | `not-an-occurrence` | an `occurrence` that is not one of the event's |
+| `no-node` | an Outlook day asked for an account with no node of its own |
+| `no-road` | an Outlook day whose node runs no Outlook, where the Teams page gives no token or Graph refuses the read |
 
-`upstream-failed` (502) is the brain, the receiver, the account service or agency answering a failure;
+`upstream-failed` (502) is the brain, the receiver, the account service, agency or the node service answering a
+failure, or a node's command answering nothing that reads;
 `not-ready` (503) is a realm asked for before the service has read the brain once and finished the move
 into companies (`docs/design.md`, 「The move into companies」).
 
@@ -415,3 +455,6 @@ root, where `settings.local.toml` links to the data root's `env/calendar.toml`);
 | `calendars` | `mine_name`, `organization_name` | the names of the calendar a realm is given when it holds none |
 | `calendars` | `platform_name` | the name the platform's own organization realm is listed by among the companies |
 | `brain`, `receiver`, `accounts`, `agency` | `address`, `token` | a peer's base address and token where the data root's files are not to be read; empty, the files are read |
+| `node`, `teams` | `address`, `token` | the node service's and bmo-ms-teams's base address, and the calendar's own caller token there, where the data root's files are not to be read; empty, the files are read |
+| `outlook` | `owner_node` | the node the deployment's own account's Outlook day is read on; empty, its agency record is read as any account's |
+| `outlook` | `graph_address` | Microsoft Graph's base address, `https://graph.microsoft.com/v1.0` |

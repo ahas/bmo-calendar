@@ -1,6 +1,7 @@
 //! The units the calendar calls (`docs/api.md`, 「Calls the calendar makes」): the brain, the receiver, the
-//! account service and agency, each found afresh for every call from the settings or the data root's files, and called
-//! with no clock on the answer. A call whose connection is refused is asked again two seconds later.
+//! account service, agency, the node service and bmo-ms-teams, each found afresh for every call from the settings
+//! or the data root's files, and called with no clock on the answer. A call whose connection is refused is asked
+//! again two seconds later.
 
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -147,11 +148,46 @@ pub fn receiver(settings: &Settings) -> Result<Reach, CallFault> {
     .get("listen")
     .and_then(|v| v.as_str())
     .map(address);
-  let token = std::fs::read_to_string(root.join("env/receiver.token"))
-    .ok()
-    .map(|token| token.trim().to_owned())
-    .filter(|token| !token.is_empty());
-  found("receiver", listen, token)
+  found("receiver", listen, token_file(&root.join("env/receiver.token")))
+}
+
+/// A token kept alone in a file, its surrounding whitespace dropped; none where the file holds none.
+fn token_file(path: &Path) -> Option<String> {
+  let token = std::fs::read_to_string(path).ok()?.trim().to_owned();
+  (!token.is_empty()).then_some(token)
+}
+
+/// The node service, with the calendar's own caller token: the settings', else `listen` of `env/node.toml` and
+/// the token of `env/calendar-node.token`.
+pub fn node(settings: &Settings) -> Result<Reach, CallFault> {
+  if let Some(reach) = named("node service", &settings.node) {
+    return Ok(reach);
+  }
+  let root = settings.data_root();
+  let listen = toml_file(&root.join("env/node.toml"))
+    .get("listen")
+    .and_then(|v| v.as_str())
+    .map(address);
+  found("node service", listen, token_file(&root.join("env/calendar-node.token")))
+}
+
+/// bmo-ms-teams's port the data root's `env/ms-teams.env` stands for where it names none.
+const TEAMS_PORT: &str = "3240";
+
+/// bmo-ms-teams, with the calendar's own page token caller token: the settings', else `BMO_MS_TEAMS_PORT` of
+/// `env/ms-teams.env` on the loopback and the token of `env/ms-teams-calendar-caller.token`.
+pub fn teams(settings: &Settings) -> Result<Reach, CallFault> {
+  if let Some(reach) = named("bmo-ms-teams", &settings.teams) {
+    return Ok(reach);
+  }
+  let root = settings.data_root();
+  let file = env_file(&root.join("env/ms-teams.env"));
+  let port = file.get("BMO_MS_TEAMS_PORT").map_or(TEAMS_PORT, String::as_str);
+  found(
+    "bmo-ms-teams",
+    Some(format!("http://127.0.0.1:{port}")),
+    token_file(&root.join("env/ms-teams-calendar-caller.token")),
+  )
 }
 
 /// The account service: the settings', else `[server] listen` and `token` of `env/web.toml`.
@@ -561,6 +597,67 @@ pub async fn holder_account(
       .find(|agent| agent["name"].as_str() == Some(holder))
       .and_then(|agent| key_of(&agent["ownerAccount"])),
   )
+}
+
+/// An account's node as agency's record names it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PersonNode {
+  pub node: String,
+  /// Whether the administrator declared the node shared for the account.
+  pub shared: bool,
+}
+
+/// The node agency's record names for an account, where one does.
+pub async fn person_node(
+  http: &reqwest::Client,
+  settings: &Settings,
+  account: &str,
+) -> Result<Option<PersonNode>, CallFault> {
+  let records: Value = call(http, &agency(settings)?, Method::GET, "/person-nodes", &[], None).await?;
+  let Some(items) = records["items"].as_array() else {
+    return Err(CallFault::Broken("agency's records of people's nodes do not read".into()));
+  };
+  Ok(
+    items
+      .iter()
+      .find(|record| key_of(&record["ownerAccount"]).as_deref() == Some(account))
+      .and_then(|record| {
+        Some(PersonNode {
+          node: record["node"].as_str().filter(|node| !node.is_empty())?.to_owned(),
+          shared: record["shared"].as_bool().unwrap_or(false),
+        })
+      }),
+  )
+}
+
+/// One command run on a person's own node as the calendar, for their account, answered with its end.
+pub async fn node_run(
+  http: &reqwest::Client,
+  settings: &Settings,
+  node_name: &str,
+  body: &Value,
+) -> Result<Value, CallFault> {
+  let path = format!("/nodes/{}/runs", segment(node_name));
+  call(http, &node(settings)?, Method::POST, &path, &[], Some(body)).await
+}
+
+/// A Microsoft Graph access token read from the account's own Teams page, holding one of the scopes named.
+pub async fn page_token(
+  http: &reqwest::Client,
+  settings: &Settings,
+  account: &str,
+  scopes: &[&str],
+) -> Result<String, CallFault> {
+  let number: u64 = account
+    .parse()
+    .map_err(|_| CallFault::Broken(format!("account {account} is no number bmo-ms-teams reads")))?;
+  let body = json!({ "account": number, "scopes": scopes });
+  let answer: Value = call(http, &teams(settings)?, Method::POST, "/page-tokens", &[], Some(&body)).await?;
+  answer["token"]
+    .as_str()
+    .filter(|token| !token.is_empty())
+    .map(str::to_owned)
+    .ok_or_else(|| CallFault::Broken("bmo-ms-teams answered no token".into()))
 }
 
 /// A company as the account service names it: its unit id and its name.

@@ -27,6 +27,12 @@ datetimes in the shape `YYYY-MM-DDTHH:mm:ss`, on the calendar host's clock.
   for approval the booking stands `requested`; its keepers are told, and the person is told their answer.
 - **`calendar_cancel_booking`** cancels a booking by its `bookingId`, or with `occurrence` one occurrence of a
   repeating booking.
+- **`calendar_outlook_day`** answers one day of the person's own Outlook calendar, read on their own PC: the
+  running Outlook where it runs there, else Microsoft Graph with the sign-in of their Teams page. `date` is the
+  day on that PC's clock, today there where none is given. Each event is one line: its time, its title, its
+  organizer, how many attendees it has and its room; where the title opens on a work code, its levels and its
+  group are named and the rest is the task. Its body is never read. A person with no PC of their own, or a PC
+  where neither road stands, is refused saying why.
 
 Examples:
 
@@ -35,6 +41,7 @@ Examples:
 - What stands this week: `calendar_events` with `{"realm": "mine", "start": "2026-11-02T00:00:00", "end":
   "2026-11-09T00:00:00"}`.
 - The next three of the organization's: `calendar_events` with `{"realm": "organization", "n": 3}`.
+- What the person's work calendar held yesterday: `calendar_outlook_day` with `{"date": "2026-11-03"}`.
 - A room for eight tomorrow from ten to eleven: `calendar_free_resources` with `{"start": "2026-11-04T10:00:00",
   "end": "2026-11-04T11:00:00", "seats": 8}`, then `calendar_book` with `{"resourceId": "<an id it answered>",
   "title": "Planning", "start": "2026-11-04T10:00:00", "end": "2026-11-04T11:00:00"}`.

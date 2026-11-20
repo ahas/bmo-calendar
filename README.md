@@ -4,14 +4,15 @@ The platform's dated events as one service: calendars and events kept as memorie
 brain the master, this unit the subordinate), in two realms kept apart, each account's own and its company's
 organization realm; a repeating event answered one row per occurrence; an alarm told once to the supervisor
 through the receiver when it comes due; a company's rooms and other resources booked, two bookings of one
-never meeting; and the console bundle that shows them under its sidebar entry.
+never meeting; one day of a person's own Outlook calendar read on their own PC for their own BMO; and the
+console bundle that shows them under its sidebar entry.
 `docs/design.md` states what it is and `docs/api.md` its boundary: every route, the events it publishes, the
 tool it places, the calls it makes and its settings. Every other unit is reached through its API.
 
 ## Tests
 
 `cargo test` (through the testbed) runs the crate's one harness, `tests/main.rs`, over stand-ins of the brain,
-the receiver, the account service and agency on a loopback port: the calendars made on first read and kept per
+the receiver, the account service, agency, the node service, bmo-ms-teams and Microsoft Graph on a loopback port: the calendars made on first read and kept per
 realm (`calendars.rs`), the administrator reading a person's own realm and writing and making nothing there
 (`administrator.rs`), each company's realm read by its own and the administrator alone, his writes in another
 company's refused, a tool session's holder acting for its owner's account, and the one move into companies
@@ -21,7 +22,9 @@ bookings, overlaps refused, approvals and their tellings (`bookings.rs`), whethe
 cancelled with their labels, idempotent by id, refused as documented and refreshed by the brain's stream
 (`events.rs`), repeating events expanded in a span and one occurrence changed or cancelled on its own
 (`repeats.rs`), the beat telling a due alarm once, a late one with its lateness and none twice across a
-restart, each in the room its account reaches (`alarms.rs`), the console's guard, the console face's manifest
+restart, each in the room its account reaches (`alarms.rs`), a person's Outlook day read on their own node from
+the running Outlook or Graph, refused for a node not their own, and its titles read as the work-code form
+(`outlook.rs`), the console's guard, the console face's manifest
 read through bmo-ui's own reading of the contract, and its events (`console.rs`), the OpenAPI document
 (`openapi.rs`) and the repository's own checks (`repository.rs`). The tool's crate carries its own harness,
 `tools/calendar/tests/main.rs`, against a stand-in calendar service. The console bundle's check is `bun run
@@ -51,7 +54,7 @@ stand-in answering the service as it answers the platform administrator.
 
 | Folder | Holds |
 |---|---|
-| `src/` | The service and its command: the routes, the cache of each realm's brain, the companies and the move into them, resources and bookings, the alarms and the beat, the told marks' store, the console face's declaration and the OpenAPI document |
+| `src/` | The service and its command: the routes, the cache of each realm's brain, the companies and the move into them, resources and bookings, the alarms and the beat, the told marks' store, a person's Outlook day and the PowerShell command that reads it on their node, the console face's declaration and the OpenAPI document |
 | `tools/` | The calendar tool the deployment places on the tool host: its crate, its manifest, its input schemas and its manual |
 | `client/` | The console plugin bundle, a project of its own |
 | `deploy/` | The service's user unit |

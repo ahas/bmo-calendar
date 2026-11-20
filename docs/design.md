@@ -223,7 +223,62 @@ appointment, and books a room when its person asks for one. A holder of the tool
 agency names as the owner of the agent holding the session, so a supervisor of a person's account reads and
 writes that person's own realm and books as that person; a holder agency names no account for acts for the
 owner, the account the account service links to the owner's sender. The organization realm and the bookings
-of a call are that account's company's.
+of a call are that account's company's. The same tool reads one day of the person's own Outlook calendar
+(「A person's Outlook day」).
+
+## A person's Outlook day
+
+A person's work calendar is the Outlook calendar of their company's Microsoft 365, which no unit here reads as
+a company. Each person's own is read on that person's own PC, in the session they signed in to there, for that
+person's own BMO alone: no company-wide application, no central reader, and nothing asked of the company's IT.
+
+```mermaid
+flowchart TD
+  T[The tool, for the session's holder] --> S[Calendar service: the holder's account]
+  S --> N{The account's own node}
+  N -->|none, or one several accounts share| X[Refused: no node of its own]
+  N --> R[One read on the node, through the node service's runs]
+  R --> O{Classic Outlook running there?}
+  O -->|yes| C[Its calendar read over COM, attached to the running Outlook]
+  O -->|no, or out of reach| G[The person's Teams page token, then Microsoft Graph]
+  C --> A[The day's events, their titles read]
+  G --> A
+```
+
+- **Whose day.** The account the session's holder acts for, as for the tool's `mine` realm (「The tool」): a
+  call reads no other person's day, and names no account of its own.
+- **Whose node.** The account's own node is the node agency's record names for it. A record agency marks shared
+  is no node of the account's own, since the Outlook signed in on it is one person's and every account sharing
+  the node would read it; the deployment's own account reads on the node the settings name for it, as its record
+  may be one the owner shares with accounts of his own. An account with no node of its own is refused, and no
+  other node is tried.
+- **Only through the node service's runs.** The read is one PowerShell command run on the node as the calendar,
+  a caller of the node service with a token of its own (the node service's `docs/api.md`, 「Runs」): the node's
+  `callers` must name the calendar, and the node service itself refuses a node whose owners do not hold the
+  account. The command takes its day through its environment, never through its text.
+- **The first road: the running Outlook.** Where the classic Outlook process runs on the node, the command attaches
+  to it over COM, in the person's interactive session the node's shell runs in, and reads the default calendar's
+  items of the day, their repeats unfolded. Where no Outlook process runs, COM is not touched, since asking COM
+  for an Outlook that is not running starts one and so changes the PC. An Outlook that runs but cannot be attached
+  to counts as not running.
+- **The second road: Graph with the person's Teams page token.** Where the first road does not stand, the service
+  asks bmo-ms-teams's page token road for the account's token with a scope that reads calendars (its
+  `docs/api.md`, 「The page token road」), and reads the day's calendar view from Microsoft Graph with it, in the
+  PC's own time zone. The token is the person's own session's, held for that one read, written nowhere and sent
+  to nothing but Graph. A token the page cannot give leaves the day unread, saying why.
+- **The day** is a date of the PC's own wall clock, today there where the call names none; the command answers
+  the PC's time zone and the day's bounds in it, so both roads read the same span. An event that meets the day
+  stands in it; a cancelled meeting does not.
+- **What is read is a reference, never content:** of each event its title, its start and end on the PC's wall
+  clock, whether it takes the whole day, its organizer's name, how many attendees it has (the required and
+  optional ones, the organizer and the rooms aside) and its room, the location it names. Its body, its
+  attachments and the attendees' names are not read. The answer goes to the session that asked and is kept
+  nowhere here.
+- **A title is read as the work-code form,** where it is written in it: a work code of seven digits and a letter,
+  its first digit, the next three pairs and the letter its levels one to five, then up to two more levels each
+  after an underscore, then a group in square brackets, then the task's words. A title not in that form is a task
+  whole, with no levels and no group. The levels and the group are a hint of the work and the part an event
+  belongs to; the task is the sentence a person wrote.
 
 ## The console
 

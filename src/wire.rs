@@ -817,3 +817,71 @@ pub struct BookingsQuery {
   #[serde(default)]
   pub company: Option<String>,
 }
+
+/// The day of a person's Outlook calendar a tool session asks for (`docs/api.md`, 「A person's Outlook day」).
+#[derive(Clone, Debug, Default, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct OutlookDayQuery {
+  /// The tool session's holder, whose account's day is read.
+  #[serde(default)]
+  pub holder_name: Option<String>,
+  /// `YYYY-MM-DD` on the PC's own wall clock; today there where none is given.
+  #[serde(default)]
+  pub date: Option<String>,
+}
+
+/// The road a person's Outlook day was read by.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum OutlookRoad {
+  /// The classic Outlook running on the node, over COM.
+  Outlook,
+  /// Microsoft Graph, with the person's Teams page token.
+  Graph,
+}
+
+/// One day of a person's Outlook calendar.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct OutlookDay {
+  /// `YYYY-MM-DD` on the PC's own wall clock.
+  pub date: String,
+  /// The PC's time zone, as Windows names it.
+  pub zone: String,
+  pub road: OutlookRoad,
+  /// The node the day was read on.
+  pub node: String,
+  /// The day's events, by start.
+  pub items: Vec<OutlookEvent>,
+}
+
+/// One event of a person's Outlook day: what it is a reference to, never its content.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct OutlookEvent {
+  pub title: String,
+  /// Local ISO datetime on the PC's wall clock.
+  pub start: String,
+  /// Local ISO datetime on the PC's wall clock.
+  pub end: String,
+  pub all_day: bool,
+  /// The organizer's name, empty where none.
+  pub organizer: String,
+  /// How many required and optional attendees, the organizer and the rooms aside.
+  pub attendees: u32,
+  /// The location the event names, empty where none.
+  pub room: String,
+  pub title_parts: TitleParts,
+}
+
+/// A title read as the work-code form (`docs/design.md`, 「A person's Outlook day」).
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct TitleParts {
+  /// The work code's levels one to seven, each as written, where the title opens on a work code; else none.
+  pub levels: Vec<String>,
+  /// The bracketed group, where one is written.
+  pub group: Option<String>,
+  /// The rest of the title: the whole title where it is in no such form.
+  pub task: String,
+}

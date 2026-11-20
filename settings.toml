@@ -46,3 +46,20 @@ token = ""
 [agency]
 address = ""
 token = ""
+
+# The node service and bmo-ms-teams, each with the calendar's own caller token there; empty, the data root's files
+# are read (docs/api.md, 「Calls the calendar makes」).
+[node]
+address = ""
+token = ""
+
+[teams]
+address = ""
+token = ""
+
+# Where a person's Outlook day is read (docs/api.md, 「A person's Outlook day」).
+[outlook]
+# The node the deployment's own account's day is read on; empty, its agency record is read as any account's.
+owner_node = ""
+# Microsoft Graph's base address.
+graph_address = "https://graph.microsoft.com/v1.0"

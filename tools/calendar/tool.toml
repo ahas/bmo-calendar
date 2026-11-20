@@ -1,5 +1,5 @@
-# The calendar tool: the events of a realm read, added, changed and cancelled in a turn (docs/api.md, 「The
-# tool」), each entry one call of a calendar route. The tool finds the service through the data root's
+# The calendar tool: the events of a realm read, added, changed and cancelled in a turn, and a day of the person's
+# own Outlook calendar read (docs/api.md, 「The tool」), each entry one call of a calendar route. The tool finds the service through the data root's
 # env/calendar.env, and names the session's holder, which acts for the owner, for the mine realm. The crate's own
 # test holds every entry here to the executable answering it. Every call waits for the service's answer however
 # long it takes.
@@ -110,4 +110,14 @@ description = "Cancel a booking, or one occurrence of a repeating booking."
 manual = "manual.md"
 input = "calendar_cancel_booking.json"
 hints = { idempotent = true, destructive = true }
+capabilities = ["room.tools"]
+
+[[entry]]
+namespace = "bmo"
+name = "calendar_outlook_day"
+title = "Read an Outlook day"
+description = "One day of the Outlook calendar of the person this session serves, read on their own PC: each event's title and its work-code parts, time, organizer, attendee count and room, never its body."
+manual = "manual.md"
+input = "calendar_outlook_day.json"
+hints = { read_only = true }
 capabilities = ["room.tools"]

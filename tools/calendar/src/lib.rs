@@ -2,7 +2,7 @@
 //! (bmo-pocket's `docs/mcp-host.md`, 「A call」), and each entry as one call of a calendar route, made with the
 //! service token the deployment writes into the data root's `env/calendar.env`. Every call names the session's
 //! holder, which the service answers with the account agency names as its owner, else the owner's: that
-//! account's own realm, its company's organization realm and its bookings.
+//! account's own realm, its company's organization realm, its bookings and its own Outlook day.
 
 use std::collections::BTreeMap;
 use std::io::{Read, Write};
@@ -16,7 +16,7 @@ use serde_json::{Map, Value, json};
 pub const PROTOCOL: u32 = 1;
 
 /// The entries this executable answers, as its manifest declares them.
-pub const ENTRIES: [&str; 10] = [
+pub const ENTRIES: [&str; 11] = [
   "calendar_list",
   "calendar_events",
   "calendar_show",
@@ -27,6 +27,7 @@ pub const ENTRIES: [&str; 10] = [
   "calendar_free_resources",
   "calendar_book",
   "calendar_cancel_booking",
+  "calendar_outlook_day",
 ];
 
 /// The data root handed in the record's variables.
@@ -272,6 +273,34 @@ pub fn booking_line(booking: &Value) -> String {
   line
 }
 
+/// One event of an Outlook day as one line.
+pub fn outlook_line(event: &Value) -> String {
+  let time = if event["allDay"].as_bool() == Some(true) {
+    "all day".to_owned()
+  } else {
+    let clock = |field: &str| event[field].as_str().unwrap_or("").get(11..16).unwrap_or("").to_owned();
+    format!("{} to {}", clock("start"), clock("end"))
+  };
+  let mut line = format!("{time} · {}", event["title"].as_str().unwrap_or(""));
+  let parts = &event["titleParts"];
+  if let Some(levels) = parts["levels"].as_array().filter(|levels| !levels.is_empty()) {
+    let levels: Vec<&str> = levels.iter().filter_map(Value::as_str).collect();
+    line.push_str(&format!(" · work code levels {}", levels.join(" ")));
+    if let Some(group) = parts["group"].as_str() {
+      line.push_str(&format!(" · group {group}"));
+    }
+    line.push_str(&format!(" · task {}", parts["task"].as_str().unwrap_or("")));
+  }
+  if let Some(organizer) = event["organizer"].as_str().filter(|organizer| !organizer.is_empty()) {
+    line.push_str(&format!(" · organized by {organizer}"));
+  }
+  line.push_str(&format!(" · {} attendees", event["attendees"].as_u64().unwrap_or(0)));
+  if let Some(room) = event["room"].as_str().filter(|room| !room.is_empty()) {
+    line.push_str(&format!(" · at {room}"));
+  }
+  line
+}
+
 fn resource_lines(page: &Value) -> Vec<String> {
   page["items"]
     .as_array()
@@ -325,6 +354,7 @@ async fn answered(handed: &Handed, service: &Service) -> Result<Answer, String> 
     "calendar_resources" | "calendar_free_resources" | "calendar_book" | "calendar_cancel_booking" => {
       booking_entry(entry_name(&handed.entry), arguments, &who, service).await
     }
+    "calendar_outlook_day" => outlook_day(arguments, &who, service).await,
     entry => event_entry(entry, arguments, &who, service).await,
   }
 }
@@ -398,6 +428,34 @@ async fn booking_entry(
       Ok(Answer::reading(vec!["Cancelled.".to_owned()], json!({ "cancelled": true })))
     }
   }
+}
+
+/// The day of the person's own Outlook calendar, read on their own node.
+async fn outlook_day(
+  arguments: &Value,
+  who: &[(&str, String)],
+  service: &Service,
+) -> Result<Answer, String> {
+  let mut query = who.to_vec();
+  if let Some(date) = text(arguments, "date") {
+    query.push(("date", date.to_owned()));
+  }
+  let day = call(service, reqwest::Method::GET, "/outlook/day", &query, None).await?;
+  let mut lines = vec![format!(
+    "{} on {} ({}), read from {}:",
+    day["date"].as_str().unwrap_or(""),
+    day["node"].as_str().unwrap_or(""),
+    day["zone"].as_str().unwrap_or(""),
+    match day["road"].as_str() {
+      Some("outlook") => "the running Outlook",
+      _ => "Microsoft Graph",
+    }
+  )];
+  match day["items"].as_array().filter(|items| !items.is_empty()) {
+    Some(items) => lines.extend(items.iter().map(outlook_line)),
+    None => lines.push("No event stands on that day.".to_owned()),
+  }
+  Ok(Answer::reading(lines, day))
 }
 
 /// The entries of a realm's calendars and events.

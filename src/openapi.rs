@@ -14,9 +14,9 @@ use crate::wire::{
   AccountQuery, AlarmMoment, AlarmTold, AlarmsQuery, Beat, Booking, BookingChange, BookingChanged,
   BookingDecided, BookingsQuery, Calendar, CalendarChange, CalendarChanged, CancelQuery, Company, Decision,
   Event, EventChange, EventChanged, EventsQuery, FreeQuery, Health, NewBooking, NewCalendar, NewEvent,
-  NewResource, Page, Reconciled, Resource, ResourceChange, ResourceChanged, ResourcesQuery, Schedule,
-  ScheduleChanged, ScheduleSet, ScheduleWrite, Source, SourceChange, SourceChanged, SourceWrite, SpanQuery,
-  StreamEvent, WireError,
+  NewResource, OutlookDay, OutlookDayQuery, Page, Reconciled, Resource, ResourceChange, ResourceChanged,
+  ResourcesQuery, Schedule, ScheduleChanged, ScheduleSet, ScheduleWrite, Source, SourceChange,
+  SourceChanged, SourceWrite, SpanQuery, StreamEvent, WireError,
 };
 
 const SCHEMAS: &str = "/components/schemas";
@@ -31,7 +31,7 @@ const DESCRIPTION: &str = "The platform's dated events, kept as memories in the 
   stated under x-tools.";
 
 /// The tool's entries: name, description, the route it calls, its input file and the answer it carries.
-pub const TOOLS: [(&str, &str, &str, &str); 10] = [
+pub const TOOLS: [(&str, &str, &str, &str); 11] = [
   ("calendar_list", "The calendars of a realm.", "GET /{realm}/calendars", "calendars"),
   (
     "calendar_events",
@@ -82,6 +82,12 @@ pub const TOOLS: [(&str, &str, &str, &str); 10] = [
     "DELETE /{realm}/bookings/{bookingId}",
     "none",
   ),
+  (
+    "calendar_outlook_day",
+    "One day of the session's person's own Outlook calendar, read on their own node.",
+    "GET /outlook/day",
+    "outlook-day",
+  ),
 ];
 
 /// The input schema of a tool entry, as the tool's folder holds it.
@@ -97,6 +103,7 @@ pub fn tool_input(name: &str) -> Value {
     "calendar_free_resources" => include_str!("../tools/calendar/calendar_free_resources.json"),
     "calendar_book" => include_str!("../tools/calendar/calendar_book.json"),
     "calendar_cancel_booking" => include_str!("../tools/calendar/calendar_cancel_booking.json"),
+    "calendar_outlook_day" => include_str!("../tools/calendar/calendar_outlook_day.json"),
     _ => "null",
   };
   serde_json::from_str(text).unwrap_or(Value::Null)
@@ -743,6 +750,17 @@ fn routes(g: &mut SchemaGenerator) -> Vec<Route> {
     },
     Route {
       method: "get",
+      path: "/outlook/day",
+      id: "readOutlookDay",
+      tag: "outlook",
+      summary: "One day of the Outlook calendar of the person a tool session serves, read on that person's own node: from the running Outlook, else from Microsoft Graph with the person's Teams page token.",
+      parameters: query::<OutlookDayQuery>(g),
+      body: None,
+      answers: vec![(200, content::<OutlookDay>(g))],
+      codes: vec!["bad-request", "no-account", "no-node", "no-road", "upstream-failed"],
+    },
+    Route {
+      method: "get",
       path: "/events",
       id: "readEvents",
       tag: "events-stream",
@@ -827,6 +845,7 @@ pub fn openapi() -> Value {
   let event = g.subschema_for::<Event>();
   let resources = g.subschema_for::<Page<Resource>>();
   let booking = g.subschema_for::<Booking>();
+  let outlook_day = g.subschema_for::<OutlookDay>();
   let tools: Vec<Value> = TOOLS
     .iter()
     .map(|(name, description, route, answer)| {
@@ -836,6 +855,7 @@ pub fn openapi() -> Value {
         "event" => json!(event),
         "resources" => json!(resources),
         "booking" => json!(booking),
+        "outlook-day" => json!(outlook_day),
         _ => json!({ "type": "object", "properties": { "cancelled": { "type": "boolean" } } }),
       };
       json!({
@@ -855,7 +875,15 @@ pub fn openapi() -> Value {
     "servers": [{ "url": "/", "description": "the calendar service" }],
     "security": [{ "bearer": [] }],
     "x-layer": "downstream",
-    "x-calls": ["bmo-brain", "bmo-receiver", "the account service", "bmo-agency"],
+    "x-calls": [
+      "bmo-brain",
+      "bmo-receiver",
+      "the account service",
+      "bmo-agency",
+      "bmo-node",
+      "bmo-ms-teams",
+      "Microsoft Graph",
+    ],
     "x-events": KINDS,
     "x-event-data": events,
     "tags": tags.iter().map(|tag| json!({ "name": tag })).collect::<Vec<_>>(),

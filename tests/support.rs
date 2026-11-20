@@ -1,5 +1,6 @@
-//! What the tests share: stand-ins of the brain, the receiver and the account service on one loopback port, the
-//! service started over them in this process, and calls of its routes.
+//! What the tests share: stand-ins of the brain, the receiver, the account service, agency, the node service,
+//! bmo-ms-teams and Microsoft Graph on one loopback port, the service started over them in this process, and
+//! calls of its routes.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::convert::Infallible;
@@ -45,6 +46,12 @@ pub const COMPANY: &str = "10";
 /// A supervisor agency names member 2 the owner of, and one of no account.
 pub const MEMBER_SUPERVISOR: &str = "supervisor-b";
 pub const NO_ACCOUNT_SUPERVISOR: &str = "supervisor-none";
+/// The calendar's own caller token at the node service and bmo-ms-teams.
+pub const CALLER_TOKEN: &str = "calendar-caller-token";
+/// The node the settings name for the deployment's own account.
+pub const OWNER_NODE: &str = "owner-pc";
+/// The Teams page token the stand-in hands out.
+pub const PAGE_TOKEN: &str = "page-token";
 
 /// What the stand-ins hold and were asked.
 #[derive(Default)]
@@ -59,6 +66,20 @@ pub struct Peers {
   pub next: i64,
   /// A `createdAt` the next memory written takes in place of now.
   pub written_at: Option<i64>,
+  /// Agency's records of people's nodes.
+  pub person_nodes: Vec<Value>,
+  /// What the command a run carries answers, before its base64; the stdout of a run as it stands where none.
+  pub node_day: Option<Value>,
+  /// The runs asked: the node, the body and the bearer.
+  pub runs: Vec<(String, Value, String)>,
+  /// Whether the Teams page holds a token.
+  pub page_token: bool,
+  /// The page tokens asked: the body and the bearer.
+  pub page_token_asks: Vec<(Value, String)>,
+  /// The events Graph holds for the day, its first one on a page of its own.
+  pub graph_events: Vec<Value>,
+  /// Graph's pages asked: the query, the `Prefer` header and the bearer.
+  pub graph_asks: Vec<(BTreeMap<String, String>, String, String)>,
 }
 
 /// The stand-ins and the address they answer at.
@@ -423,6 +444,81 @@ async fn role_agents() -> Json<Value> {
   Json(json!({ "items": [{ "name": "role-agent", "role": "voyager", "ownerAccount": 3 }], "more": false }))
 }
 
+fn bearer_of(headers: &axum::http::HeaderMap) -> String {
+  headers
+    .get("authorization")
+    .and_then(|value| value.to_str().ok())
+    .and_then(|value| value.strip_prefix("Bearer "))
+    .unwrap_or("")
+    .to_owned()
+}
+
+async fn person_nodes(State(stand): State<Stand>) -> Json<Value> {
+  page(stand.peers.lock().unwrap().person_nodes.clone())
+}
+
+/// A run, answered by the command's answer in base64 on its last line, as the PowerShell command writes it.
+async fn node_run(
+  State(stand): State<Stand>,
+  Path(node): Path<String>,
+  headers: axum::http::HeaderMap,
+  Json(body): Json<Value>,
+) -> Response {
+  use base64::Engine;
+  let mut peers = stand.peers.lock().unwrap();
+  peers.runs.push((node, body, bearer_of(&headers)));
+  let Some(day) = peers.node_day.clone() else {
+    return Json(json!({ "exitCode": 1, "stdout": "", "stderr": "The term is not recognized." }))
+      .into_response();
+  };
+  let encoded = base64::engine::general_purpose::STANDARD.encode(day.to_string());
+  Json(json!({ "node": "n", "shell": "powershell", "exitCode": 0, "signal": null, "stdout": format!("{encoded}\r\n"),
+    "stderr": "", "stdoutCut": false, "stderrCut": false }))
+  .into_response()
+}
+
+async fn page_tokens(
+  State(stand): State<Stand>,
+  headers: axum::http::HeaderMap,
+  Json(body): Json<Value>,
+) -> Response {
+  let mut peers = stand.peers.lock().unwrap();
+  peers.page_token_asks.push((body, bearer_of(&headers)));
+  if !peers.page_token {
+    return (
+      StatusCode::SERVICE_UNAVAILABLE,
+      Json(json!({ "code": "not-ready", "error": "The page asks for a sign-in." })),
+    )
+      .into_response();
+  }
+  Json(json!({ "token": PAGE_TOKEN, "scopes": "Calendars.ReadWrite", "expiresAt": now() + 3_600_000, "node": "n" }))
+    .into_response()
+}
+
+/// Graph's calendar view: the first event on a page of its own, the rest on the page its next link names.
+async fn calendar_view(
+  State(stand): State<Stand>,
+  Query(query): Query<BTreeMap<String, String>>,
+  headers: axum::http::HeaderMap,
+) -> Response {
+  let mut peers = stand.peers.lock().unwrap();
+  let prefer = headers.get("prefer").and_then(|value| value.to_str().ok()).unwrap_or("").to_owned();
+  peers.graph_asks.push((query.clone(), prefer, bearer_of(&headers)));
+  if bearer_of(&headers) != PAGE_TOKEN {
+    return (
+      StatusCode::UNAUTHORIZED,
+      Json(json!({ "error": { "code": "InvalidAuthenticationToken", "message": "Bad token." } })),
+    )
+      .into_response();
+  }
+  let events = peers.graph_events.clone();
+  if query.contains_key("second") {
+    return Json(json!({ "value": events.get(1..).unwrap_or_default() })).into_response();
+  }
+  let next = format!("{}/me/calendarView?second=1", stand.address);
+  Json(json!({ "value": events.get(..1).unwrap_or_default(), "@odata.nextLink": next })).into_response()
+}
+
 /// The stand-ins, answering on a fresh loopback port.
 pub async fn stand() -> Stand {
   let (live, _) = broadcast::channel(1000);
@@ -449,6 +545,10 @@ pub async fn stand() -> Stand {
     .route("/checks/unit", post(unit_check))
     .route("/supervisors/{name}", get(supervisor))
     .route("/role-agents", get(role_agents))
+    .route("/person-nodes", get(person_nodes))
+    .route("/nodes/{node}/runs", post(node_run))
+    .route("/page-tokens", post(page_tokens))
+    .route("/me/calendarView", get(calendar_view))
     .with_state(stand.clone());
   tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
   stand
@@ -485,7 +585,10 @@ pub fn settings(stand: &Stand, folder: &std::path::Path) -> Settings {
      [brain]\naddress = \"{peer}\"\ntoken = \"{PEER_TOKEN}\"\n\
      [receiver]\naddress = \"{peer}\"\ntoken = \"{PEER_TOKEN}\"\n\
      [accounts]\naddress = \"{peer}\"\ntoken = \"{PEER_TOKEN}\"\n\
-     [agency]\naddress = \"{peer}\"\ntoken = \"{PEER_TOKEN}\"\n",
+     [agency]\naddress = \"{peer}\"\ntoken = \"{PEER_TOKEN}\"\n\
+     [node]\naddress = \"{peer}\"\ntoken = \"{CALLER_TOKEN}\"\n\
+     [teams]\naddress = \"{peer}\"\ntoken = \"{CALLER_TOKEN}\"\n\
+     [outlook]\nowner_node = \"{OWNER_NODE}\"\ngraph_address = \"{peer}\"\n",
     root = folder.join("data").display(),
     bundle = folder.join("bundle").display(),
     store = folder.join("data/calendar/calendar.db").display(),

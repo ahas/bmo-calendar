@@ -240,6 +240,7 @@ name = "bmo-calendar"
 version = "0.1.0-rev.1"
 dependencies = [
  "axum",
+ "base64 0.22.1",
  "bmo-console-face",
  "chrono",
  "clap",
