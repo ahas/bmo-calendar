@@ -194,7 +194,7 @@ unit beats once a minute and reads the due alarms from its cache; the moment it 
 due while it was down, once each, naming how late. Beside the marks the store keeps the moment of the last
 beat, which is how far back a beat looks; an event written after its alarm's moment and before its start is
 told at the next beat. The telling is the receiver's instruction route: an order for the
-supervisor in the recipient's room, the first of these that stands, as bmo-project's notices are (bmo-project
+supervisor in the recipient's room, the first of these that stands, as bmo-work's notices are (bmo-work
 `docs/design.md`, 「Notices」):
 
 1. the owner's private room, for the owner;
