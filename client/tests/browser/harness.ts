@@ -4,6 +4,8 @@ import { extname, join } from "node:path";
 
 import { answerOf } from "./stand-in";
 
+import type { Reader } from "./stand-in";
+
 import type { Browser, BrowserContext, Page, Route } from "playwright-core";
 
 // The harness page (`screens-harness.ts`) built and opened in a real browser: the build written into a scratch
@@ -59,22 +61,30 @@ export interface Opened {
   page: Page;
 }
 
-/** Opens the harness at one width on the address given, the stand-in answering the service. */
-export async function openScreen(browser: Browser, built: Built, width: Width, address: string): Promise<Opened> {
+/** Who the page is read by, and a wait the companies' answer is held behind until the test lets it go. */
+export interface Reading {
+  reader?: Reader;
+  companiesHeld?: Promise<void>;
+}
+
+/** Opens the harness at one width on the address given, the stand-in answering the service as it answers the reader. */
+export async function openScreen(browser: Browser, built: Built, width: Width, address: string, reading: Reading = {}): Promise<Opened> {
   const context = await browser.newContext(CONTEXTS[width]);
   const page = await context.newPage();
   const files = new Set(readdirSync(built.folder));
 
   await page.route(
     (url) => url.origin === ORIGIN,
-    (route: Route) => {
+    async (route: Route) => {
       const url = new URL(route.request().url());
       const path = url.pathname;
 
       if (path === `${RELAY}/events`) return route.fulfill({ contentType: "text/event-stream", body: "retry: 86400000\n\n" });
 
       if (path.startsWith(`${RELAY}/`)) {
-        const answer = answerOf(route.request().method(), path.slice(RELAY.length), url.searchParams);
+        if (path === `${RELAY}/organization/companies`) await reading.companiesHeld;
+
+        const answer = answerOf(route.request().method(), path.slice(RELAY.length), url.searchParams, reading.reader);
 
         return route.fulfill({ status: answer.status, contentType: "application/json", body: JSON.stringify(answer.body) });
       }

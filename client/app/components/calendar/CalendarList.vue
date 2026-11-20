@@ -4,7 +4,7 @@
        realm's calendars stand the sources other units push schedules under, one layer each, shown or hidden
        the same way and marked as received. The organization's are the company read, which the administrator
        chooses in the screen's list of companies; another company's calendars and sources he reads alone, the
-       heading marked read-only and no calendar offered to add, set or hide, nor a source to hide. At the foot
+       heading marked read-only by a lock and no calendar offered to add, set or hide, nor a source to hide. At the foot
        stands the way to the booking screen, on the same company. -->
   <div class="flex flex-col gap-4">
     <section v-for="group in groups" :key="group.realm" class="flex flex-col gap-1">
@@ -16,7 +16,9 @@
           <span class="truncate">{{ $t(group.realm === "mine" ? "calendar.label.mine" : "calendar.label.organization") }}</span>
         </h2>
         <CalendarSettingsPopover v-if="writable(group.realm)" :realm="group.realm" />
-        <UBadge v-else :label="$t('calendar.label.read_only')" color="neutral" variant="soft" size="sm" class="shrink-0" />
+        <HintTip v-else :text="$t('calendar.label.read_only')" class="flex size-8 shrink-0 items-center justify-center" role="img" :aria-label="$t('calendar.label.read_only')">
+          <UIcon :name="READ_ONLY_ICON" class="size-4 text-muted" />
+        </HintTip>
       </div>
 
       <template v-if="calendarsRead">
@@ -47,8 +49,8 @@
           <span v-if="sendingLayers.includes(`source:${group.realm}:${source.id}`)" class="flex size-8 shrink-0 items-center justify-center">
             <UIcon :name="SENDING_ICON" class="size-4 animate-spin text-muted motion-reduce:animate-none" />
           </span>
-          <HintTip v-else :text="$t('calendar.label.received')" class="flex size-8 shrink-0 items-center justify-center">
-            <UIcon :name="RECEIVED_ICON" class="size-4 text-muted" role="img" :aria-label="$t('calendar.label.received')" />
+          <HintTip v-else :text="$t('calendar.label.received')" class="flex size-8 shrink-0 items-center justify-center" role="img" :aria-label="$t('calendar.label.received')">
+            <UIcon :name="RECEIVED_ICON" class="size-4 text-muted" />
           </HintTip>
         </div>
       </template>
@@ -69,7 +71,7 @@
 import CalendarSettingsPopover from "./CalendarSettingsPopover.vue";
 import { BOOKING_ICON } from "../../domain/bookings";
 import { companyQuery } from "../../domain/companies";
-import { RECEIVED_ICON, REALM_ICON, SENDING_ICON } from "../../domain/colors";
+import { READ_ONLY_ICON, RECEIVED_ICON, REALM_ICON, SENDING_ICON } from "../../domain/colors";
 import { BOOKINGS_PATH } from "../../composables/useBookingScreen";
 import { useCalendar } from "../../composables/useCalendar";
 import { useCalendarEvents } from "../../composables/useCalendarEvents";
