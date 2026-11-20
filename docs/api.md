@@ -296,6 +296,9 @@ One day of the Outlook calendar of the person a tool session serves, read on tha
 - **The node.** The account's record in agency's `GET /person-nodes`, where it is not marked `shared`; for the
   deployment's own account, the account linked to the receiver's owner, the node `[outlook] owner_node` names
   where it names one. An account with neither is 422 `no-node`.
+- **The account the run and the page token name.** The account itself; for the deployment's own account the one
+  `[outlook] owner_account` names where it names one, the account his node and his Teams page are known by
+  (`docs/design.md`, 「A person's Outlook day」).
 - **The answer:** `date`; `zone`, the PC's time zone as Windows names it; `road`, `outlook` where the running
   Outlook was read and `graph` where Microsoft Graph was; `node`; and `items`, each `title`, `start` and `end`
   (local ISO datetimes on the PC's wall clock), `allDay`, `organizer` (a name, empty where none), `attendees` (how
@@ -457,4 +460,5 @@ root, where `settings.local.toml` links to the data root's `env/calendar.toml`);
 | `brain`, `receiver`, `accounts`, `agency` | `address`, `token` | a peer's base address and token where the data root's files are not to be read; empty, the files are read |
 | `node`, `teams` | `address`, `token` | the node service's and bmo-ms-teams's base address, and the calendar's own caller token there, where the data root's files are not to be read; empty, the files are read |
 | `outlook` | `owner_node` | the node the deployment's own account's Outlook day is read on; empty, its agency record is read as any account's |
+| `outlook` | `owner_account` | the account the deployment's own account is known by to the node service and bmo-ms-teams, which the run and the page token for its day name; empty, its own account |
 | `outlook` | `graph_address` | Microsoft Graph's base address, `https://graph.microsoft.com/v1.0` |

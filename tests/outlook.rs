@@ -6,7 +6,7 @@ use bmo_calendar::title::parts;
 use bmo_calendar::wire::TitleParts;
 use serde_json::{Value, json};
 
-use crate::support::{CALLER_TOKEN, CONSOLE, OWNER_NODE, PAGE_TOKEN, Service, stand};
+use crate::support::{CALLER_TOKEN, CONSOLE, OWNER_NODE, OWNER_NODE_ACCOUNT, PAGE_TOKEN, Service, stand};
 
 const DAY: &str = "/outlook/day?holderName=supervisor-b&date=2026-03-04";
 
@@ -152,16 +152,33 @@ async fn a_day_with_no_road_or_no_node_of_its_own_is_refused() {
 }
 
 #[tokio::test]
-async fn the_owners_day_is_read_on_the_node_the_settings_name() {
-  let service = service_for_member(node_day(Some(json!([])))).await;
-  service.stand.peers.lock().unwrap().person_nodes =
-    vec![json!({ "ownerAccount": "1", "node": "shared-pc", "shared": true, "setAt": 1 })];
+async fn the_owners_day_is_read_on_his_node_under_the_account_it_knows_him_by() {
+  let service = service_for_member(node_day(None)).await;
+  {
+    let mut peers = service.stand.peers.lock().unwrap();
+    peers.person_nodes = vec![
+      json!({ "ownerAccount": OWNER_NODE_ACCOUNT, "node": OWNER_NODE, "shared": true, "setAt": 1 }),
+      json!({ "ownerAccount": "2", "node": OWNER_NODE, "shared": true, "setAt": 1 }),
+    ];
+    peers.page_token = true;
+  }
   let (status, day) = service.get("/outlook/day?holderName=someone-of-the-owner").await;
   assert_eq!(status, 200, "{day}");
-  assert_eq!(day["node"], OWNER_NODE);
-  let peers = service.stand.peers.lock().unwrap();
-  assert_eq!(peers.runs[0].1["account"], "1");
-  assert!(peers.runs[0].1.get("env").is_none(), "no day named is the PC's today");
+  assert_eq!((day["node"].as_str(), day["road"].as_str()), (Some(OWNER_NODE), Some("graph")));
+  {
+    let peers = service.stand.peers.lock().unwrap();
+    assert_eq!(peers.runs[0].1["account"], OWNER_NODE_ACCOUNT, "the account his node knows him by");
+    assert_eq!(peers.page_token_asks[0].0["account"].to_string(), OWNER_NODE_ACCOUNT, "a number");
+    assert!(peers.runs[0].1.get("env").is_none(), "no day named is the PC's today");
+  }
+
+  let (status, refused) = service.get(DAY).await;
+  assert_eq!(
+    (status, refused["code"].as_str()),
+    (422, Some("no-node")),
+    "another account sharing his node"
+  );
+  assert_eq!(service.stand.peers.lock().unwrap().runs.len(), 1);
 }
 
 #[test]

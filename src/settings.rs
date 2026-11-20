@@ -42,6 +42,8 @@ pub struct Settings {
 pub struct Outlook {
   /// The node the deployment's own account's day is read on; empty, its agency record is read as any account's.
   pub owner_node: String,
+  /// The account the deployment's own account is known by to the node service and bmo-ms-teams; empty, its own.
+  pub owner_account: String,
   /// Microsoft Graph's base address.
   pub graph_address: String,
 }

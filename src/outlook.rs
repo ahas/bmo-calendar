@@ -120,18 +120,18 @@ async fn outlook_day(
   let account = api::account_of(app, &caller)
     .await?
     .ok_or_else(|| ApiError::no_account("The call names no tool session's holder."))?;
-  let node = own_node(app, &account).await?;
-  let mut read = node_day(app, &node, &account, date.as_deref()).await?;
+  let place = place(app, &account).await?;
+  let mut read = node_day(app, &place, date.as_deref()).await?;
   let (road, found) = if read.outlook == OutlookState::Running {
     (OutlookRoad::Outlook, std::mem::take(&mut read.events))
   } else {
-    (OutlookRoad::Graph, graph_day(app, &account, &read).await?)
+    (OutlookRoad::Graph, graph_day(app, &place.account, &read).await?)
   };
   Ok(Json(OutlookDay {
     date: read.date,
     zone: read.zone,
     road,
-    node,
+    node: place.node,
     items: found.into_iter().map(Found::event).collect(),
   }))
 }
@@ -148,27 +148,43 @@ fn day(named: Option<String>) -> Answer<Option<String>> {
   Ok(Some(named))
 }
 
-/// The account's own node: for the deployment's own account the node the settings name, where they name one;
-/// else the node agency's record names, where the record is not one several accounts share.
-async fn own_node(app: &App, account: &str) -> Answer<String> {
-  let owner_node = app.settings.outlook.owner_node.trim();
-  if !owner_node.is_empty()
-    && peers::owner_account(&app.http, &app.settings).await?.as_deref() == Some(account)
-  {
-    return Ok(owner_node.to_owned());
+/// Where an account's day is read: its own node, and the account the node service and bmo-ms-teams know it by.
+struct Place {
+  node: String,
+  account: String,
+}
+
+/// The account's place. For the deployment's own account, the node and the account the settings name, each where
+/// they name one; for every account, the node agency's record names under the account it is known by, where the
+/// record is not one several accounts share.
+async fn place(app: &App, account: &str) -> Answer<Place> {
+  let named_node = app.settings.outlook.owner_node.trim();
+  let named_account = app.settings.outlook.owner_account.trim();
+  let owner = (!named_node.is_empty() || !named_account.is_empty())
+    && peers::owner_account(&app.http, &app.settings).await?.as_deref() == Some(account);
+  let known_by = if owner && !named_account.is_empty() { named_account } else { account };
+  if owner && !named_node.is_empty() {
+    return Ok(Place {
+      node: named_node.to_owned(),
+      account: known_by.to_owned(),
+    });
   }
-  match peers::person_node(&app.http, &app.settings, account).await? {
-    Some(record) if !record.shared => Ok(record.node),
+  match peers::person_node(&app.http, &app.settings, known_by).await? {
+    Some(record) if !record.shared => Ok(Place {
+      node: record.node,
+      account: known_by.to_owned(),
+    }),
     Some(record) => Err(ApiError::no_node(format!(
-      "Account {account}'s node {} is one several accounts share, so no node of its own.",
+      "Account {known_by}'s node {} is one several accounts share, so no node of its own.",
       record.node
     ))),
-    None => Err(ApiError::no_node(format!("Account {account} has no node of its own."))),
+    None => Err(ApiError::no_node(format!("Account {known_by} has no node of its own."))),
   }
 }
 
-/// The command run on the node for the account, its answer read off the last line it wrote.
-async fn node_day(app: &App, node: &str, account: &str, date: Option<&str>) -> Answer<NodeDay> {
+/// The command run on the account's node, its answer read off the last line it wrote.
+async fn node_day(app: &App, place: &Place, date: Option<&str>) -> Answer<NodeDay> {
+  let Place { node, account } = place;
   let mut body = json!({ "account": account, "command": SCRIPT, "shell": "powershell" });
   if let Some(date) = date {
     body["env"] = json!({ DAY_VARIABLE: date });

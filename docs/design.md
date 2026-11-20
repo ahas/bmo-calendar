@@ -252,6 +252,11 @@ flowchart TD
   the node would read it; the deployment's own account reads on the node the settings name for it, as its record
   may be one the owner shares with accounts of his own. An account with no node of its own is refused, and no
   other node is tried.
+- **Whom the node and the Teams page are asked for.** Every account is asked for by its own account, but the
+  deployment's own: agency keeps no node record for the administrator's account, so the owner's node is bound
+  in agency, and his Teams page placed in bmo-ms-teams, under an account of their own. The settings name that
+  account beside his node, and the run and the page token for the owner's day are asked under it; the account
+  his own calendars are kept under stays the account service's.
 - **Only through the node service's runs.** The read is one PowerShell command run on the node as the calendar,
   a caller of the node service with a token of its own (the node service's `docs/api.md`, 「Runs」): the node's
   `callers` must name the calendar, and the node service itself refuses a node whose owners do not hold the

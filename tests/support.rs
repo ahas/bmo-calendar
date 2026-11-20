@@ -48,8 +48,10 @@ pub const MEMBER_SUPERVISOR: &str = "supervisor-b";
 pub const NO_ACCOUNT_SUPERVISOR: &str = "supervisor-none";
 /// The calendar's own caller token at the node service and bmo-ms-teams.
 pub const CALLER_TOKEN: &str = "calendar-caller-token";
-/// The node the settings name for the deployment's own account.
+/// The node the settings name for the deployment's own account, and the account that node and the Teams page
+/// know him by.
 pub const OWNER_NODE: &str = "owner-pc";
+pub const OWNER_NODE_ACCOUNT: &str = "9001";
 /// The Teams page token the stand-in hands out.
 pub const PAGE_TOKEN: &str = "page-token";
 
@@ -588,7 +590,8 @@ pub fn settings(stand: &Stand, folder: &std::path::Path) -> Settings {
      [agency]\naddress = \"{peer}\"\ntoken = \"{PEER_TOKEN}\"\n\
      [node]\naddress = \"{peer}\"\ntoken = \"{CALLER_TOKEN}\"\n\
      [teams]\naddress = \"{peer}\"\ntoken = \"{CALLER_TOKEN}\"\n\
-     [outlook]\nowner_node = \"{OWNER_NODE}\"\ngraph_address = \"{peer}\"\n",
+     [outlook]\nowner_node = \"{OWNER_NODE}\"\nowner_account = \"{OWNER_NODE_ACCOUNT}\"\n\
+     graph_address = \"{peer}\"\n",
     root = folder.join("data").display(),
     bundle = folder.join("bundle").display(),
     store = folder.join("data/calendar/calendar.db").display(),
