@@ -182,8 +182,10 @@ import type { CalendarView } from "../../../../shared/types";
 // One screen for every view: a change of day keeps the view standing rather than building it again.
 definePageMeta({ key: (route) => `calendar-${String(route.params.view)}` });
 
+// The calendars' region is sized in pixels, so it keeps room for a heading and its mark whether or not the list of
+// companies takes a share of the width beside it.
 const SIDES: SplitterItem[] = [
-  { slot: "side", minSize: 14, defaultSize: 20, maxSize: 32 },
+  { slot: "side", minSize: 240, defaultSize: 256, maxSize: 400, sizeUnit: "px" },
   { slot: "grid", minSize: 50, defaultSize: 80 }
 ];
 

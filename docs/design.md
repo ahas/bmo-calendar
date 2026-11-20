@@ -301,7 +301,8 @@ kept as either screen moves through its views, days and parts and from one scree
 is a step of the history and a kept link opens the same company; an address naming none, or one he does not
 read, reads his own company. The grid, the layers and the bookings read the company chosen. A member reads his
 own company alone and is shown no list. With another company than his own chosen, its 조직 일정 are read-only,
-the heading marked 읽기 전용: its calendars are neither added, set nor hidden, nor its sources hidden, its events
+the heading marked so by a lock at its trailing edge, named 읽기 전용 in its tooltip, as a list marks a state
+by a compact icon: its calendars are neither added, set nor hidden, nor its sources hidden, its events
 are neither drawn, moved nor changed, an event's form shows it with no save and no delete, and a new event goes
 into his own calendars alone. The platform's own stays his to write.
 
@@ -388,8 +389,8 @@ The screen is used by finger and by ear as well as by mouse:
   dialog rather than beside what opened them. Every name the screen shows in a tooltip is bmo-ui's
   shared one (its components document, 「Tooltips」): an icon button is its icon button (`IconButton`)
   and the way to today its shared tooltip standing on a press, so a finger holds either to read its
-  name and lifting presses nothing; the offline mark and a schedule source's received mark do nothing
-  else, so a tap opens theirs.
+  name and lifting presses nothing; the offline mark, a schedule source's received mark and the read-only
+  lock do nothing else, so a tap opens theirs.
 - **Screen readers and keys.** The month view is a grid of days: the weekdays head its columns, each day
   is named by its full date, whether it is today and how many events it holds, and the arrow keys, Home,
   End, Page Up and Page Down walk it, and Enter opens the day. The day and week views name each day the

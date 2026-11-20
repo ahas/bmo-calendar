@@ -1,6 +1,6 @@
 import type { Calendar, CalendarEventRow, Company, Realm, Resource, Source } from "../../shared/types";
 
-// The calendar service as the harness page's relay answers the platform administrator (`docs/api.md`, 「Companies」,
+// The calendar service as the harness page's relay answers a member of his own company and the platform administrator (`docs/api.md`, 「Companies」,
 // 「Calendars」 and 「Events」): his own company, which he writes in, the platform's own realm, and another company,
 // which he reads alone (「What the administrator writes」). Each company's organization realm holds a calendar, one
 // event in the week the tests open and a resource (「Resources and bookings」), the other company's a source another unit
@@ -72,6 +72,12 @@ const ORGANIZATION: Record<string, Held> = {
   }
 };
 
+/** Who the stand-in answers: a member reads his own company alone, whatever a call names (「Companies」). */
+export type Reader = "administrator" | "member";
+
+/** The companies a member reads: his own alone. */
+export const MEMBER_COMPANIES: Company[] = [{ ...COMPANIES[0]!, manages: false }];
+
 export interface Answer {
   status: number;
   body: unknown;
@@ -80,12 +86,13 @@ export interface Answer {
 const items = (list: unknown[]): Answer => ({ status: 200, body: { items: list, more: false } });
 
 /** The answer the stand-in gives a call: what it holds for a read, a refusal for any write. */
-export function answerOf(method: string, path: string, query: URLSearchParams): Answer {
+export function answerOf(method: string, path: string, query: URLSearchParams, reader: Reader = "administrator"): Answer {
   if (method !== "GET") return { status: 403, body: { code: "forbidden", error: "The stand-in takes no write." } };
-  if (path === "/organization/companies") return items(COMPANIES);
+  if (path === "/organization/companies") return items(reader === "member" ? MEMBER_COMPANIES : COMPANIES);
 
   const [realm, kind] = path.split("/").filter(Boolean) as [Realm, string];
-  const held = realm === "mine" ? MINE : ORGANIZATION[query.get("company") ?? OWN_COMPANY];
+  const company = reader === "member" ? OWN_COMPANY : (query.get("company") ?? OWN_COMPANY);
+  const held = realm === "mine" ? MINE : ORGANIZATION[company];
 
   if (kind === "calendars") return items(held?.calendars ?? []);
   if (kind === "sources") return items(held?.sources ?? []);

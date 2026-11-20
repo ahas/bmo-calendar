@@ -37,6 +37,9 @@ export const CALENDAR_DOT: Record<CalendarColor, string> = {
 /** The mark a received schedule carries beside its realm's, and its source carries in the sidebar. */
 export const RECEIVED_ICON = "i-material-symbols-link";
 
+/** The mark a realm's heading carries where the reader reads it and writes nothing in it. */
+export const READ_ONLY_ICON = "i-material-symbols-lock-outline";
+
 /** The mark that spins while a change is on its way. */
 export const SENDING_ICON = "i-material-symbols-progress-activity";
 

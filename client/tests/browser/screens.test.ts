@@ -10,14 +10,16 @@ import { COMPANIES, DAY, OTHER_COMPANY, OWN_COMPANY } from "./stand-in";
 import type { Browser, Locator, Page } from "playwright-core";
 import type { Built, Width } from "./harness";
 
-// The bundle's screens drawn by a real browser, read by the platform administrator (`docs/design.md`, 「The console」).
-// Both screens stand beside the list of companies: at a desktop's width beside the body, searched as it is typed and
-// chosen into the address, and at the narrowest phone's in a drawer opened from the button carrying the company chosen;
-// the company the address names is kept as the screens move. At a desktop's width and a phone's, the calendar screen
-// opened on another company: its organization heading marked read-only, no calendar offered to add or set, nor a
-// calendar or a source to hide, and an event's form holding every field and offering no save and no delete, standing
-// inside the screen and closed with nothing asked; the mark's words read at 4.5:1 in both modes. The screens stand on
-// the harness page, the stand-in answering the service. Skipped where the browser build is not on the machine.
+// The bundle's screens drawn by a real browser (`docs/design.md`, 「The console」). For the platform administrator both
+// screens stand beside the list of companies, the body standing as the list arrives: at a desktop's width beside the
+// body, searched as it is typed, and at the narrowest phone's in a drawer opened from the button carrying the company
+// chosen, which Esc and Back close alone; a choice is one step of the history and names the company in the address,
+// which the screens keep as they move. A member is shown the body alone at either width. At a desktop's width and a
+// phone's, the calendar screen opened on another company: its organization heading marked read-only by a lock named in
+// its tooltip, no calendar offered to add or set, nor a calendar or a source to hide, and an event's form holding every
+// field and offering no save and no delete, standing inside the screen and closed with nothing asked; the lock reads at
+// 3:1 in both modes. The screens stand on the harness page, the stand-in answering the service. Skipped where the
+// browser build is not on the machine.
 
 function browserReady(): boolean {
   try {
@@ -59,8 +61,8 @@ afterAll(async () => {
 
 const button = (page: Page, name: string): Locator => page.getByRole("button", { name, exact: true });
 const checkbox = (page: Page, name: string): Locator => page.getByRole("checkbox", { name, exact: true });
-// The read-only mark's words, and the mark itself around them.
-const readOnly = (page: Page): Locator => page.getByText(words.label.read_only, { exact: true });
+// The read-only lock, named by its words: the box its tooltip stands on, the icon inside it.
+const readOnly = (page: Page): Locator => page.getByRole("img", { name: words.label.read_only, exact: true });
 const company = (page: Page): string | null => new URL(page.url()).searchParams.get("company");
 
 /** Opens the week the stand-in's events stand in on the other company, as an address naming it opens it, with the
@@ -82,7 +84,7 @@ async function openOther(width: Width) {
   return opened;
 }
 
-// The words the mark shows read against what stands under it: its own ground laid over every ground beneath it, each
+// The ink a mark is drawn in read against what stands under it: its own ground laid over every ground beneath it, each
 // colour read as the browser paints it, the page's own ground the mode's.
 async function contrast(node: Locator): Promise<number> {
   return node.evaluate((element) => {
@@ -130,18 +132,28 @@ describe.each(WIDTHS)("at a %s's width", (width) => {
         expect(await checkbox(page, "Project schedules").isDisabled()).toBe(true);
         expect(await checkbox(page, "Personal").isDisabled()).toBe(false);
 
-        // The mark stands at the heading's trailing edge, on its centre line.
-        const placed = await readOnly(page).evaluate((ink) => {
-          const mark = ink.parentElement!;
+        // The lock stands at the heading's trailing edge, on its centre line, and leaves the heading's words whole.
+        const placed = await readOnly(page).evaluate((mark) => {
           const row = mark.parentElement!.getBoundingClientRect();
-          const heading = mark.parentElement!.querySelector("h2")!.getBoundingClientRect();
+          const heading = mark.parentElement!.querySelector("h2")!;
+          const words = heading.querySelector("span")!;
           const own = mark.getBoundingClientRect();
+          const head = heading.getBoundingClientRect();
 
-          return { trailing: row.right - own.right, centre: heading.top + heading.height / 2 - (own.top + own.height / 2) };
+          return { trailing: row.right - own.right, centre: head.top + head.height / 2 - (own.top + own.height / 2), cut: words.scrollWidth - words.clientWidth };
         });
 
         expect(Math.abs(placed.trailing)).toBeLessThan(0.5);
         expect(Math.abs(placed.centre)).toBeLessThan(0.5);
+        expect(placed.cut).toBeLessThanOrEqual(0);
+
+        // Its words stand in its tooltip, a pointer bringing it up and a tap where a finger is all there is.
+        const mark = readOnly(page);
+
+        if (width === "desktop") await mark.hover();
+        else await mark.tap();
+
+        await page.locator('[role="tooltip"]', { hasText: words.label.read_only }).first().waitFor({ state: "attached" });
       } finally {
         await context.close();
       }
@@ -200,7 +212,7 @@ describe.each(WIDTHS)("at a %s's width", (width) => {
   );
 
   test.each(["light", "dark"] as const)(
-    "the read-only mark reads at 4.5:1 or better in the %s mode",
+    "the read-only lock reads at 3:1 or better in the %s mode",
     async (scheme) => {
       if (!ready) return;
 
@@ -212,7 +224,7 @@ describe.each(WIDTHS)("at a %s's width", (width) => {
           document.documentElement.classList.toggle("dark", dark);
           await Promise.allSettled(document.getAnimations().filter((motion) => motion instanceof CSSTransition).map((motion) => motion.finished));
         }, scheme === "dark");
-        expect(await contrast(readOnly(page))).toBeGreaterThanOrEqual(4.5);
+        expect(await contrast(readOnly(page).locator("svg"))).toBeGreaterThanOrEqual(3);
       } finally {
         await context.close();
       }
@@ -230,6 +242,17 @@ const SCREENS = [
 
 const row = (scope: Page | Locator, value: string): Locator => scope.locator(`[data-choice-sidebar-row="${value}"]`);
 
+const historyLength = (page: Page): Promise<number> => page.evaluate(() => history.length);
+
+/** What stands of the list where it is laid aside: nothing beside the body, no button and no splitter's line. */
+async function laidAside(page: Page): Promise<{ list: number; opener: number; handle: number }> {
+  return {
+    list: await page.locator("[data-choice-sidebar-list]").count(),
+    opener: await page.locator("[data-choice-sidebar-open]").count(),
+    handle: await page.locator("[data-choice-sidebar] > [data-slot=handle]").count()
+  };
+}
+
 /** The values of the rows the list shows, in its order. */
 async function rowValues(page: Page): Promise<string[]> {
   return page.locator("[data-choice-sidebar-row]").evaluateAll((rows) => rows.map((one) => one.getAttribute("data-choice-sidebar-row")!));
@@ -237,18 +260,24 @@ async function rowValues(page: Page): Promise<string[]> {
 
 describe("the list of companies", () => {
   test.each(SCREENS)(
-    "at 1280 stands beside the $screen screen's body, narrows as it is searched, and a choice reads the company and names it in the address",
+    "at 1280 comes beside the $screen screen's standing body, narrows as it is searched, and a choice is one step of the history naming the company",
     async ({ address, own, other }) => {
       if (!ready) return;
 
-      const { context, page } = await openScreen(browser, built, "desktop", address);
+      const { promise: companiesHeld, resolve: answerCompanies } = Promise.withResolvers<void>();
+      const { context, page } = await openScreen(browser, built, "desktop", address, { companiesHeld });
 
       try {
         const list = page.locator("[data-choice-sidebar-list]");
         const body = page.locator("[data-choice-sidebar-body]");
 
+        // Until the companies are read the body stands alone, and it is the same body once the list comes.
         await body.getByText(own).first().waitFor();
+        expect(await laidAside(page)).toEqual({ list: 0, opener: 0, handle: 0 });
+        await body.getByText(own).first().evaluate((node) => Object.assign(window, { standing: node }));
+        answerCompanies();
         await list.waitFor();
+        expect(await page.evaluate(() => (window as unknown as { standing: Node }).standing.isConnected)).toBe(true);
 
         const [listBox, bodyBox] = [(await list.boundingBox())!, (await body.boundingBox())!];
 
@@ -262,11 +291,21 @@ describe("the list of companies", () => {
         await row(page, OWN.id).waitFor({ state: "detached" });
         expect(await rowValues(page)).toEqual([OTHER.id]);
 
+        const steps = await historyLength(page);
+
         await row(page, OTHER.id).click();
         await body.getByText(other).first().waitFor();
         expect(await body.getByText(own).count()).toBe(0);
         expect(company(page)).toBe(OTHER.id);
+        expect(await historyLength(page)).toBe(steps + 1);
         expect(await row(page, OTHER.id).getAttribute("aria-current")).toBe("page");
+
+        // Back is the step before the choice: the company named before it, read again.
+        await page.goBack();
+        await body.getByText(own).first().waitFor();
+        expect(company(page)).toBeNull();
+        await page.locator("[data-choice-sidebar-search]").fill("");
+        expect(await row(page, OWN.id).getAttribute("aria-current")).toBe("page");
       } finally {
         await context.close();
       }
@@ -275,34 +314,84 @@ describe("the list of companies", () => {
   );
 
   test.each(SCREENS)(
-    "at 360 stands in a drawer the $screen screen's button opens, carrying the company chosen, and a choice closes it and reads the company",
+    "at 360 opens on the $screen screen from the button carrying the company chosen, Esc and Back close it alone, and a choice closes it in one step of the history",
     async ({ address, own, other }) => {
       if (!ready) return;
 
-      const { context, page } = await openScreen(browser, built, "narrow", address);
+      const { promise: companiesHeld, resolve: answerCompanies } = Promise.withResolvers<void>();
+      const { context, page } = await openScreen(browser, built, "narrow", address, { companiesHeld });
 
       try {
         const body = page.locator("[data-choice-sidebar-body]");
         const opener = page.locator("[data-choice-sidebar-open]");
+        const drawer = page.getByRole("dialog", { name: words.label.organizations });
 
         await body.getByText(own).first().waitFor();
+        expect(await laidAside(page)).toEqual({ list: 0, opener: 0, handle: 0 });
+        await body.getByText(own).first().evaluate((node) => Object.assign(window, { standing: node }));
+        answerCompanies();
         await opener.waitFor();
+        expect(await page.evaluate(() => (window as unknown as { standing: Node }).standing.isConnected)).toBe(true);
         expect(await page.locator("[data-choice-sidebar-list]").count()).toBe(0);
         expect((await opener.innerText()).trim()).toBe(OWN_LABEL);
 
+        const steps = await historyLength(page);
+        const at = page.url();
+
+        // Esc, and then Back, put the drawer away and leave the page and its company as they stood.
+        for (const close of [() => page.keyboard.press("Escape"), () => page.goBack()]) {
+          await opener.click();
+          await drawer.locator("[data-choice-sidebar-list]").waitFor();
+          await close();
+          await drawer.waitFor({ state: "hidden" });
+          expect([page.url(), (await opener.innerText()).trim()]).toEqual([at, OWN_LABEL]);
+        }
+
         await opener.click();
-
-        const drawer = page.getByRole("dialog", { name: words.label.organizations });
-
-        await drawer.locator("[data-choice-sidebar-list]").waitFor();
         await row(drawer, OTHER.id).click();
         await drawer.waitFor({ state: "hidden" });
         await body.getByText(other).first().waitFor();
         expect(await body.getByText(own).count()).toBe(0);
         expect((await opener.innerText()).trim()).toBe(OTHER.name);
         expect(company(page)).toBe(OTHER.id);
+        expect(await historyLength(page)).toBe(steps + 1);
+
+        // Back is the step before the choice.
+        await page.goBack();
+        await body.getByText(own).first().waitFor();
+        expect([page.url(), (await opener.innerText()).trim(), await drawer.count()]).toEqual([at, OWN_LABEL, 0]);
       } finally {
         await context.close();
+      }
+    },
+    TEST_MS
+  );
+
+  test.each(["desktop", "narrow"] as const)(
+    "is laid aside for a member at the %s width, both screens showing the body alone across the screen",
+    async (width) => {
+      if (!ready) return;
+
+      for (const { address, own } of SCREENS) {
+        const { promise: companiesHeld, resolve: answerCompanies } = Promise.withResolvers<void>();
+        const { context, page } = await openScreen(browser, built, width, address, { reader: "member", companiesHeld });
+
+        try {
+          const body = page.locator("[data-choice-sidebar-body]");
+
+          await body.getByText(own).first().waitFor();
+
+          // The member's one company answered, and the frames after it drawn.
+          const answered = page.waitForResponse((response) => new URL(response.url()).pathname.endsWith("/organization/companies"));
+
+          answerCompanies();
+          await answered;
+          await page.evaluate(() => new Promise((drawn) => requestAnimationFrame(() => requestAnimationFrame(drawn))));
+          expect(await laidAside(page)).toEqual({ list: 0, opener: 0, handle: 0 });
+          expect((await body.boundingBox())!.width).toBe(page.viewportSize()!.width);
+        } finally {
+          await context.close();
+        }
       }
     },
     TEST_MS
