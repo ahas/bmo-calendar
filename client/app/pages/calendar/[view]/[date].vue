@@ -173,9 +173,10 @@ import type { CalendarView } from "../../../../shared/types";
 // One screen for every view: a change of day keeps the view standing rather than building it again.
 definePageMeta({ key: (route) => `calendar-${String(route.params.view)}` });
 
-// The calendars' region is sized in pixels, room for a heading and its mark, so the grid keeps the rest of the width.
+// The calendars' region is sized in pixels, room for a heading and its mark, so the grid keeps the rest of the width:
+// beside the console's navigation and right panel at 1280 its day columns still hold a title of four syllables.
 const SIDES: SplitterItem[] = [
-  { slot: "side", minSize: 240, defaultSize: 256, maxSize: 400, sizeUnit: "px" },
+  { slot: "side", minSize: 208, defaultSize: 224, maxSize: 400, sizeUnit: "px" },
   { slot: "grid", minSize: 50, defaultSize: 80 }
 ];
 

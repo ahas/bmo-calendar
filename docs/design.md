@@ -297,10 +297,12 @@ and resize, a popover to edit, a quick natural-language entry, colour-coded cale
 mini calendar), stood as a console bundle under the sidebar entry 캘린더 (bmo-ui's console plugin contract;
 `docs/api.md`, 「Console」). The sidebar lists 내 일정 and 조직 일정 calendars apart; one grid shows both.
 What a month cell shows beside an event's title goes by the cell's own width, not the screen's, so a narrow cell
-keeps its room for the titles wherever the grid stands: there an event's time, its calendar's dot, its received or
-booking mark and the mark of the reader's own realm give way, in the narrowest cells the organization's mark as
-well, the first of a month is named by its number alone, and the count of the events that do not fit is written
-short (`+3`). A title too long for its cell gives way at its end, named whole to a reader who does not see it.
+keeps its room for the titles wherever the grid stands: there an event's time, its calendar's dot, its realm's
+mark and its received or booking mark give way and its padding narrows, the first of a month is named by its
+number alone, and the count of the events that do not fit is written short (`+3`). The sidebar beside the grid is
+narrow enough that at a desktop's width with the console's navigation and its right panel open a day column still
+holds a title of four syllables. A title too long for its cell gives way at its end, named whole to a reader who
+does not see it.
 
 The 조직 일정 are the reader's company's. The administrator chooses among the companies he reads, 조직 목록, every company
 and the platform's own among them, his own named as his. On the calendar screen they stand in the sidebar itself,

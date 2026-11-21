@@ -5,7 +5,7 @@ import type { Calendar, CalendarEventRow, Company, Realm, Resource, Source } fro
 // which he reads alone (「What the administrator writes」). Each company's organization realm holds a calendar, one
 // event in the week the tests open and a resource (「Resources and bookings」), the other company's a source another unit
 // pushes schedules under as well (「Sources and schedules」); his own realm holds one calendar, one event in that week and
-// a busy day a week later, more events than a month cell has room for. Every other read answers an empty list, and a
+// a busy day a week later, more events than a month cell has room for, and an all-day event a week earlier. Every other read answers an empty list, and a
 // write is refused.
 
 /** The week the tests open, and a day in it every event but the busy day's stands on. */
@@ -13,6 +13,9 @@ export const DAY = "2026-11-18";
 
 /** The day a week later whose events outnumber a month cell's room. */
 export const BUSY_DAY = "2026-11-25";
+
+/** A day a week earlier with one all-day event, drawn in the month as a bar. */
+export const ALL_DAY = "2026-11-11";
 
 export const OWN_COMPANY = "10";
 export const OTHER_COMPANY = "20";
@@ -64,7 +67,12 @@ const BUSY = ["Gym", "Call", "Lunch", "Sync", "Demo", "Read", "Plan"].map((title
   event("mine", null, "personal", `event-busy-${at}`, title, [`${String(9 + at).padStart(2, "0")}:00`, `${String(10 + at).padStart(2, "0")}:00`], BUSY_DAY)
 );
 
-const MINE: Held = { calendars: [calendar("mine", null, "personal", "Personal", "primary")], events: [event("mine", null, "personal", "event-own", "Dentist", ["08:00", "09:00"]), ...BUSY] };
+const DAY_OFF: CalendarEventRow = { ...event("mine", null, "personal", "event-day-off", "Day off", ["00:00", "00:00"], ALL_DAY), end: "2026-11-12T00:00:00", allDay: true };
+
+const MINE: Held = {
+  calendars: [calendar("mine", null, "personal", "Personal", "primary")],
+  events: [event("mine", null, "personal", "event-own", "Dentist", ["08:00", "09:00"]), ...BUSY, DAY_OFF]
+};
 
 const ORGANIZATION: Record<string, Held> = {
   [OWN_COMPANY]: {

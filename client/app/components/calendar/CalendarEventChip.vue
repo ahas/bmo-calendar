@@ -19,7 +19,7 @@
       v-on="!movable(event) ? {} : { pointerdown: (pointer: PointerEvent) => onPointerdown(pointer, event) }"
     >
       <span v-if="!event.allDay" class="size-2 shrink-0 rounded-full max-lg:hidden @max-[8rem]/day:hidden" :class="CALENDAR_DOT[color]" />
-      <UIcon :name="REALM_ICON[event.realm]" class="size-3.5 shrink-0 text-muted @max-[4rem]/day:hidden" :class="event.realm === 'mine' && 'max-sm:hidden @max-[6rem]/day:hidden'" />
+      <UIcon :name="REALM_ICON[event.realm]" class="size-3.5 shrink-0 text-muted @max-[6rem]/day:hidden" :class="event.realm === 'mine' && 'max-sm:hidden'" />
       <UIcon v-if="mark" :name="mark" class="size-3.5 shrink-0 text-muted max-sm:hidden @max-[6rem]/day:hidden" />
       <span class="truncate font-medium max-sm:flex-1">{{ event.title }}</span>
       <span v-if="showTime && !event.allDay" data-time class="ms-auto shrink-0 tabular-nums text-muted">{{ formatTime(fromLocalISO(event.start)) }}</span>

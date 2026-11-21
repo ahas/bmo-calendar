@@ -242,9 +242,11 @@ describe.each(WIDTHS)("at a %s's width", (width) => {
 // A company's row in the calendar screen's list of calendars, by its value.
 const companyRow = (scope: Page | Locator, value: string): Locator => scope.locator(`[data-company-row="${value}"]`);
 
-// The month grid, and the narrowest an event's title is ever shown: about its first two characters.
+// The month grid, the narrowest an event's title is ever shown, about its first two characters, and the widest title a
+// day column holds whole beside the console's navigation and right panel, a title of four Korean syllables.
 const MONTH_GRID = "[role=grid]:has([data-date])";
 const TITLE_SHOWN_PX = 24;
+const TITLE_WHOLE_PX = 52;
 
 /** Every piece of words the grid shows, by how much of it stands and how wide it is whole, and whether it is an
  *  event's title, which gives way where the cell has no room for it. */
@@ -263,7 +265,7 @@ async function gridWords(page: Page): Promise<{ text: string; shown: number; who
 
 describe("the month grid", () => {
   test.each(["console", "narrow"] as const)(
-    "at the %s width stands inside the screen, cuts no word of its own and shows every event's title at least by its first characters",
+    "at the %s width stands inside the screen, cuts no word of its own and shows every event's title at least by its first characters, a short one whole beside the console's panels",
     async (width) => {
       if (!ready) return;
 
@@ -280,6 +282,11 @@ describe("the month grid", () => {
 
         expect(pieces.filter((piece) => !piece.title && piece.shown < piece.whole)).toEqual([]);
         expect(pieces.filter((piece) => piece.title && piece.shown < Math.min(piece.whole, TITLE_SHOWN_PX))).toEqual([]);
+        // Beside the console's panels a short title stands whole, a timed event's and an all-day bar's alike.
+        if (width === "console") {
+          expect(pieces.filter((piece) => piece.title && piece.whole <= TITLE_WHOLE_PX && piece.shown < piece.whole)).toEqual([]);
+          expect(pieces.filter((piece) => piece.title && ["Dentist", "Day off"].includes(piece.text)).length).toBe(2);
+        }
         // The busy day counts the events it has no room for.
         expect(pieces.some((piece) => piece.text === words.label.more_short.replace("{n}", "4"))).toBe(true);
 

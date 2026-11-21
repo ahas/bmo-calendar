@@ -52,7 +52,7 @@
           v-else
           :event="event"
           :anchored="!continuesBefore"
-          class="relative z-1 mx-0.5 self-start"
+          class="relative z-1 mx-0.5 self-start @max-[6rem]/day:px-1"
           :class="[continuesBefore && 'rounded-s-none', continuesAfter && 'rounded-e-none']"
           :style="barStyle(lane, colSpan)"
         />
