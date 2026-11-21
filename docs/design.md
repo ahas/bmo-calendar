@@ -300,7 +300,10 @@ at its head carrying the company chosen. The company chosen is the address's `co
 kept as either screen moves through its views, days and parts and from one screen to the other, so a choice
 is a step of the history and a kept link opens the same company; an address naming none, or one he does not
 read, reads his own company. The grid, the layers and the bookings read the company chosen. A member reads his
-own company alone and is shown no list. With another company than his own chosen, its 조직 일정 are read-only,
+own company alone and is shown no list. Until the companies are read the list stands as its skeleton,
+beside the rest of the screen on a wide one and as the skeleton of the button on a phone, so the rest of the
+screen stands at its final width from the first frame; it is laid aside once the read finds a member
+or answers nothing. With another company than his own chosen, its 조직 일정 are read-only,
 the heading marked so by a lock at its trailing edge, named 읽기 전용 in its tooltip, as a list marks a state
 by a compact icon: its calendars are neither added, set nor hidden, nor its sources hidden, its events
 are neither drawn, moved nor changed, an event's form shows it with no save and no delete, and a new event goes

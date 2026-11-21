@@ -11,10 +11,11 @@ import type { Browser, Locator, Page } from "playwright-core";
 import type { Built, Width } from "./harness";
 
 // The bundle's screens drawn by a real browser (`docs/design.md`, 「The console」). For the platform administrator both
-// screens stand beside the list of companies, the body standing as the list arrives: at a desktop's width beside the
+// screens stand beside the list of companies, its skeleton until the companies are read and the body standing where it
+// stays as the list arrives: at a desktop's width beside the
 // body, searched as it is typed, and at the narrowest phone's in a drawer opened from the button carrying the company
 // chosen, which Esc and Back close alone; a choice is one step of the history and names the company in the address,
-// which the screens keep as they move. A member is shown the body alone at either width. At a desktop's width and a
+// which the screens keep as they move. A member is shown the list's skeleton until his company is read, and then the body alone at either width. At a desktop's width and a
 // phone's, the calendar screen opened on another company: its organization heading marked read-only by a lock named in
 // its tooltip, no calendar offered to add or set, nor a calendar or a source to hide, and an event's form holding every
 // field and offering no save and no delete, standing inside the screen and closed with nothing asked; the lock reads at
@@ -258,9 +259,22 @@ async function rowValues(page: Page): Promise<string[]> {
   return page.locator("[data-choice-sidebar-row]").evaluateAll((rows) => rows.map((one) => one.getAttribute("data-choice-sidebar-row")!));
 }
 
+// The skeleton the list stands as until the companies are read: its rows' beside the body at a desktop's width, and the
+// button's bar at the body's head at a phone's.
+const LIST_SKELETON = "[data-choice-sidebar-list] [role=status][aria-busy=true]";
+const OPENER_SKELETON = '[data-choice-sidebar-body] > div:first-child > [aria-hidden="true"][aria-busy="true"]';
+
+/** Where the body stands across the screen, and how far down it the words it reads stand. */
+async function bodyPlace(page: Page, words: string): Promise<{ x: number; width: number; top: number }> {
+  const body = (await page.locator("[data-choice-sidebar-body]").boundingBox())!;
+  const held = (await page.locator("[data-choice-sidebar-body]").getByText(words).first().boundingBox())!;
+
+  return { x: Math.round(body.x), width: Math.round(body.width), top: Math.round(held.y) };
+}
+
 describe("the list of companies", () => {
   test.each(SCREENS)(
-    "at 1280 comes beside the $screen screen's standing body, narrows as it is searched, and a choice is one step of the history naming the company",
+    "at 1280 stands as its skeleton and then its rows beside the $screen screen's standing body, narrows as it is searched, and a choice is one step of the history naming the company",
     async ({ address, own, other }) => {
       if (!ready) return;
 
@@ -271,13 +285,19 @@ describe("the list of companies", () => {
         const list = page.locator("[data-choice-sidebar-list]");
         const body = page.locator("[data-choice-sidebar-body]");
 
-        // Until the companies are read the body stands alone, and it is the same body once the list comes.
+        // Until the companies are read the list stands as its skeleton beside the body, and the body is the same body,
+        // standing where it stays, once the list comes.
         await body.getByText(own).first().waitFor();
-        expect(await laidAside(page)).toEqual({ list: 0, opener: 0, handle: 0 });
+        await page.locator(LIST_SKELETON).waitFor();
+        expect(await page.locator("[data-choice-sidebar-row]").count()).toBe(0);
         await body.getByText(own).first().evaluate((node) => Object.assign(window, { standing: node }));
+
+        const unread = await bodyPlace(page, own);
+
         answerCompanies();
-        await list.waitFor();
+        await row(list, OWN.id).waitFor();
         expect(await page.evaluate(() => (window as unknown as { standing: Node }).standing.isConnected)).toBe(true);
+        expect(await bodyPlace(page, own)).toEqual(unread);
 
         const [listBox, bodyBox] = [(await list.boundingBox())!, (await body.boundingBox())!];
 
@@ -314,7 +334,7 @@ describe("the list of companies", () => {
   );
 
   test.each(SCREENS)(
-    "at 360 opens on the $screen screen from the button carrying the company chosen, Esc and Back close it alone, and a choice closes it in one step of the history",
+    "at 360 stands as the skeleton of the $screen screen's button, then opens from the button carrying the company chosen, Esc and Back close it alone, and a choice closes it in one step of the history",
     async ({ address, own, other }) => {
       if (!ready) return;
 
@@ -326,12 +346,19 @@ describe("the list of companies", () => {
         const opener = page.locator("[data-choice-sidebar-open]");
         const drawer = page.getByRole("dialog", { name: words.label.organizations });
 
+        // Until the companies are read the button stands as its skeleton at the body's head, and the body is the same
+        // body, standing where it stays, once the button comes.
         await body.getByText(own).first().waitFor();
+        await page.locator(OPENER_SKELETON).waitFor();
         expect(await laidAside(page)).toEqual({ list: 0, opener: 0, handle: 0 });
         await body.getByText(own).first().evaluate((node) => Object.assign(window, { standing: node }));
+
+        const unread = await bodyPlace(page, own);
+
         answerCompanies();
         await opener.waitFor();
         expect(await page.evaluate(() => (window as unknown as { standing: Node }).standing.isConnected)).toBe(true);
+        expect(await bodyPlace(page, own)).toEqual(unread);
         expect(await page.locator("[data-choice-sidebar-list]").count()).toBe(0);
         expect((await opener.innerText()).trim()).toBe(OWN_LABEL);
 
@@ -368,7 +395,7 @@ describe("the list of companies", () => {
   );
 
   test.each(["desktop", "narrow"] as const)(
-    "is laid aside for a member at the %s width, both screens showing the body alone across the screen",
+    "stands as its skeleton until a member's company is read, and is then laid aside at the %s width, both screens showing the body alone across the screen",
     async (width) => {
       if (!ready) return;
 
@@ -380,6 +407,7 @@ describe("the list of companies", () => {
           const body = page.locator("[data-choice-sidebar-body]");
 
           await body.getByText(own).first().waitFor();
+          await page.locator(width === "desktop" ? LIST_SKELETON : OPENER_SKELETON).waitFor();
 
           // The member's one company answered, and the frames after it drawn.
           const answered = page.waitForResponse((response) => new URL(response.url()).pathname.endsWith("/organization/companies"));

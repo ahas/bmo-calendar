@@ -11,7 +11,8 @@ import type { SideChoice } from "bmo-ui/app/domain/side-parts";
 // console」): the companies as the list's entries in the order the service lists them, his own named as his,
 // the company read chosen, and a choice made by moving the screen's address to name it, a step of the history.
 // The company read follows the address for as long as the screen stands, so a screen calls this before it
-// reads anything of the organization realm. A member is offered no list.
+// reads anything of the organization realm. Until the companies are read the list stands as its skeleton; a member,
+// and a reader whose companies did not answer, are then offered no list.
 
 export function useCompanyChoice() {
   const route = useRoute();
@@ -30,5 +31,8 @@ export function useCompanyChoice() {
     void navigateTo({ path: route.path, query: { ...route.query, company: String(value) } });
   }
 
-  return { entries, chosen: company, listed: administrator, choose };
+  /** Whether the list stands: while the companies are unread, as its skeleton, and then for the administrator alone. */
+  const listed = computed(() => !companiesRead.value || administrator.value);
+
+  return { entries, chosen: company, listed, choose };
 }
