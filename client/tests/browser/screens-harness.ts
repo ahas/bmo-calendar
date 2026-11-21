@@ -26,8 +26,9 @@ import type { Ref } from "vue";
 // under the router as its module names them (`console/routes.ts`), and the console's relay of the calendar service
 // at the relay base, which the test answers. The page wires itself as the console does: the library's app root
 // holding the layer's tooltip setting, the overlays the back gesture closes, the page taken over by the browser so a
-// skeleton says it is busy, and the console's words for the layer's own keys. No people directory is offered, so the
-// screens read none.
+// skeleton says it is busy, and the console's words for the layer's own keys. Where the test asks for them, the
+// console's navigation and its right panel stand beside the frame at the widths it names, as empty columns. No people
+// directory is offered, so the screens read none.
 
 /** Where the page relays a call to a service, as the console's relay base. */
 export const RELAY_BASE = "/relay";
@@ -87,18 +88,24 @@ const i18n = createI18n({
   fallbackWarn: false
 });
 
+// The console's columns beside the frame, in pixels, where the test hands them to the page before it loads.
+const asides = (window as { consoleAsides?: { navigation: number; panel: number } }).consoleAsides;
+const aside = (width: number, name: string) => h("div", { class: "h-dvh shrink-0 border-default", style: { width: `${width}px` }, [`data-console-${name}`]: "" });
+
 const Page = defineComponent(() => {
   // The console offers its title bar to the screens under its layout, which then draw none of their own.
   provide("bmo-console-title-bar", {});
 
   return () =>
     h(UApp, { tooltip: TOOLTIP_PROVIDER }, () =>
-      h(UDashboardGroup, { storage: "local", storageKey: "harness" }, () =>
+      h(UDashboardGroup, { storage: "local", storageKey: "harness" }, () => [
+        asides ? aside(asides.navigation, "navigation") : null,
         h("div", { class: "relative flex h-dvh min-h-0 min-w-0 flex-1 flex-col", "data-console-frame": "" }, [
           h(UDashboardNavbar, { title: i18n.global.t("calendar.title"), icon: "i-material-symbols-calendar-month-outline", toggle: false }),
           h(RouterView)
-        ])
-      )
+        ]),
+        asides ? aside(asides.panel, "panel") : null
+      ])
     );
 });
 

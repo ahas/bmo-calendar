@@ -24,6 +24,7 @@
       "event_title": "Title",
       "mine": "My calendars",
       "more": "{n} more",
+      "more_short": "+{n}",
       "name": "Name",
       "notes": "Notes",
       "offline": "Offline",

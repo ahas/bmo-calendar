@@ -2,14 +2,15 @@
   <!-- One week of the month grid, a row of the grid's table: each day a cell holding its number, then a
        fixed stack of slots it fills. All-day bars stand in the cell of their first day this week and run
        across the days they cover, holding their lane; timed events fill the slots the bars leave, and the
-       last free slot counts what does not fit. A cell is named by its full date and its events, and the
-       keyboard walks the cells (the month view). -->
+       last free slot counts what does not fit. What a cell shows beside a title goes by the cell's own width,
+       wherever the grid stands, so a narrow cell keeps its room for the titles. A cell is named by its full date
+       and its events, and the keyboard walks the cells (the month view). -->
   <div role="row" :aria-rowindex="props.rowIndex" class="grid min-w-0 grid-cols-7" :style="gridStyle">
     <div
       v-for="(cell, index) in cells"
       :key="cell.iso"
       role="gridcell"
-      class="focus-inset row-span-full grid grid-cols-[minmax(0,1fr)] grid-rows-subgrid border-b border-default"
+      class="@container/day focus-inset row-span-full grid grid-cols-[minmax(0,1fr)] grid-rows-subgrid border-b border-default"
       :class="[index !== 0 && (cell.day.getDate() === 1 ? 'shadow-[inset_1px_0_0_var(--ui-border-accented)]' : 'shadow-[inset_1px_0_0_var(--ui-border)]'), endsMonth(cell.day) && 'border-b-accented', isWeekend(cell.day) && 'bg-elevated/50']"
       :data-date="cell.iso"
       :tabindex="cell.iso === props.tabDay ? 0 : -1"
@@ -31,8 +32,8 @@
         :class="cell.today ? 'badge-ink bg-primary text-inverted hover:bg-primary/75 active:bg-primary/75' : [inFocus(cell.day) ? 'text-highlighted' : 'text-muted', 'hover:bg-elevated active:bg-accented']"
       >
         <!-- The first of a month names its month where the cell has room for it. -->
-        <span v-if="cell.day.getDate() === 1" class="whitespace-nowrap max-sm:hidden">{{ formatMonthDay(cell.day) }}</span>
-        <span :class="cell.day.getDate() === 1 && 'sm:hidden'">{{ cell.day.getDate() }}</span>
+        <span v-if="cell.day.getDate() === 1" class="whitespace-nowrap @max-[6rem]/day:hidden">{{ formatMonthDay(cell.day) }}</span>
+        <span :class="cell.day.getDate() === 1 && '@min-[6rem]/day:hidden'">{{ cell.day.getDate() }}</span>
       </ULink>
 
       <USkeleton v-for="slot in skeletons[index]" :key="`skeleton-${slot}`" class="pointer-events-none mx-0.5 h-6 self-start rounded-sm" :style="{ gridRow: slot + 2 }" />
@@ -59,7 +60,7 @@
 
       <template v-for="{ event, slot, anchored } in cell.events" :key="event.key">
         <CalendarEventDraft v-if="event.key === DRAFT_EVENT_KEY" variant="chip" anchored class="mx-0.5 self-start" :style="{ gridRow: slot + 2 }" />
-        <CalendarEventChip v-else :event="event" :anchored="anchored" show-time class="mx-0.5 self-start max-lg:**:data-time:hidden" :style="{ gridRow: slot + 2 }" />
+        <CalendarEventChip v-else :event="event" :anchored="anchored" show-time class="mx-0.5 self-start @max-[6rem]/day:px-1 @max-[8rem]/day:**:data-time:hidden" :style="{ gridRow: slot + 2 }" />
       </template>
 
       <UPopover v-if="cell.more" :content="{ side: 'right', align: 'start' }" :ui="{ content: 'w-64 p-2' }">
@@ -68,11 +69,14 @@
             color="neutral"
             variant="ghost"
             size="sm"
-            class="mx-0.5 h-6 justify-start self-start px-1.5 font-normal text-muted"
+            class="mx-0.5 h-6 justify-start self-start px-1.5 font-normal text-muted @max-[6rem]/day:px-1"
             :class="open && 'bg-elevated'"
-            :label="$t('calendar.label.more', { n: countText(cell.more.hidden) })"
             :style="{ gridRow: cell.more.slot + 2 }"
-          />
+          >
+            <!-- A narrow cell counts the rest in the short form. -->
+            <span class="@max-[6rem]/day:hidden">{{ $t("calendar.label.more", { n: countText(cell.more.hidden) }) }}</span>
+            <span class="@min-[6rem]/day:hidden">{{ $t("calendar.label.more_short", { n: countText(cell.more.hidden) }) }}</span>
+          </UButton>
         </template>
 
         <template #content>

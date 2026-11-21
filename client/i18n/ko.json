@@ -24,6 +24,7 @@
       "event_title": "제목",
       "mine": "내 일정",
       "more": "외 {n}",
+      "more_short": "외 {n}",
       "name": "이름",
       "notes": "메모",
       "offline": "오프라인",

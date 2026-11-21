@@ -2,8 +2,8 @@
   <!-- The calendar screen (docs/design.md, 「The console」): the calendars of both realms beside one grid. Where
        there is room the calendars stand beside the grid behind a splitter; on a phone the grid is the body,
        the calendars rise from the bottom edge, the way to today stands in a bar at its foot and a new event
-       floats over that bar. For the administrator both stand beside the list of companies under the toolbar.
-       The view, the day and the company are the address. -->
+       floats over that bar. For the administrator the calendars' list holds the companies he chooses from. The
+       view, the day and the company are the address. -->
   <UDashboardPanel id="calendar" :ui="{ body: 'p-0 sm:p-0 gap-0 sm:gap-0 overflow-y-hidden [&>*]:max-w-none' }">
     <!-- Beside the title stands only the screen's name and mark; what acts on the screen stands in its toolbar. -->
     <template v-if="!consoleBar" #header>
@@ -81,17 +81,9 @@
       <!-- The span a step lands on, said once it has landed. -->
       <p class="sr-only" aria-live="polite" aria-atomic="true">{{ announced }}</p>
 
-      <!-- For the administrator the companies stand beside the rest of the screen, the calendars' own side
-           region inside it; a member reads one company and is shown the rest alone. -->
-      <ChoiceSidebar
-        :label="$t('calendar.label.organizations')"
-        :entries="companyEntries"
-        :chosen="chosenCompany"
-        :listed="companiesListed"
-        save-id="calendar-companies"
-        :no-match-text="$t('calendar.status.no_organization_match')"
-        @choose="chooseCompany"
-      >
+      <!-- For the administrator the companies stand in the calendars' list, under the organization's heading, so
+           the grid shares the width with one side region alone. -->
+      <div class="flex min-h-0 min-w-0 flex-1 flex-col" data-calendar-body>
         <p v-if="failed" role="alert" class="badge-ink flex shrink-0 items-center gap-3 border-b border-default px-4 py-2 text-sm text-error">
           {{ $t("calendar.error.events_failed") }}
         </p>
@@ -113,7 +105,7 @@
             <template #body>
               <UScrollArea ref="sheetBody" class="min-h-0 flex-1">
                 <div class="flex flex-col gap-4 p-4">
-                  <CalendarList />
+                  <CalendarList :companies="companyEntries" :chosen="chosenCompany" :listed="companiesListed" @choose="choose" />
                 </div>
               </UScrollArea>
             </template>
@@ -124,7 +116,7 @@
           <template #side>
             <UScrollArea class="min-h-0 min-w-0 flex-1">
               <div class="flex flex-col gap-4 p-4">
-                <CalendarList />
+                <CalendarList :companies="companyEntries" :chosen="chosenCompany" :listed="companiesListed" @choose="choose" />
                 <USeparator />
                 <CalendarMini />
               </div>
@@ -139,7 +131,7 @@
             </div>
           </template>
         </USplitter>
-      </ChoiceSidebar>
+      </div>
     </template>
   </UDashboardPanel>
 </template>
@@ -149,7 +141,6 @@ import { defineShortcuts } from "@nuxt/ui/composables/defineShortcuts";
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from "vue";
 import { navigateTo } from "nuxt/app";
 import { useI18n } from "vue-i18n";
-import ChoiceSidebar from "bmo-ui/app/components/ChoiceSidebar.vue";
 import ToolBar from "bmo-ui/app/components/ToolBar.vue";
 import { useIsland } from "bmo-ui/app/domain/island";
 import { countText } from "bmo-ui/app/domain/numbers";
@@ -182,8 +173,7 @@ import type { CalendarView } from "../../../../shared/types";
 // One screen for every view: a change of day keeps the view standing rather than building it again.
 definePageMeta({ key: (route) => `calendar-${String(route.params.view)}` });
 
-// The calendars' region is sized in pixels, so it keeps room for a heading and its mark whether or not the list of
-// companies takes a share of the width beside it.
+// The calendars' region is sized in pixels, room for a heading and its mark, so the grid keeps the rest of the width.
 const SIDES: SplitterItem[] = [
   { slot: "side", minSize: 240, defaultSize: 256, maxSize: 400, sizeUnit: "px" },
   { slot: "grid", minSize: 50, defaultSize: 80 }
@@ -372,6 +362,12 @@ watch(isSidebarOpen, async (opened) => {
   await new Promise((resolve) => requestAnimationFrame(resolve));
   sheetBodyRef.value?.$el.closest<HTMLElement>('[role="dialog"]')?.focus();
 });
+
+// A company chosen in the calendars' drawer puts the drawer away first, so the choice is the one step of the history.
+function choose(value: string): void {
+  isSidebarOpen.value = false;
+  chooseCompany(value);
+}
 
 // The calendars' drawer steps aside once what it chose is on its way.
 watch([() => date.value.toString(), () => !!draft.value], () => {

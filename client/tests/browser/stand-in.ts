@@ -4,11 +4,15 @@ import type { Calendar, CalendarEventRow, Company, Realm, Resource, Source } fro
 // 「Calendars」 and 「Events」): his own company, which he writes in, the platform's own realm, and another company,
 // which he reads alone (「What the administrator writes」). Each company's organization realm holds a calendar, one
 // event in the week the tests open and a resource (「Resources and bookings」), the other company's a source another unit
-// pushes schedules under as well (「Sources and schedules」); his own realm holds one calendar and one event. Every other
-// read answers an empty list, and a write is refused.
+// pushes schedules under as well (「Sources and schedules」); his own realm holds one calendar, one event in that week and
+// a busy day a week later, more events than a month cell has room for. Every other read answers an empty list, and a
+// write is refused.
 
-/** The week the tests open, and a day in it every event stands on. */
+/** The week the tests open, and a day in it every event but the busy day's stands on. */
 export const DAY = "2026-11-18";
+
+/** The day a week later whose events outnumber a month cell's room. */
+export const BUSY_DAY = "2026-11-25";
 
 export const OWN_COMPANY = "10";
 export const OTHER_COMPANY = "20";
@@ -23,7 +27,7 @@ function calendar(realm: Realm, company: string | null, id: string, name: string
   return { id, realm, company, name, color, writers: realm === "mine" ? null : "creator", tell: realm === "mine" ? null : "creator", hidden: false, creator: "1", createdAt: 1 };
 }
 
-function event(realm: Realm, company: string | null, calendarId: string, id: string, title: string, hours: [string, string]): CalendarEventRow {
+function event(realm: Realm, company: string | null, calendarId: string, id: string, title: string, hours: [string, string], day = DAY): CalendarEventRow {
   return {
     id,
     realm,
@@ -31,8 +35,8 @@ function event(realm: Realm, company: string | null, calendarId: string, id: str
     calendarId,
     title,
     description: "",
-    start: `${DAY}T${hours[0]}:00`,
-    end: `${DAY}T${hours[1]}:00`,
+    start: `${day}T${hours[0]}:00`,
+    end: `${day}T${hours[1]}:00`,
     allDay: false,
     alarm: "none",
     repeat: "none",
@@ -56,7 +60,11 @@ interface Held {
   resources?: Resource[];
 }
 
-const MINE: Held = { calendars: [calendar("mine", null, "personal", "Personal", "primary")], events: [event("mine", null, "personal", "event-own", "Dentist", ["08:00", "09:00"])] };
+const BUSY = ["Gym", "Call", "Lunch", "Sync", "Demo", "Read", "Plan"].map((title, at) =>
+  event("mine", null, "personal", `event-busy-${at}`, title, [`${String(9 + at).padStart(2, "0")}:00`, `${String(10 + at).padStart(2, "0")}:00`], BUSY_DAY)
+);
+
+const MINE: Held = { calendars: [calendar("mine", null, "personal", "Personal", "primary")], events: [event("mine", null, "personal", "event-own", "Dentist", ["08:00", "09:00"]), ...BUSY] };
 
 const ORGANIZATION: Record<string, Held> = {
   [OWN_COMPANY]: {

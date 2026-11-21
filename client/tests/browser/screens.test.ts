@@ -5,23 +5,27 @@ import { chromium } from "playwright-core";
 
 import en from "../../i18n/en.json";
 import { WIDTHS, buildHarness, openScreen } from "./harness";
-import { COMPANIES, DAY, OTHER_COMPANY, OWN_COMPANY } from "./stand-in";
+import { BUSY_DAY, COMPANIES, DAY, OTHER_COMPANY, OWN_COMPANY } from "./stand-in";
 
 import type { Browser, Locator, Page } from "playwright-core";
 import type { Built, Width } from "./harness";
 
-// The bundle's screens drawn by a real browser (`docs/design.md`, 「The console」). For the platform administrator both
-// screens stand beside the list of companies, its skeleton until the companies are read and the body standing where it
-// stays as the list arrives: at a desktop's width beside the
-// body, searched as it is typed, and at the narrowest phone's in a drawer opened from the button carrying the company
-// chosen, which Esc and Back close alone; a choice is one step of the history and names the company in the address,
-// which the screens keep as they move. At a desktop's width the line under the row heading each view, the weekdays,
-// the days or the hours, runs on from the line under the list's head. A member is shown the list's skeleton until his company is read, and then the body alone at either width. At a desktop's width and a
-// phone's, the calendar screen opened on another company: its organization heading marked read-only by a lock named in
-// its tooltip, no calendar offered to add or set, nor a calendar or a source to hide, and an event's form holding every
-// field and offering no save and no delete, standing inside the screen and closed with nothing asked; the lock reads at
-// 3:1 in both modes. The screens stand on the harness page, the stand-in answering the service. Skipped where the
-// browser build is not on the machine.
+// The bundle's screens drawn by a real browser (`docs/design.md`, 「The console」). The month grid at a desktop's width
+// with the console's navigation and right panel open, and at the narrowest phone's, standing inside the screen with no
+// word of its own cut and every event's title showing at least its first characters. For the platform administrator the
+// calendar screen holds the companies in its calendars' list, under the organization's heading: their skeleton until
+// they are read, the grid standing where it stays as they arrive, searched as it is typed, and at the narrowest phone's
+// in the calendars' sheet, which a choice closes. The booking screen stands beside the list of companies, its skeleton
+// until the companies are read and the body standing where it stays as the list arrives: at a desktop's width beside
+// the body, searched as it is typed, and at the narrowest phone's in a drawer opened from the button carrying the
+// company chosen, which Esc and Back close alone. On either screen a choice is one step of the history and names the
+// company in the address, which the screens keep as they move; at a desktop's width the line under the row heading
+// each of its views, the weekdays, the days or the hours, runs on from the line under the list's head. A member is shown the companies' skeleton until his
+// company is read, and then no company at either width. At a desktop's width and a phone's, the calendar screen opened
+// on another company: its row marked read-only by a lock named in its tooltip, no calendar offered to add or set, nor a
+// calendar or a source to hide, and an event's form holding every field and offering no save and no delete, standing
+// inside the screen and closed with nothing asked; the lock reads at 3:1 in both modes. The screens stand on the harness
+// page, the stand-in answering the service. Skipped where the browser build is not on the machine.
 
 function browserReady(): boolean {
   try {
@@ -119,7 +123,7 @@ async function contrast(node: Locator): Promise<number> {
 
 describe.each(WIDTHS)("at a %s's width", (width) => {
   test.skipIf(!ready)(
-    "another company's calendars stand read-only, marked so at the heading's trailing edge",
+    "another company's calendars stand read-only, marked so at the trailing edge of its row",
     async () => {
       const { context, page } = await openOther(width);
 
@@ -134,11 +138,11 @@ describe.each(WIDTHS)("at a %s's width", (width) => {
         expect(await checkbox(page, "Project schedules").isDisabled()).toBe(true);
         expect(await checkbox(page, "Personal").isDisabled()).toBe(false);
 
-        // The lock stands at the heading's trailing edge, on its centre line, and leaves the heading's words whole.
+        // The lock stands at the trailing edge of the company's row, on its centre line, and leaves its words whole.
         const placed = await readOnly(page).evaluate((mark) => {
           const row = mark.parentElement!.getBoundingClientRect();
-          const heading = mark.parentElement!.querySelector("h2")!;
-          const words = heading.querySelector("span")!;
+          const heading = mark.parentElement!.firstElementChild!;
+          const words = heading.querySelector("[data-layer-words]")!;
           const own = mark.getBoundingClientRect();
           const head = heading.getBoundingClientRect();
 
@@ -235,17 +239,207 @@ describe.each(WIDTHS)("at a %s's width", (width) => {
   );
 });
 
-// Each screen the list of companies stands on, by the address it is opened on and what its body reads of the
-// reader's own company and of the other: the calendar screen an organization event, the booking screen a resource.
-const SCREENS = [
-  { screen: "calendar", address: `/calendar/week/${DAY}`, own: "Hanbit review", other: "Nuri weekly meeting" },
-  { screen: "booking", address: `/calendar/bookings?date=${DAY}`, own: "Hanbit board room", other: "Nuri hall" }
-];
+// A company's row in the calendar screen's list of calendars, by its value.
+const companyRow = (scope: Page | Locator, value: string): Locator => scope.locator(`[data-company-row="${value}"]`);
 
-const row = (scope: Page | Locator, value: string): Locator => scope.locator(`[data-choice-sidebar-row="${value}"]`);
+// The month grid, and the narrowest an event's title is ever shown: about its first two characters.
+const MONTH_GRID = "[role=grid]:has([data-date])";
+const TITLE_SHOWN_PX = 24;
+
+/** Every piece of words the grid shows, by how much of it stands and how wide it is whole, and whether it is an
+ *  event's title, which gives way where the cell has no room for it. */
+async function gridWords(page: Page): Promise<{ text: string; shown: number; whole: number; title: boolean }[]> {
+  return page.locator(MONTH_GRID).evaluate((grid) =>
+    [...grid.querySelectorAll<HTMLElement>("*")]
+      .filter((node) => node.getClientRects().length > 0 && [...node.childNodes].some((child) => child.nodeType === Node.TEXT_NODE && child.textContent!.trim() !== ""))
+      .map((node) => ({
+        text: node.textContent!.trim(),
+        shown: node.clientWidth,
+        whole: node.scrollWidth,
+        title: node.closest("[data-event]") !== null && !node.hasAttribute("data-time")
+      }))
+  );
+}
+
+describe("the month grid", () => {
+  test.each(["console", "narrow"] as const)(
+    "at the %s width stands inside the screen, cuts no word of its own and shows every event's title at least by its first characters",
+    async (width) => {
+      if (!ready) return;
+
+      const { context, page } = await openScreen(browser, built, width, `/calendar/month/${BUSY_DAY}`);
+
+      try {
+        const grid = page.locator(MONTH_GRID);
+
+        await grid.locator("[data-event]", { hasText: "Lunch" }).waitFor();
+        // The calendars' list stands at its final width once the companies are read.
+        if (width === "console") await companyRow(page, OWN.id).waitFor();
+
+        const pieces = await gridWords(page);
+
+        expect(pieces.filter((piece) => !piece.title && piece.shown < piece.whole)).toEqual([]);
+        expect(pieces.filter((piece) => piece.title && piece.shown < Math.min(piece.whole, TITLE_SHOWN_PX))).toEqual([]);
+        // The busy day counts the events it has no room for.
+        expect(pieces.some((piece) => piece.text === words.label.more_short.replace("{n}", "4"))).toBe(true);
+
+        const placed = await grid.evaluate((node) => {
+          const box = node.getBoundingClientRect();
+
+          return { left: box.left, right: box.right, screen: window.innerWidth, scroll: document.documentElement.scrollWidth };
+        });
+
+        expect(placed.left).toBeGreaterThanOrEqual(0);
+        expect(placed.right).toBeLessThanOrEqual(placed.screen);
+        expect(placed.scroll).toBeLessThanOrEqual(placed.screen);
+      } finally {
+        await context.close();
+      }
+    },
+    TEST_MS
+  );
+});
+
+// What the calendar screen reads of the reader's own company and of the other.
+const OWN_EVENT = "Hanbit review";
+const OTHER_EVENT = "Nuri weekly meeting";
+
+/** The values of the company rows the calendars' list shows, in its order. */
+async function companyValues(scope: Page | Locator): Promise<string[]> {
+  return scope.locator("[data-company-row]").evaluateAll((rows) => rows.map((one) => one.getAttribute("data-company-row")!));
+}
+
+/** Where the words of an event the grid reads stand across the screen. */
+async function eventPlace(page: Page, title: string): Promise<{ x: number; width: number }> {
+  const held = (await page.locator("[data-calendar-body]").getByText(title).first().boundingBox())!;
+
+  return { x: Math.round(held.x), width: Math.round(held.width) };
+}
 
 const historyLength = (page: Page): Promise<number> => page.evaluate(() => history.length);
 
+describe("the companies in the calendars' list", () => {
+  test.skipIf(!ready)(
+    "at 1280 stand as their skeleton under the organization's heading and then as rows, the grid standing where it stays, narrow as they are searched, and a choice is one step of the history naming the company",
+    async () => {
+      const { promise: companiesHeld, resolve: answerCompanies } = Promise.withResolvers<void>();
+      const { context, page } = await openScreen(browser, built, "desktop", `/calendar/week/${DAY}`, { companiesHeld });
+
+      try {
+        // Until the companies are read their rows stand as a skeleton, and the grid stands where it stays once they come.
+        await page.locator("[data-calendar-body]").getByText(OWN_EVENT).first().waitFor();
+        await page.locator("[data-company-skeleton]").waitFor();
+        expect(await page.locator("[data-company-row]").count()).toBe(0);
+
+        const unread = await eventPlace(page, OWN_EVENT);
+
+        answerCompanies();
+        await companyRow(page, OWN.id).waitFor();
+        expect(await eventPlace(page, OWN_EVENT)).toEqual(unread);
+        expect(await companyValues(page)).toEqual(COMPANIES.map((one) => one.id));
+        expect((await companyRow(page, OWN.id).innerText()).trim()).toBe(OWN_LABEL);
+        expect(await companyRow(page, OWN.id).getAttribute("aria-current")).toBe("page");
+        expect(await checkbox(page, "Hanbit company").isVisible()).toBe(true);
+
+        await page.locator("[data-company-search]").fill(OTHER.name.slice(0, 2));
+        await companyRow(page, OWN.id).waitFor({ state: "detached" });
+        expect(await companyValues(page)).toEqual([OTHER.id]);
+
+        const steps = await historyLength(page);
+
+        // The company chosen holds its calendars under its row.
+        await companyRow(page, OTHER.id).click();
+        await page.locator("[data-calendar-body]").getByText(OTHER_EVENT).first().waitFor();
+        expect(await page.getByText(OWN_EVENT).count()).toBe(0);
+        expect(company(page)).toBe(OTHER.id);
+        expect(await historyLength(page)).toBe(steps + 1);
+        expect(await companyRow(page, OTHER.id).getAttribute("aria-current")).toBe("page");
+        await checkbox(page, "Nuri company").waitFor();
+
+        // Back is the step before the choice: the company named before it, read again.
+        await page.goBack();
+        await page.locator("[data-calendar-body]").getByText(OWN_EVENT).first().waitFor();
+        expect(company(page)).toBeNull();
+        await page.locator("[data-company-search]").fill("");
+        expect(await companyRow(page, OWN.id).getAttribute("aria-current")).toBe("page");
+      } finally {
+        await context.close();
+      }
+    },
+    TEST_MS
+  );
+
+  test.skipIf(!ready)(
+    "at 360 stand in the calendars' sheet, and a choice closes it in one step of the history naming the company",
+    async () => {
+      const { context, page } = await openScreen(browser, built, "narrow", `/calendar/week/${DAY}`);
+
+      try {
+        const sheet = page.getByRole("dialog", { name: words.action.calendars });
+
+        await page.getByText(OWN_EVENT).first().waitFor();
+
+        const steps = await historyLength(page);
+        const at = page.url();
+
+        await button(page, words.action.calendars).click();
+        await companyRow(sheet, OTHER.id).click();
+        await sheet.waitFor({ state: "hidden" });
+        await page.getByText(OTHER_EVENT).first().waitFor();
+        expect(company(page)).toBe(OTHER.id);
+        expect(await historyLength(page)).toBe(steps + 1);
+
+        // Back is the step before the choice.
+        await page.goBack();
+        await page.getByText(OWN_EVENT).first().waitFor();
+        expect([page.url(), await sheet.count()]).toEqual([at, 0]);
+      } finally {
+        await context.close();
+      }
+    },
+    TEST_MS
+  );
+
+  test.each(["desktop", "narrow"] as const)(
+    "stand as their skeleton until a member's company is read, and then none stands at the %s width, the organization's heading offering its calendar to add",
+    async (width) => {
+      if (!ready) return;
+
+      const { promise: companiesHeld, resolve: answerCompanies } = Promise.withResolvers<void>();
+      const { context, page } = await openScreen(browser, built, width, `/calendar/week/${DAY}`, { reader: "member", companiesHeld });
+
+      try {
+        await page.getByText(OWN_EVENT).first().waitFor();
+
+        if (width !== "desktop") {
+          await button(page, words.action.calendars).click();
+          await page.getByRole("dialog").waitFor();
+        }
+
+        await page.locator("[data-company-skeleton]").waitFor();
+
+        // The member's one company answered, and the frames after it drawn.
+        const answered = page.waitForResponse((response) => new URL(response.url()).pathname.endsWith("/organization/companies"));
+
+        answerCompanies();
+        await answered;
+        await page.evaluate(() => new Promise((drawn) => requestAnimationFrame(() => requestAnimationFrame(drawn))));
+        expect(await page.locator("[data-company-row], [data-company-search], [data-company-skeleton]").count()).toBe(0);
+        expect(await button(page, words.action.add_calendar).count()).toBe(2);
+        expect(await checkbox(page, "Hanbit company").isVisible()).toBe(true);
+      } finally {
+        await context.close();
+      }
+    },
+    TEST_MS
+  );
+});
+
+// The booking screen stands beside the list of companies: the address it is opened on and what its body reads of the
+// reader's own company and of the other, a resource.
+const SCREENS = [{ screen: "booking", address: `/calendar/bookings?date=${DAY}`, own: "Hanbit board room", other: "Nuri hall" }];
+
+const row = (scope: Page | Locator, value: string): Locator => scope.locator(`[data-choice-sidebar-row="${value}"]`);
 /** What stands of the list where it is laid aside: nothing beside the body, no button and no splitter's line. */
 async function laidAside(page: Page): Promise<{ list: number; opener: number; handle: number }> {
   return {
@@ -273,11 +467,8 @@ async function bodyPlace(page: Page, words: string): Promise<{ x: number; width:
   return { x: Math.round(body.x), width: Math.round(body.width), top: Math.round(held.y) };
 }
 
-// Each view of the two screens by its address, the row heading its body marked `data-body-head`.
+// Each view of the booking screen by its address, the row heading its body marked `data-body-head`.
 const HEADED_VIEWS = [
-  { view: "the calendar's month", address: `/calendar/month/${DAY}` },
-  { view: "the calendar's week", address: `/calendar/week/${DAY}` },
-  { view: "the calendar's day", address: `/calendar/day/${DAY}` },
   { view: "the bookings' month", address: `/calendar/bookings?view=month&date=${DAY}` },
   { view: "the bookings' week", address: `/calendar/bookings?view=week&date=${DAY}` },
   { view: "the bookings' day", address: `/calendar/bookings?view=day&date=${DAY}` }
@@ -299,7 +490,7 @@ async function headLines(page: Page): Promise<{ list: number[]; heading: number[
   });
 }
 
-describe("the list of companies", () => {
+describe("the booking screen's list of companies", () => {
   test.each(HEADED_VIEWS)(
     "at 1280 meets $view in one line: the line under the row heading it runs on from the line under the list's head",
     async ({ address }) => {
@@ -443,7 +634,7 @@ describe("the list of companies", () => {
   );
 
   test.each(["desktop", "narrow"] as const)(
-    "stands as its skeleton until a member's company is read, and is then laid aside at the %s width, both screens showing the body alone across the screen",
+    "stands as its skeleton until a member's company is read, and is then laid aside at the %s width, the screen showing the body alone across it",
     async (width) => {
       if (!ready) return;
 
@@ -481,8 +672,8 @@ describe("the list of companies", () => {
       try {
         const body = page.locator("[data-choice-sidebar-body]");
 
-        await body.getByText("Nuri weekly meeting").first().waitFor();
-        expect(await row(page, OTHER.id).getAttribute("aria-current")).toBe("page");
+        await page.getByText(OTHER_EVENT).first().waitFor();
+        expect(await companyRow(page, OTHER.id).getAttribute("aria-current")).toBe("page");
 
         await page.getByRole("link", { name: words.action.next, exact: true }).click();
         await page.waitForURL((url) => url.pathname !== `/calendar/week/${DAY}`);

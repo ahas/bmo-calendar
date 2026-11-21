@@ -21,17 +21,23 @@ const PAGE = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta n
 
 const TYPES: Record<string, string> = { ".js": "text/javascript", ".css": "text/css", ".woff2": "font/woff2" };
 
-export type Width = "desktop" | "phone" | "narrow";
+export type Width = "desktop" | "console" | "phone" | "narrow";
 
 export const WIDTHS: Width[] = ["desktop", "phone"];
 
-// A desktop's window, a Galaxy S25 held upright, the phone the screens are designed against, and the narrowest phone
-// a screen is laid out for, 360 pixels wide.
+// A desktop's window, the same window with the console's navigation and its right panel open beside the screen, a
+// Galaxy S25 held upright, the phone the screens are designed against, and the narrowest phone a screen is laid out
+// for, 360 pixels wide.
 const CONTEXTS = {
   desktop: { viewport: { width: 1280, height: 800 } },
+  console: { viewport: { width: 1280, height: 800 } },
   phone: { viewport: { width: 412, height: 915 }, deviceScaleFactor: 2.625, isMobile: true, hasTouch: true },
   narrow: { viewport: { width: 360, height: 780 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true }
 };
+
+// What the console stands beside the screen at each width, in pixels: at the console's, its navigation and its right
+// panel, which leave the screen 688 of the window's 1280 (`screens-harness.ts`).
+const ASIDES: Partial<Record<Width, { navigation: number; panel: number }>> = { console: { navigation: 256, panel: 336 } };
 
 /** The built page: the folder its files stand in, and the way to take it away. */
 export interface Built {
@@ -70,6 +76,10 @@ export interface Reading {
 /** Opens the harness at one width on the address given, the stand-in answering the service as it answers the reader. */
 export async function openScreen(browser: Browser, built: Built, width: Width, address: string, reading: Reading = {}): Promise<Opened> {
   const context = await browser.newContext(CONTEXTS[width]);
+  const asides = ASIDES[width];
+
+  if (asides) await context.addInitScript((widths) => Object.assign(window, { consoleAsides: widths }), asides);
+
   const page = await context.newPage();
   const files = new Set(readdirSync(built.folder));
 

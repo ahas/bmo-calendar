@@ -296,24 +296,36 @@ The console screen follows the Nuxt UI calendar template (day, week, month and y
 and resize, a popover to edit, a quick natural-language entry, colour-coded calendars with visibility, a
 mini calendar), stood as a console bundle under the sidebar entry 캘린더 (bmo-ui's console plugin contract;
 `docs/api.md`, 「Console」). The sidebar lists 내 일정 and 조직 일정 calendars apart; one grid shows both.
-The 조직 일정 are the reader's company's. For the administrator both of the bundle's screens stand beside a
-list of the companies he reads, 조직 목록, every company and the platform's own among them, his own named as
-his (bmo-ui's `ChoiceSidebar`, its components document, 「Choosing from a side list」): under the screen's
-toolbar, which keeps the whole width, the list stands beside the rest of the screen behind a splitter, searched
-as it is typed, and the row heading each view beside it, the weekdays, the days or the hours, stands as tall as
-the list's head (its `--bmo-list-head`), so the line under it runs on from the line under the list's head; on a phone the rest of the screen fills it and the list opens as a bottom drawer from a button
-at its head carrying the company chosen. The company chosen is the address's `company` (`?company=<id>`),
-kept as either screen moves through its views, days and parts and from one screen to the other, so a choice
-is a step of the history and a kept link opens the same company; an address naming none, or one he does not
-read, reads his own company. The grid, the layers and the bookings read the company chosen. A member reads his
-own company alone and is shown no list. Until the companies are read the list stands as its skeleton,
-beside the rest of the screen on a wide one and as the skeleton of the button on a phone, so the rest of the
-screen stands at its final width from the first frame; it is laid aside once the read finds a member
-or answers nothing. With another company than his own chosen, its 조직 일정 are read-only,
-the heading marked so by a lock at its trailing edge, named 읽기 전용 in its tooltip, as a list marks a state
-by a compact icon: its calendars are neither added, set nor hidden, nor its sources hidden, its events
-are neither drawn, moved nor changed, an event's form shows it with no save and no delete, and a new event goes
-into his own calendars alone. The platform's own stays his to write.
+What a month cell shows beside an event's title goes by the cell's own width, not the screen's, so a narrow cell
+keeps its room for the titles wherever the grid stands: there an event's time, its calendar's dot, its received or
+booking mark and the mark of the reader's own realm give way, in the narrowest cells the organization's mark as
+well, the first of a month is named by its number alone, and the count of the events that do not fit is written
+short (`+3`). A title too long for its cell gives way at its end, named whole to a reader who does not see it.
+
+The 조직 일정 are the reader's company's. The administrator chooses among the companies he reads, 조직 목록, every company
+and the platform's own among them, his own named as his. On the calendar screen they stand in the sidebar itself,
+under the 조직 일정 heading and searched as it is typed: each company a row choosing it, the calendars and sources of
+the one chosen standing under its row. The grid so shares the width with the one sidebar, and at a desktop's width
+with the console's navigation and its right panel open its day columns keep room for their words. On a phone they
+stand in the calendars' sheet, which a choice closes. The booking screen, which has no side region of its own,
+stands beside a list of the same companies (bmo-ui's `ChoiceSidebar`, its components document, 「Choosing from a
+side list」): under the screen's toolbar, which keeps the whole width, the list stands beside the rest of the
+screen behind a splitter, searched as it is typed, and the row heading each of its views, the weekdays, the days
+or the hours, stands as tall as the list's head (its `--bmo-list-head`), so the line under it runs on from the
+line under the list's head; the calendar screen's views, with no list's head beside them, keep their own height.
+On a phone the rest of the booking screen fills it and the list opens as a bottom drawer from a button at its head
+carrying the company chosen. The company chosen is the address's `company` (`?company=<id>`), kept as either
+screen moves through its views, days and parts and from one screen to the other, so a choice is a step of the
+history and a kept link opens the same company; an address naming none, or one he does not read, reads his own
+company. The grid, the layers and the bookings read the company chosen. A member reads his own company alone and
+is shown no company. Until the companies are read they stand as their skeleton: rows under the 조직 일정 heading on
+the calendar screen, and on the booking screen the list beside the rest of the screen on a wide one and the
+skeleton of the button on a phone, so the rest of the screen stands at its final width from the first frame; they
+are laid aside once the read finds a member or answers nothing. With another company than his own chosen, its 조직
+일정 are read-only, its row marked so by a lock at its trailing edge, named 읽기 전용 in its tooltip, as a list marks a
+state by a compact icon: its calendars are neither added, set nor hidden, nor its sources hidden, its events are
+neither drawn, moved nor changed, an event's form shows it with no save and no delete, and a new event goes into
+his own calendars alone. The platform's own stays his to write.
 
 Booking stands on its own screen in the same bundle, 예약, reached from the calendar screen's sidebar and
 back again:
