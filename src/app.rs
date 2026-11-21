@@ -9,7 +9,7 @@ use serde_json::Value;
 use crate::cache::{Cache, Changed, Held, RealmKey};
 use crate::error::ApiError;
 use crate::events::{Events, Scope};
-use crate::model::Memory;
+use crate::model::{Memory, schedule_private};
 use crate::peers::{self, AGAIN, BrainCalls, BrainRow, CallFault};
 use crate::settings::Settings;
 use crate::store::Store;
@@ -188,9 +188,12 @@ impl App {
 
   /// A memory taken into the cache, and what changed published to those who read it.
   pub fn take_in(&self, realm: &RealmKey, memory: &Memory) {
-    let changed = match self.cache.lock() {
-      Ok(mut cache) => cache.apply(realm, memory),
-      Err(_) => None,
+    let (changed, standing) = match self.cache.lock() {
+      Ok(mut cache) => {
+        let standing = cache.standing_schedule(realm, memory);
+        (cache.apply(realm, memory), standing)
+      }
+      Err(_) => (None, None),
     };
     let scope = scope_of(realm);
     let company = realm.company();
@@ -218,15 +221,19 @@ impl App {
       Some(Changed::Source(source_id)) => {
         self.events.publish("source.changed", SourceChanged { source_id }, Scope::Everyone)
       }
-      Some(Changed::Schedule(source_id, item_id)) => self.events.publish(
-        "schedule.changed",
-        ScheduleChanged {
-          company: company_word,
-          source_id,
-          item_id,
-        },
-        scope,
-      ),
+      Some(Changed::Schedule(source_id, item_id)) => {
+        for scope in schedule_scopes(realm, standing.as_ref(), memory) {
+          self.events.publish(
+            "schedule.changed",
+            ScheduleChanged {
+              company: company_word.clone(),
+              source_id: source_id.clone(),
+              item_id: item_id.clone(),
+            },
+            scope,
+          );
+        }
+      }
       Some(Changed::Resource(resource_id)) => self.events.publish(
         "resource.changed",
         ResourceChanged {
@@ -328,6 +335,24 @@ impl App {
       }
     }
   }
+}
+
+/// Who a schedule's change is given to: the readers of the version it replaces and of the one taken in, so a
+/// schedule made private or opened to its company leaves or reaches the company's view, and one that stays
+/// private reaches its assignee alone.
+fn schedule_scopes(realm: &RealmKey, standing: Option<&Memory>, taken: &Memory) -> Vec<Scope> {
+  let mut scopes = Vec::new();
+  for memory in standing.into_iter().chain([taken]) {
+    let scope = if schedule_private(memory) {
+      Scope::Account(memory.label("assignee").to_owned())
+    } else {
+      scope_of(realm)
+    };
+    if !scopes.contains(&scope) {
+      scopes.push(scope);
+    }
+  }
+  scopes
 }
 
 /// Who a realm's events are given to: an account's own, or a company's readers.

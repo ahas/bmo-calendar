@@ -132,7 +132,7 @@ flowchart TD
   A --> P[Platform brain: the source]
   A -->|names a company| B[That company's brain: the schedule]
   A -->|names none| N[Platform brain: the schedule]
-  B --> O[The company's organization realm: every schedule of it]
+  B --> O[The company's organization realm: every schedule of it but the private ones]
   B --> M[Mine realm: the schedules assigned to the account, of its own company]
   N --> X[The administrator alone]
 ```
@@ -148,6 +148,11 @@ flowchart TD
 - **Where it stands.** A schedule stands in its company's organization realm. One whose assignee is an
   account of that company also stands in that account's own realm, read from the same memory rather than
   copied into the account's brain, so the realms' brains stay apart.
+- **Private, the assignee's alone.** A unit may send a schedule as private, naming its assignee and its
+  company: it is kept in that company's brain as any schedule is, but stands in the assignee's own realm alone,
+  left out of the company's organization realm, so neither the company's readers nor the administrator reading
+  the company see it. The administrator reads it only as he reads any account's own realm, naming the account,
+  and a change of it is announced to its assignee alone.
 - **No company, no reader but the administrator.** A schedule sent with no company stands in the platform's
   own realm alone: no company reads it and no account's own realm shows it, until its unit sends it again
   naming its company.
@@ -344,7 +349,7 @@ Received schedules stand on the same grid as layers, one for each source in each
 - **Layers.** Under each realm's calendars the sidebar lists every source as a layer, by its name and
   colour, marked as received; each is shown or hidden for the reader's account alone, in that realm
   alone, a mark spinning beside it while the change is sent. The 조직 일정 layer of a source carries all
-  its schedules, the 내 일정 layer those assigned to the reader.
+  its schedules but the private ones, the 내 일정 layer those assigned to the reader.
 - **One row each.** Where an item stands in both shown layers, the grid draws it once, as the reader's own.
 - **Drawn as an event, read-only.** A schedule is drawn as an event is, in its source's colour with its
   realm's mark and a mark that it is received; it is never dragged, stretched or opened in a form, and a

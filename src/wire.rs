@@ -508,6 +508,10 @@ pub struct ScheduleWrite {
   /// where it belongs to none, which the platform administrator alone reads.
   #[serde(default)]
   pub company: Option<String>,
+  /// Whether it is its assignee's alone: read in the assignee's `mine` realm and in no `organization` realm.
+  /// A private schedule names its assignee and its company. Default `false`.
+  #[serde(default)]
+  pub private: Option<bool>,
 }
 
 /// One item of a source's whole set.
@@ -558,6 +562,8 @@ pub struct Schedule {
   pub link: String,
   /// Null where it has none.
   pub assignee: Option<String>,
+  /// Whether it is its assignee's alone.
+  pub private: bool,
   pub created_at: i64,
   pub changed_at: i64,
 }

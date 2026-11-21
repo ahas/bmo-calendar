@@ -100,6 +100,8 @@ export interface ScheduleRow {
   /** Where the item it stands for opens: a console path, or an `http` or `https` address. */
   link: string;
   assignee: string | null;
+  /** Whether it is its assignee's alone, read in the `mine` realm only. */
+  private: boolean;
   createdAt: number;
   changedAt: number;
 }

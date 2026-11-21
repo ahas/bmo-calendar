@@ -473,7 +473,7 @@ async fn list_schedules(
     .map(|memory| schedule_read(memory, asked.realm.realm(), &kept))
     .filter(|schedule| match &asked.realm {
       RealmKey::Mine(account) => schedule.assignee.as_deref() == Some(account.as_str()),
-      _ => true,
+      _ => !schedule.private,
     })
     .filter(|schedule| match (parse_local(&schedule.start), parse_local(&schedule.end)) {
       (Some(start), Some(end)) => start < high && end > low,

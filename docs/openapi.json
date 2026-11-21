@@ -1516,6 +1516,10 @@
           "link": {
             "type": "string"
           },
+          "private": {
+            "description": "Whether it is its assignee's alone.",
+            "type": "boolean"
+          },
           "realm": {
             "$ref": "#/components/schemas/Realm",
             "description": "The realm it is read in."
@@ -1542,6 +1546,7 @@
           "allDay",
           "link",
           "assignee",
+          "private",
           "createdAt",
           "changedAt"
         ],
@@ -1605,6 +1610,14 @@
             "description": "Where the item it stands for is opened: a console path, or an `http` or `https` address.",
             "type": "string"
           },
+          "private": {
+            "default": null,
+            "description": "Whether it is its assignee's alone: read in the assignee's `mine` realm and in no `organization` realm.\nA private schedule names its assignee and its company. Default `false`.",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
           "start": {
             "description": "Local ISO datetime, `YYYY-MM-DDTHH:mm:ss`.",
             "type": "string"
@@ -1622,7 +1635,8 @@
           "allDay",
           "link",
           "assignee",
-          "company"
+          "company",
+          "private"
         ],
         "type": "object"
       },
@@ -1675,6 +1689,14 @@
             "description": "Where the item it stands for is opened: a console path, or an `http` or `https` address.",
             "type": "string"
           },
+          "private": {
+            "default": null,
+            "description": "Whether it is its assignee's alone: read in the assignee's `mine` realm and in no `organization` realm.\nA private schedule names its assignee and its company. Default `false`.",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
           "start": {
             "description": "Local ISO datetime, `YYYY-MM-DDTHH:mm:ss`.",
             "type": "string"
@@ -1691,7 +1713,8 @@
           "allDay",
           "link",
           "assignee",
-          "company"
+          "company",
+          "private"
         ],
         "type": "object"
       },

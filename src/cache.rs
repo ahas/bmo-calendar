@@ -64,6 +64,14 @@ impl Cache {
     self.realms.iter().find(|(_, held)| held.brain == brain).map(|(realm, _)| realm.clone())
   }
 
+  /// The schedule standing in a realm at the own id a memory of a schedule names, before that memory is taken in.
+  pub fn standing_schedule(&self, realm: &RealmKey, memory: &Memory) -> Option<Memory> {
+    if memory.kind != SCHEDULE_TYPE {
+      return None;
+    }
+    self.realms.get(realm)?.schedules.get(memory.own_id()?).cloned()
+  }
+
   /// A memory read or written taken in: a live one stands at its own id unless a later one stands there, a
   /// closed one leaves where it stood. Answers what changed, where anything did.
   pub fn apply(&mut self, realm: &RealmKey, memory: &Memory) -> Option<Changed> {

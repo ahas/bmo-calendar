@@ -155,10 +155,12 @@ calendar's code names no unit, and treats every source alike.
   to, as the account service names its unit (1 to 64 letters, digits, `-` and `_`); null, empty or absent
   where it belongs to none. A unit sends the company of every item it has one for: a schedule with none is
   read by the platform administrator alone, in the `platform` company. The calendar does not ask whether a
-  company stands.
+  company stands. `private` (default `false`) says the schedule is its assignee's alone: it stands in the
+  assignee's `mine` realm and in no `organization` realm, so no other reader of the company, nor of the
+  `platform` company, is answered it. A private schedule names both its `assignee` and its `company`.
 - **A schedule read** is `sourceId`, `itemId`, `realm` (the realm it is read in), `company` (`platform`
   where it was sent with none), `title`, `start`, `end`, `allDay`, `link`, `assignee` (null where none),
-  `createdAt`, `changedAt`.
+  `private`, `createdAt`, `changedAt`.
 - **The ids.** A `sourceId` and an `itemId` are each 1 to 64 letters, digits, `-` and `_`; a unit writes
   under its own source and keeps its own item ids, so a schedule is known by the pair alone.
 - **Writes are idempotent.** A write that names what already stands keeps it and answers 200; a delete of a
@@ -174,12 +176,13 @@ calendar's code names no unit, and treats every source alike.
 - **Who writes.** The writes are the service token's, the units' own credential (`env/calendar.env`,
   「The tool」); a console call to one is 403 `forbidden`.
 - **Who reads.** Every console reader reads every source. In the `organization` realm a read answers every
-  schedule of the company (「Companies」); in the `mine` realm only the schedules of the account's own company
-  whose `assignee` is the account (「Realms」). `hidden` is the caller's own for the realm in the path, as a
+  schedule of the company but the private ones (「Companies」); in the `mine` realm only the schedules of the
+  account's own company whose `assignee` is the account, private or not (「Realms」), so the administrator reads a
+  private schedule where he reads its assignee's realm, and nowhere else. `hidden` is the caller's own for the realm in the path, as a
   calendar's is: a PATCH of it hides or shows the source's schedules in that realm for the caller's account
   alone. A read answers the hidden ones as well; the screen leaves them off the grid.
-- **Refusals.** An id, a title, a link, an assignee, a company or a colour outside its shape, or an `itemId`
-  named twice in one set, is 400 `bad-request`; an end not after the start is 422 `end-before-start`; a span
+- **Refusals.** An id, a title, a link, an assignee, a company or a colour outside its shape, a private
+  schedule naming no assignee or no company, or an `itemId` named twice in one set, is 400 `bad-request`; an end not after the start is 422 `end-before-start`; a span
   over 92 days or ending before it starts is 422 `span-too-long`; a source the calendar does not hold in a
   PATCH is 404 `not-found`.
 - **No alarms.** A schedule is never told: its unit tells of its own items.
@@ -346,7 +349,8 @@ the change is the whole event's), `alarm.told` (`realm`, `company`, `eventId`, `
 (`company`, `bookingId`, `state`, `title`), `company` null in the `mine` realm. A console reader is given every
 source's events, its own account's `mine` events, its own company's `organization` events and the
 `booking.decided` of its own bookings; the administrator every company's; the service token reads every
-one. The service keeps the events since it started, at most the last 1000, numbered upward from its start's
+one. A private schedule's `schedule.changed` is given to its assignee alone, and to the company's readers as
+well where the change makes it private or opens it to the company. The service keeps the events since it started, at most the last 1000, numbered upward from its start's
 moment in milliseconds times 1000; a resume from before them is 410 `gone`. The console refreshes the
 visible span on `event.changed`, `schedule.changed` and `booking.changed`, reads the calendars, sources and
 resources again on `calendar.changed`, `source.changed` and `resource.changed`, and rings `alarm.told` and

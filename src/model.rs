@@ -31,6 +31,8 @@ pub const MIGRATION_TYPE: &str = "migration";
 
 /// The longest assignee a schedule names, in characters: the longest Owner-Key a call carries.
 const ASSIGNEE_CHARS: usize = 200;
+/// The label that marks a schedule its assignee's alone.
+const PRIVATE_LABEL: &str = "private";
 
 /// The shape of a local datetime.
 const LOCAL_SHAPE: &str = "%Y-%m-%dT%H:%M:%S";
@@ -446,7 +448,8 @@ pub enum ScheduleFault {
 }
 
 /// Whether a schedule written stands: its title one line and not blank, its end after its start, its link a
-/// console path or an `http` or `https` address, its assignee no longer than an Owner-Key, its company an id.
+/// console path or an `http` or `https` address, its assignee no longer than an Owner-Key, its company an id, and
+/// a private one naming both.
 pub fn check_schedule(write: &ScheduleWrite) -> Result<(), ScheduleFault> {
   let shape = |why: &str| Err(ScheduleFault::Shape(why.to_owned()));
   if write.title.trim().is_empty() || write.title.contains('\n') {
@@ -467,6 +470,9 @@ pub fn check_schedule(write: &ScheduleWrite) -> Result<(), ScheduleFault> {
   }
   if schedule_company(write).is_some_and(|company| !valid_id(company)) {
     return shape("A company is 1 to 64 letters, digits, '-' and '_'.");
+  }
+  if is_private(write) && (assignee_of(write).is_none() || schedule_company(write).is_none()) {
+    return shape("A private schedule names its assignee and its company.");
   }
   if end <= start {
     return Err(ScheduleFault::EndBeforeStart);
@@ -490,6 +496,11 @@ pub fn valid_link(link: &str) -> bool {
 /// The assignee a write names, none where it names an empty one.
 fn assignee_of(write: &ScheduleWrite) -> Option<&str> {
   write.assignee.as_deref().map(str::trim).filter(|assignee| !assignee.is_empty())
+}
+
+/// Whether a schedule written is its assignee's alone.
+fn is_private(write: &ScheduleWrite) -> bool {
+  write.private.unwrap_or(false)
 }
 
 /// The company a schedule written names, none where it names none or the platform's own word.
@@ -516,9 +527,18 @@ pub fn schedule_labels(source: &str, item: &str, write: &ScheduleWrite, created_
   labels.insert("allDay".into(), write.all_day.unwrap_or(false).to_string());
   labels.insert("link".into(), write.link.clone());
   labels.insert("assignee".into(), assignee_of(write).unwrap_or("").to_owned());
+  // Only a private schedule carries the mark, so an open schedule's labels never change for it.
+  if is_private(write) {
+    labels.insert(PRIVATE_LABEL.into(), "true".into());
+  }
   labels.insert("realm".into(), Realm::Organization.word().into());
   labels.insert("createdAt".into(), created_at.to_string());
   labels
+}
+
+/// Whether a schedule's memory is its assignee's alone.
+pub fn schedule_private(memory: &Memory) -> bool {
+  memory.label(PRIVATE_LABEL) == "true"
 }
 
 /// A schedule read from its memory, as it is read in a realm, kept in a company's brain or the platform's.
@@ -535,6 +555,7 @@ pub fn schedule_of(memory: &Memory, realm: Realm, company: String) -> Schedule {
     all_day: memory.label("allDay") == "true",
     link: memory.label("link").to_owned(),
     assignee: (!assignee.is_empty()).then(|| assignee.to_owned()),
+    private: schedule_private(memory),
     created_at: number(memory, "createdAt"),
     changed_at: memory.created_at,
   }

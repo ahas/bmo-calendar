@@ -282,3 +282,65 @@ async fn a_schedule_stands_in_its_company_alone_and_one_of_no_company_with_the_a
   let live = service.stand.live("schedule:plans:ours");
   assert_eq!(live.len(), 1, "kept once");
 }
+
+#[tokio::test]
+async fn a_private_schedule_stands_in_its_assignees_own_realm_alone() {
+  let service = Service::fresh().await;
+  let mut own = schedule("Own", "2026-11-20T09:00:00", "2026-11-20T10:00:00", Some("2"));
+  own["private"] = json!(true);
+  let (status, kept) = service.call(Method::PUT, "/sources/plans/schedules/own", Some(own.clone())).await;
+  assert_eq!((status, &kept["private"]), (201, &json!(true)), "{kept}");
+
+  let read = async |path: &str, key: &str, role: &str| {
+    let (status, page) = service.console(Method::GET, path, key, role, None).await;
+    assert_eq!(status, 200, "{page}");
+    pairs(&page)
+  };
+  let organization = format!("/organization/schedules?{SPAN}");
+  let mine = format!("/mine/schedules?{SPAN}");
+  assert_eq!(read(&mine, "2", "member").await, ["plans:own"]);
+  assert!(
+    read(&organization, "2", "member").await.is_empty(),
+    "not even its assignee's company view"
+  );
+  assert!(read(&organization, "3", "member").await.is_empty());
+  assert!(read(&mine, "3", "member").await.is_empty());
+  assert!(
+    read(&format!("{organization}&company={COMPANY}"), "1", "administrator")
+      .await
+      .is_empty()
+  );
+  assert_eq!(
+    read(&format!("{mine}&account=2"), "1", "administrator").await,
+    ["plans:own"],
+    "the administrator reads it in its assignee's realm"
+  );
+
+  let changes = async |key: &str| {
+    let headers = [("Owner-Key", key), ("Owner-Role", "member"), ("accept", "application/json")];
+    let (_, page) = service
+      .ask(
+        Method::GET,
+        "/events?kinds=schedule.changed",
+        Some(crate::support::CONSOLE),
+        &headers,
+        None,
+      )
+      .await;
+    page["items"].as_array().unwrap().len()
+  };
+  assert_eq!((changes("2").await, changes("3").await), (1, 0), "its change is its assignee's alone");
+  let mut opened = own.clone();
+  opened["private"] = json!(false);
+  service.call(Method::PUT, "/sources/plans/schedules/own", Some(opened)).await;
+  assert_eq!(read(&organization, "3", "member").await, ["plans:own"]);
+  assert_eq!(changes("3").await, 1, "opened to the company, the company is told");
+
+  for field in ["assignee", "company"] {
+    let mut refused = own.clone();
+    refused[field] = json!(null);
+    let (status, refusal) =
+      service.call(Method::PUT, "/sources/plans/schedules/other", Some(refused)).await;
+    assert_eq!((status, refusal["code"].as_str()), (400, Some("bad-request")), "{field}");
+  }
+}
