@@ -6,12 +6,12 @@
        reader may not book — another company than the reader's own is read — a cell offers nothing. -->
   <div ref="scroller" class="min-h-0 flex-1 overflow-auto pb-[var(--bmo-create-room)]">
     <div class="w-max min-w-full">
-      <div class="sticky top-0 z-10 flex border-b border-default bg-default" aria-hidden="true">
+      <div data-body-head class="sticky top-0 z-10 flex border-b border-default bg-default" aria-hidden="true">
         <div class="sticky start-0 z-10 w-32 shrink-0 border-e border-default bg-default sm:w-48" />
         <span
           v-for="day in props.days"
           :key="day.getTime()"
-          class="flex h-9 w-28 shrink-0 items-center gap-1 border-e border-default px-2 text-sm last:border-e-0 sm:min-w-32 sm:flex-1 pointer-coarse:h-10"
+          class="flex h-9 min-h-[calc(var(--bmo-list-head)-1px)] w-28 shrink-0 items-center gap-1 border-e border-default px-2 text-sm last:border-e-0 sm:min-w-32 sm:flex-1 pointer-coarse:h-10"
           :class="isToday(day) ? 'font-semibold text-highlighted' : 'text-muted'"
         >
           <span class="tabular-nums">{{ formatMonthDay(day) }}</span>

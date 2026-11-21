@@ -5,7 +5,7 @@
        hour's height is the reader's own text size's (`HOUR_REM`). -->
   <div ref="view" class="flex min-h-0 flex-1 flex-col" :style="scale">
     <div class="shrink-0 border-b border-default [scrollbar-gutter:stable] overflow-hidden">
-      <div class="grid" :style="gridStyle" @keydown="onHeadKeydown">
+      <div data-body-head class="grid min-h-[calc(var(--bmo-list-head)-1px)]" :style="gridStyle" @keydown="onHeadKeydown">
         <div />
         <ULink
           v-for="(day, index) in days"

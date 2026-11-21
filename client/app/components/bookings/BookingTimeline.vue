@@ -7,9 +7,9 @@
        reader may not book — another company than the reader's own is read — nothing is offered. -->
   <div ref="scroller" class="min-h-0 flex-1 overflow-auto pb-[var(--bmo-create-room)] [--hour:4rem] sm:[--hour:6rem]">
     <div class="w-max min-w-full">
-      <div class="sticky top-0 z-10 flex border-b border-default bg-default" aria-hidden="true">
+      <div data-body-head class="sticky top-0 z-10 flex border-b border-default bg-default" aria-hidden="true">
         <div class="sticky start-0 z-10 w-32 shrink-0 border-e border-default bg-default sm:w-48" />
-        <div class="relative h-9 shrink-0 pointer-coarse:h-10" :style="{ width: trackWidth }">
+        <div class="relative h-9 min-h-[calc(var(--bmo-list-head)-1px)] shrink-0 pointer-coarse:h-10" :style="{ width: trackWidth }">
           <span v-for="hour in HOURS" :key="hour" class="absolute inset-y-0 flex items-center ps-2 text-sm tabular-nums text-muted" :style="{ insetInlineStart: hourAt(hour) }">
             {{ formatHour(hour) }}
           </span>

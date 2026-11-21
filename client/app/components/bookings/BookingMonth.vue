@@ -4,7 +4,7 @@
        how many it holds in all. A day is pressed to open its day view; each is named to a reader by its full
        date and what it holds. -->
   <div class="flex min-h-0 flex-1 flex-col">
-    <div class="grid shrink-0 grid-cols-7 border-b border-default" aria-hidden="true">
+    <div data-body-head class="grid min-h-(--bmo-list-head) shrink-0 grid-cols-7 items-center border-b border-default" aria-hidden="true">
       <span v-for="day in props.days.slice(0, 7)" :key="day.getDay()" class="py-2 text-center text-sm text-muted">{{ formatWeekday(day) }}</span>
     </div>
 

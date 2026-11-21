@@ -13,7 +13,7 @@
     @keydown="onKeydown"
     @focusin="onFocusin"
   >
-    <div role="row" aria-rowindex="1" class="grid h-9 shrink-0 grid-cols-7 overflow-hidden border-b border-default [scrollbar-gutter:stable]">
+    <div role="row" aria-rowindex="1" data-body-head class="grid h-9 min-h-(--bmo-list-head) shrink-0 grid-cols-7 overflow-hidden border-b border-default [scrollbar-gutter:stable]">
       <span
         v-for="(weekday, index) in weekdays"
         :key="weekday.short"

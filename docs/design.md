@@ -295,7 +295,8 @@ The 조직 일정 are the reader's company's. For the administrator both of the 
 list of the companies he reads, 조직 목록, every company and the platform's own among them, his own named as
 his (bmo-ui's `ChoiceSidebar`, its components document, 「Choosing from a side list」): under the screen's
 toolbar, which keeps the whole width, the list stands beside the rest of the screen behind a splitter, searched
-as it is typed; on a phone the rest of the screen fills it and the list opens as a bottom drawer from a button
+as it is typed, and the row heading each view beside it, the weekdays, the days or the hours, stands as tall as
+the list's head (its `--bmo-list-head`), so the line under it runs on from the line under the list's head; on a phone the rest of the screen fills it and the list opens as a bottom drawer from a button
 at its head carrying the company chosen. The company chosen is the address's `company` (`?company=<id>`),
 kept as either screen moves through its views, days and parts and from one screen to the other, so a choice
 is a step of the history and a kept link opens the same company; an address naming none, or one he does not

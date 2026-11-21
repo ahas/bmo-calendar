@@ -15,7 +15,8 @@ import type { Built, Width } from "./harness";
 // stays as the list arrives: at a desktop's width beside the
 // body, searched as it is typed, and at the narrowest phone's in a drawer opened from the button carrying the company
 // chosen, which Esc and Back close alone; a choice is one step of the history and names the company in the address,
-// which the screens keep as they move. A member is shown the list's skeleton until his company is read, and then the body alone at either width. At a desktop's width and a
+// which the screens keep as they move. At a desktop's width the line under the row heading each view, the weekdays,
+// the days or the hours, runs on from the line under the list's head. A member is shown the list's skeleton until his company is read, and then the body alone at either width. At a desktop's width and a
 // phone's, the calendar screen opened on another company: its organization heading marked read-only by a lock named in
 // its tooltip, no calendar offered to add or set, nor a calendar or a source to hide, and an event's form holding every
 // field and offering no save and no delete, standing inside the screen and closed with nothing asked; the lock reads at
@@ -272,7 +273,54 @@ async function bodyPlace(page: Page, words: string): Promise<{ x: number; width:
   return { x: Math.round(body.x), width: Math.round(body.width), top: Math.round(held.y) };
 }
 
+// Each view of the two screens by its address, the row heading its body marked `data-body-head`.
+const HEADED_VIEWS = [
+  { view: "the calendar's month", address: `/calendar/month/${DAY}` },
+  { view: "the calendar's week", address: `/calendar/week/${DAY}` },
+  { view: "the calendar's day", address: `/calendar/day/${DAY}` },
+  { view: "the bookings' month", address: `/calendar/bookings?view=month&date=${DAY}` },
+  { view: "the bookings' week", address: `/calendar/bookings?view=week&date=${DAY}` },
+  { view: "the bookings' day", address: `/calendar/bookings?view=day&date=${DAY}` }
+];
+
+/**
+ * The pixel rows the line under the list's head and the line under the row heading the body take, each as its top
+ * and bottom. The head's line is drawn over its last pixel; the heading row's is its own bottom border where it draws
+ * one, and otherwise the top border of what follows it.
+ */
+async function headLines(page: Page): Promise<{ list: number[]; heading: number[] }> {
+  return page.evaluate(() => {
+    const head = document.querySelector("[data-choice-sidebar-list]")!.firstElementChild!.getBoundingClientRect();
+    const heading = document.querySelector("[data-choice-sidebar-body] [data-body-head]")!;
+    const box = heading.getBoundingClientRect();
+    const own = getComputedStyle(heading).borderBottomWidth === "1px";
+
+    return { list: [head.bottom - 1, head.bottom], heading: own ? [box.bottom - 1, box.bottom] : [box.bottom, box.bottom + 1] };
+  });
+}
+
 describe("the list of companies", () => {
+  test.each(HEADED_VIEWS)(
+    "at 1280 meets $view in one line: the line under the row heading it runs on from the line under the list's head",
+    async ({ address }) => {
+      if (!ready) return;
+
+      const { context, page } = await openScreen(browser, built, "desktop", address);
+
+      try {
+        await row(page.locator("[data-choice-sidebar-list]"), OWN.id).waitFor();
+        await page.locator("[data-choice-sidebar-body] [data-body-head]").waitFor();
+
+        const lines = await headLines(page);
+
+        expect(lines.heading).toEqual(lines.list);
+      } finally {
+        await context.close();
+      }
+    },
+    TEST_MS
+  );
+
   test.each(SCREENS)(
     "at 1280 stands as its skeleton and then its rows beside the $screen screen's standing body, narrows as it is searched, and a choice is one step of the history naming the company",
     async ({ address, own, other }) => {
