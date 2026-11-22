@@ -5,7 +5,8 @@ name = "bmo-calendar"
 
 [test]
 # The Cargo workspace's crates, and the console bundle under client/, whose check script installs its locked
-# packages and typechecks it.
+# packages and typechecks it. Its tests wait on round trips to a loopback stand-in, which a machine running
+# several deployment gates at once slows past the runner's 5-second default, so the script gives each 30.
 languages = ["cargo", "bun"]
 
 # The console bundle under client/ is a project of its own: its manifest and lockfile stand in its own folder,

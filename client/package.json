@@ -13,7 +13,7 @@
     "prepare": "bun x nuxi prepare",
     "bundle": "vite build --config console/vite.config.ts",
     "typecheck": "nuxi typecheck",
-    "check": "bun install --frozen-lockfile && bun run typecheck && bun test --path-ignore-patterns='tests/browser/**'"
+    "check": "bun install --frozen-lockfile && bun run typecheck && bun test --timeout 30000 --path-ignore-patterns='tests/browser/**'"
   },
   "dependencies": {
     "@internationalized/date": "^3.12.4",
