@@ -697,6 +697,16 @@ describe("the booking screen's list of companies", () => {
         expect([new URL(page.url()).pathname, company(page)]).toEqual(["/calendar/bookings", OTHER.id]);
         expect(await row(page, OTHER.id).getAttribute("aria-current")).toBe("page");
 
+        // Steps of the screen's own, two of its parts, each one more entry of the history: the way back leaves past
+        // both at once.
+        const entries = await page.evaluate(() => history.length);
+
+        await page.getByRole("tab", { name: words.label.resources, exact: true }).click();
+        await page.waitForURL((url) => url.searchParams.get("tab") === "resources");
+        await page.getByRole("tab", { name: words.label.bookings_mine, exact: true }).click();
+        await page.waitForURL((url) => url.searchParams.get("tab") === "mine");
+        expect(await page.evaluate(() => history.length)).toBeGreaterThan(entries);
+
         await button(page, words.action.back).click();
         await page.waitForURL((url) => url.pathname.startsWith("/calendar/month/"));
         expect(company(page)).toBe(OTHER.id);

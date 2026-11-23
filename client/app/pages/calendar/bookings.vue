@@ -222,6 +222,9 @@ const resourceListRef = useTemplateRef<InstanceType<typeof ResourceList>>("resou
 
 const { t } = useI18n();
 const router = useRouter();
+// The calendar address the screen was entered from, read once as it opens: the way back leaves to it however many
+// steps the screen's own parts, views and days took since, rather than stepping back through them.
+const enteredFrom = enteredFromCalendar(typeof window === "undefined" ? null : window.history.state?.back);
 const overlay = useOverlay();
 const island = useIsland(t);
 const narrow = useNarrow();
@@ -305,9 +308,23 @@ const kindItems = computed(() => kinds.value.map((one) => ({ label: one, value: 
 
 watch(range, (span) => void loadSpan(span), { immediate: true });
 
+// The way back leaves the screen: to the calendar address it was entered from, the company chosen here carried
+// along, else to the calendar screen.
 function back(): void {
-  if (typeof window !== "undefined" && window.history.state?.back) router.back();
-  else void navigateTo({ path: "/calendar", query: companyQuery(company.value) });
+  if (enteredFrom !== null) {
+    const left = router.resolve(enteredFrom);
+
+    void navigateTo({ path: left.path, query: { ...left.query, ...companyQuery(company.value) } });
+  } else void navigateTo({ path: "/calendar", query: companyQuery(company.value) });
+}
+
+// A calendar address of this bundle the browser names as the entry before this screen, none for any other.
+function enteredFromCalendar(previous: unknown): string | null {
+  if (typeof previous !== "string") return null;
+
+  const path = router.resolve(previous).path;
+
+  return path.startsWith("/calendar") && !path.startsWith("/calendar/bookings") ? previous : null;
 }
 
 async function refresh(): Promise<void> {

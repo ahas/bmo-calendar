@@ -331,7 +331,9 @@ neither drawn, moved nor changed, an event's form shows it with no save and no d
 his own calendars alone. The platform's own stays his to write.
 
 Booking stands on its own screen in the same bundle, 예약, reached from the calendar screen's sidebar and
-back again:
+back again. Its way back leaves the screen at once, to the calendar address it was entered from with the company
+chosen on it, however many parts, views and days were chosen on the screen since; the browser's own back still
+steps through them:
 
 - **The resources by day, week and month.** One kind of resource at a time, chosen at the top, its resources
   grouped by place. The day is a row for each resource across the hours, wide enough per hour that an hour's
