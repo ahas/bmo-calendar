@@ -70,10 +70,12 @@ describe("the event form", () => {
 
 describe("the words", () => {
   test("no choice is a word for the default standing in place of a value", () => {
-    const defaultWord = word(PACKS.ko, "calendar.label.default_mark")!.replace("{value}", "").replace(/[()\s]/g, "");
+    for (const pack of Object.values(PACKS)) {
+      const defaultWord = word(pack, "calendar.label.default_mark")!.replace("{value}", "").replace(/[()\uFF08\uFF09\s]/g, "");
 
-    for (const choice of [...ALARM_CHOICES, ...REPEAT_CHOICES, ...WRITERS_CHOICES, ...TELL_CHOICES]) {
-      expect(word(PACKS.ko, choice.label)).not.toContain(defaultWord);
+      for (const choice of [...ALARM_CHOICES, ...REPEAT_CHOICES, ...WRITERS_CHOICES, ...TELL_CHOICES]) {
+        expect(word(pack, choice.label)).not.toContain(defaultWord);
+      }
     }
   });
 });

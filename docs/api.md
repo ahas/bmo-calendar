@@ -332,7 +332,8 @@ the calendar chooses within it.
   relayed outside the prefix.
 - **Its files.** The folder `bun run bundle` builds in `client/` with bmo-ui's bundle build (`[console]
   folder`), read once at start: the module `bundle.js`, the stylesheet `bundle.css` and the words
-  `words.json`, beside the layer that build wrote. A folder the face cannot be built from leaves the service
+  `words.json` (one pack to a locale: `en`, `ko`, `ja` and `zh-CN`, each holding every key), beside the
+  layer that build wrote. A folder the face cannot be built from leaves the service
   with no console face, and the console's routes answer 404.
 - **The screens' routes.** The companies, the calendars, the events, the sources, the schedules, the
   resources, the bookings, the alarms and the event stream, held to the manifest's role and owner key for a

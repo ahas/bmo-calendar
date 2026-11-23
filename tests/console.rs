@@ -94,7 +94,7 @@ async fn the_served_manifest_is_read_by_the_contract_on_the_vendored_release() {
   let (status, _, words) = fetch(&service, read["words"].as_str().unwrap(), CONSOLE, &[]).await;
   assert_eq!(status, 200);
   let words: Value = serde_json::from_str(&words).unwrap();
-  for locale in ["en", "ko"] {
+  for locale in ["en", "ko", "ja", "zh-CN"] {
     assert!(words[locale]["calendar"]["title"].is_string(), "{locale}: {words}");
   }
 
@@ -116,8 +116,8 @@ fn build(folder: &Path, layer: Option<&str>) {
   std::fs::create_dir_all(&bundle).unwrap();
   std::fs::write(bundle.join("bundle.js"), MODULE).unwrap();
   std::fs::write(bundle.join("bundle.css"), STYLESHEET).unwrap();
-  let words =
-    json!({ "en": { "calendar": { "title": "Calendar" } }, "ko": { "calendar": { "title": "Calendar" } } });
+  let title = json!({ "calendar": { "title": "Calendar" } });
+  let words = json!({ "en": title, "ko": title, "ja": title, "zh-CN": title });
   std::fs::write(bundle.join("words.json"), words.to_string()).unwrap();
   if let Some(layer) = layer {
     std::fs::write(bundle.join("layer.json"), json!({ "layer": layer }).to_string()).unwrap();

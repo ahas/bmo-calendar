@@ -7,7 +7,7 @@ import { PACKS, keysOf, word } from "./words";
 
 import type { Element } from "./template";
 
-// The bundle as a console finds it: the words every key the screens ask for, in both locales, under the
+// The bundle as a console finds it: the words every key the screens ask for, in every locale, under the
 // bundle's namespace, and no Korean anywhere in the code. The manifest is the service's, read through bmo-ui's
 // own reading by the service's tests.
 
@@ -24,9 +24,22 @@ function files(folder: string): string[] {
 const sources = [...files(join(root, "app")), ...files(join(root, "shared")), ...files(join(root, "console"))].filter((path) => /\.(ts|vue)$/.test(path));
 
 describe("the words", () => {
-  test("both locales hold the same keys, all under the bundle's namespace", () => {
-    expect(keysOf(PACKS.en).sort()).toEqual(keysOf(PACKS.ko).sort());
+  test("every locale holds the same keys, all under the bundle's namespace", () => {
+    const shipped = readdirSync(join(root, "i18n")).filter((name) => name.endsWith(".json")).map((name) => name.replace(/\.json$/, "")).sort();
+
+    expect(shipped).toEqual(Object.keys(PACKS).sort());
+
+    for (const [locale, pack] of Object.entries(PACKS)) expect([locale, keysOf(pack).sort()]).toEqual([locale, keysOf(PACKS.ko).sort()]);
+
     expect(keysOf(PACKS.ko).every((key) => key.startsWith("calendar."))).toBe(true);
+  });
+
+  test("every locale keeps the marks its words are filled at", () => {
+    const marks = (text: string | undefined) => [...(text ?? "").matchAll(/\{(\w+)\}/g)].map((match) => match[1]).sort();
+
+    for (const [locale, pack] of Object.entries(PACKS)) {
+      for (const key of keysOf(PACKS.en)) expect([locale, key, marks(word(pack, key))]).toEqual([locale, key, marks(word(PACKS.en, key))]);
+    }
   });
 
   test("every key the screens ask for is held", () => {
