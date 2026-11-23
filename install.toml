@@ -1,0 +1,71 @@
+# What installing the calendar service on a fresh machine needs, read by the testbed's install verb
+# (bmo-testbed's docs/install.md, 「The install declaration」). The settings are docs/api.md's 「Settings」.
+
+install = 1
+
+restart = "systemctl --user restart bmo-calendar.service"
+
+[[needs]]
+program = "cargo"
+what = "Builds the service and its tool; the Rust toolchain from https://rustup.rs."
+
+[[needs]]
+program = "bun"
+what = "Builds the console bundle at every release; the Bun runtime from https://bun.sh."
+
+[[port]]
+name = "calendar.server"
+number = 13127
+
+[[token]]
+name = "calendar.service"
+file = "env/calendar-service.token"
+
+[[token]]
+name = "calendar.console"
+file = "env/calendar-console.token"
+
+# The release's settings.local.toml. The peers are named here outright, so none of their own files is read:
+# the brain and the receiver by their service tokens, the account service (bmo-web's server) by its token, and
+# the agency by its control token. The node service and bmo-ms-teams stay unnamed, so a person's Outlook day is
+# read only where they stand.
+[[settings]]
+file = "env/calendar.toml"
+text = """
+[server]
+listen = "127.0.0.1:{{port.calendar.server}}"
+token = "{{token.calendar.service}}"
+data_root = "{{data_root}}"
+
+[console]
+token = "{{token.calendar.console}}"
+
+[store]
+path = "{{data_root}}/calendar/calendar.db"
+
+[brain]
+address = "http://127.0.0.1:{{port.brain.server}}"
+token = "{{token.brain.service}}"
+
+[receiver]
+address = "http://127.0.0.1:{{port.receiver.server}}"
+token = "{{token.receiver.service}}"
+
+[accounts]
+address = "{{value.web.address}}"
+token = "{{token.web.server}}"
+
+[agency]
+address = "http://127.0.0.1:{{port.agency.control}}"
+token = "{{token.agency.control}}"
+"""
+
+[[line]]
+file = "env/web-console.env"
+key = "CALENDAR_ADDRESS"
+value = "http://127.0.0.1:{{port.calendar.server}}"
+
+[[line]]
+file = "env/web-console.env"
+key = "CALENDAR_TOKEN"
+value = "{{token.calendar.console}}"

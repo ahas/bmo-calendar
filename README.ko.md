@@ -59,7 +59,7 @@ Outlook 또는 Graph에서 본인의 노드로 읽는 개인의 Outlook 하루�
 | `docs/` | 서비스가 무엇인지와 그 경계에 대한 정식 기술, 그리고 OpenAPI 문서 |
 | `tests/` | 크레이트의 단일 테스트 하니스와 그것이 사용하는 대역 |
 
-루트에는 Cargo 매니페스트, `Cargo.lock`, `testbed.toml`, `rustfmt.toml`, `settings.toml`(바이너리에 내장되는
+루트에는 Cargo 매니페스트, `Cargo.lock`, `testbed.toml`, `install.toml`, `rustfmt.toml`, `settings.toml`(바이너리에 내장되는
 기본값), `CLAUDE.md`, `PERSONAL-DATA.md`, `LICENSE`가 있습니다.
 
 ## 명령

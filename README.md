@@ -63,7 +63,7 @@ stand-in answering the service as it answers the platform administrator.
 | `docs/` | The canonical statements of what the service is and its boundary, and the OpenAPI document |
 | `tests/` | The crate's one test harness and the stand-ins it runs over |
 
-At the root stand the Cargo manifest, `Cargo.lock`, `testbed.toml`, `rustfmt.toml`, `settings.toml` (the
+At the root stand the Cargo manifest, `Cargo.lock`, `testbed.toml`, `install.toml`, `rustfmt.toml`, `settings.toml` (the
 defaults built into the binary), `CLAUDE.md`, `PERSONAL-DATA.md` and `LICENSE`.
 
 ## Commands

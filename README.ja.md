@@ -61,7 +61,7 @@ OpenAPI ドキュメント(`openapi.rs`)、そしてリポジトリ自身のチ�
 | `docs/` | サービスが何であるかとその境界の正式な記述、および OpenAPI ドキュメント |
 | `tests/` | クレート唯一のテストハーネスと、それが使うスタンドイン |
 
-ルートには Cargo マニフェスト、`Cargo.lock`、`testbed.toml`、`rustfmt.toml`、`settings.toml`(バイナリに
+ルートには Cargo マニフェスト、`Cargo.lock`、`testbed.toml`、`install.toml`、`rustfmt.toml`、`settings.toml`(バイナリに
 組み込まれる既定値)、`CLAUDE.md`、`PERSONAL-DATA.md`、`LICENSE` があります。
 
 ## コマンド

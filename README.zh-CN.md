@@ -53,7 +53,7 @@
 | `docs/` | 关于服务是什么及其边界的权威说明,以及 OpenAPI 文档 |
 | `tests/` | crate 唯一的测试入口及其使用的替身 |
 
-根目录下有 Cargo 清单、`Cargo.lock`、`testbed.toml`、`rustfmt.toml`、`settings.toml`(编译进二进制的默认值)、
+根目录下有 Cargo 清单、`Cargo.lock`、`testbed.toml`、`install.toml`、`rustfmt.toml`、`settings.toml`(编译进二进制的默认值)、
 `CLAUDE.md`、`PERSONAL-DATA.md` 和 `LICENSE`。
 
 ## 命令
