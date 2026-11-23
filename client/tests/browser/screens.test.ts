@@ -24,7 +24,10 @@ import type { Built, Width } from "./harness";
 // company is read, and then no company at either width. At a desktop's width and a phone's, the calendar screen opened
 // on another company: its row marked read-only by a lock named in its tooltip, no calendar offered to add or set, nor a
 // calendar or a source to hide, and an event's form holding every field and offering no save and no delete, standing
-// inside the screen and closed with nothing asked; the lock reads at 3:1 in both modes. The screens stand on the harness
+// inside the screen and closed with nothing asked; the lock reads at 3:1 in both modes. At a desktop's width the
+// calendar screen's mini calendar stands at its sidebar's foot, reached by a pointer, while the list above it scrolls
+// on its own to its last row; at a phone's the calendars' sheet holds no mini calendar and its last row is reached by
+// scrolling, nothing standing over it. The screens stand on the harness
 // page, the stand-in answering the service. Skipped where the browser build is not on the machine.
 
 function browserReady(): boolean {
@@ -698,6 +701,131 @@ describe("the booking screen's list of companies", () => {
         await button(page, words.action.back).click();
         await page.waitForURL((url) => url.pathname.startsWith("/calendar/month/"));
         expect(company(page)).toBe(OTHER.id);
+      } finally {
+        await context.close();
+      }
+    },
+    TEST_MS
+  );
+});
+
+// The scrolling box of a region: the region itself or the first box inside it that scrolls up and down.
+async function scroller(region: Locator): Promise<Locator> {
+  const marked = await region.evaluate((node) => {
+    const scrolls = (element: Element) => ["auto", "scroll"].includes(getComputedStyle(element).overflowY);
+    const found = scrolls(node) ? node : [...node.querySelectorAll("*")].find(scrolls);
+
+    found?.setAttribute("data-test-scroller", "");
+
+    return found !== undefined;
+  });
+
+  expect(marked).toBe(true);
+
+  return region.locator("xpath=descendant-or-self::*[@data-test-scroller]").first();
+}
+
+describe("the mini calendar", () => {
+  test.skipIf(!ready)(
+    "at a desktop's width stands at the sidebar's foot while the list above it scrolls on its own",
+    async () => {
+      const { context, page } = await openScreen(browser, built, "desktop", `/calendar/week/${DAY}`);
+
+      try {
+        await page.getByText("Hanbit company").first().waitFor();
+        // A short window, so the list outruns its region and scrolls.
+        await page.setViewportSize({ width: 1280, height: 560 });
+
+        const list = await scroller(page.locator("[data-calendar-side-list]"));
+        const mini = page.locator("[data-calendar-mini]");
+        // The box the mini calendar stands in, the bottom of the sidebar it stands at, and what a pointer at its
+        // centre lands on.
+        const placed = () =>
+          mini.evaluate((node) => {
+            const own = node.getBoundingClientRect();
+            const side = node.parentElement!.getBoundingClientRect();
+            const hit = document.elementFromPoint(own.left + own.width / 2, own.top + own.height / 2);
+
+            return { top: own.top, gap: side.bottom - own.bottom, window: window.innerHeight - own.bottom, reached: hit !== null && node.contains(hit) };
+          });
+
+        const before = await placed();
+
+        expect(before.gap).toBeCloseTo(0, 0);
+        expect(before.window).toBeGreaterThanOrEqual(0);
+        expect(before.reached).toBe(true);
+
+        const overflow = await list.evaluate((node) => node.scrollHeight - node.clientHeight);
+
+        expect(overflow).toBeGreaterThan(0);
+
+        await list.hover();
+        await page.mouse.wheel(0, overflow);
+        await page.waitForFunction(
+          ([node, end]) => (node as HTMLElement).scrollTop >= (end as number) - 1,
+          [await list.elementHandle(), overflow] as const
+        );
+
+        // The mini calendar has not moved, and the list's last row is reached above it, clear of it.
+        const after = await placed();
+
+        expect(after).toEqual(before);
+
+        const last = await list.evaluate((node) => {
+          const rows = [...node.querySelectorAll("label, button, a, [role=checkbox]")].filter((row) => row.getBoundingClientRect().height > 0);
+          const row = rows.at(-1)!.getBoundingClientRect();
+
+          return { bottom: row.bottom, foot: node.getBoundingClientRect().bottom };
+        });
+
+        expect(last.bottom).toBeLessThanOrEqual(last.foot + 0.5);
+        expect(last.bottom).toBeLessThanOrEqual(after.top + 0.5);
+      } finally {
+        await context.close();
+      }
+    },
+    TEST_MS
+  );
+
+  test.skipIf(!ready)(
+    "at a phone's width stays out of the calendars' sheet, whose last row is reached by scrolling",
+    async () => {
+      const { context, page } = await openScreen(browser, built, "phone", `/calendar/week/${DAY}`);
+
+      try {
+        await page.getByText("Dentist").first().waitFor();
+        // A short phone, so the sheet's list outruns it.
+        await page.setViewportSize({ width: 412, height: 560 });
+        await button(page, words.action.calendars).click();
+
+        const sheet = page.getByRole("dialog");
+
+        await sheet.getByText("Hanbit company").first().waitFor();
+        expect(await page.locator("[data-calendar-mini]").count()).toBe(0);
+
+        const list = await scroller(sheet);
+
+        // The sheet stands once it has risen whole, and its list outruns it and scrolls.
+        await list.evaluate((node) => new Promise((done) => {
+          const risen = () => (node.getBoundingClientRect().bottom <= window.innerHeight + 0.5 ? done(undefined) : requestAnimationFrame(risen));
+
+          risen();
+        }));
+        expect(await list.evaluate((node) => node.scrollHeight - node.clientHeight)).toBeGreaterThan(0);
+
+        await list.evaluate((node) => node.scrollTo({ top: node.scrollHeight }));
+
+        const last = await list.evaluate((node) => {
+          const rows = [...node.querySelectorAll("label, button, a, [role=checkbox]")].filter((row) => row.getBoundingClientRect().height > 0);
+          const target = rows.at(-1)!;
+          const row = target.getBoundingClientRect();
+          const hit = document.elementFromPoint(row.left + row.width / 2, row.top + row.height / 2);
+
+          return { bottom: row.bottom, foot: Math.min(node.getBoundingClientRect().bottom, window.innerHeight), reached: hit !== null && (target.contains(hit) || hit.contains(target)) };
+        });
+
+        expect(last.bottom).toBeLessThanOrEqual(last.foot + 0.5);
+        expect(last.reached).toBe(true);
       } finally {
         await context.close();
       }

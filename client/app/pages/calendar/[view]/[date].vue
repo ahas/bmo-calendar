@@ -113,14 +113,20 @@
         </template>
 
         <USplitter v-else id="calendar-splitter" auto-save-id="calendar-splitter" :items="SIDES" :ui="{ handle: SPLIT_HANDLE }" class="min-h-0 flex-1">
+          <!-- The list scrolls on its own over the mini calendar, which stands at the sidebar's foot whatever the list
+               scrolls. -->
           <template #side>
-            <UScrollArea class="min-h-0 min-w-0 flex-1">
-              <div class="flex flex-col gap-4 p-4">
-                <CalendarList :companies="companyEntries" :chosen="chosenCompany" :listed="companiesListed" @choose="choose" />
-                <USeparator />
+            <div class="flex min-h-0 min-w-0 flex-1 flex-col">
+              <UScrollArea class="min-h-0 min-w-0 flex-1" data-calendar-side-list>
+                <div class="flex flex-col gap-4 p-4">
+                  <CalendarList :companies="companyEntries" :chosen="chosenCompany" :listed="companiesListed" @choose="choose" />
+                </div>
+              </UScrollArea>
+
+              <div class="shrink-0 border-t border-default p-4" data-calendar-mini>
                 <CalendarMini />
               </div>
-            </UScrollArea>
+            </div>
           </template>
 
           <template #grid>
