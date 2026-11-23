@@ -12,6 +12,12 @@ build = 'cargo build --release -p calendar-tool && cp "$BMO_CARGO_TARGET/release
 check = 'cargo test -p calendar-tool'
 run = ["calendar-tool"]
 
+[app]
+key = "calendar"
+name = "Calendar"
+description = "Events, reminders and shared calendars, read and written by the agent."
+icon = "i-lucide-calendar"
+
 [[entry]]
 namespace = "bmo"
 name = "calendar_list"
