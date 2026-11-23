@@ -310,7 +310,7 @@ One day of the Outlook calendar of the person a tool session serves, read on tha
   written, the first five always together), else none; `group`, the bracketed group, or null; and `task`, the
   rest of the title, the whole title where it is in no such form.
 - **Failures.** A node service that refuses the run, a node out of reach, or a command that ends with no answer
-  that reads is 502 `upstream-failed`, saying which. A node whose Outlook is not running, where bmo-ms-teams gives
+  that reads is 502 `upstream-failed`, saying which. A node whose Outlook is not running, where the Teams page service gives
   no token or Graph refuses the read, is 422 `no-road`, saying why. No answer is kept, and nothing is published.
 
 ## Console
@@ -401,7 +401,7 @@ deployment writes before the flip with `bmo-calendar tool-env`.
 | whether an account heads its company | the account service `POST /checks/unit` (`unit` the company's unit id as a number, `user` the account key as a string, as the account service's contract types them) |
 | which node is an account's own | agency `GET /person-nodes` (each `ownerAccount`, `node`, `shared`) |
 | a person's Outlook day read on their node | the node service `POST /nodes/{nodeName}/runs` (`account`, `command`, `shell` `powershell`, `env`), as the caller its own token names |
-| a person's Teams page token | bmo-ms-teams `POST /page-tokens` (`account` as a number, `scopes` `Calendars.Read`, `Calendars.ReadWrite`, `Calendars.Read.Shared`, `Calendars.ReadWrite.Shared`), as the caller its own token names |
+| a person's Teams page token | the Teams page service `POST /page-tokens` (`account` as a number, `scopes` `Calendars.Read`, `Calendars.ReadWrite`, `Calendars.Read.Shared`, `Calendars.ReadWrite.Shared`), as the caller its own token names |
 | a person's day from Microsoft Graph | Graph `GET /me/calendarView` (`startDateTime`, `endDateTime`, the fields read alone, `Prefer: outlook.timezone`), with the person's page token, following `@odata.nextLink` |
 
 The brain's address and token are `BRAIN_ADDRESS` and `BRAIN_TOKEN` from `env/brain.env`; the receiver's
@@ -409,7 +409,7 @@ The brain's address and token are `BRAIN_ADDRESS` and `BRAIN_TOKEN` from `env/br
 listen` and `token` from `env/web.toml`; agency's control port from `env/agency.env` (`AGENCY_CONTROL_PORT`,
 3220 where it names none, on the loopback) and its token from the same file (`AGENCY_CONTROL_TOKEN`, or the
 file `AGENCY_CONTROL_TOKEN_FILE` names); the node service's `listen` from `env/node.toml` and the calendar's own
-caller token from `env/calendar-node.token`; bmo-ms-teams's port from `env/ms-teams.env` (`BMO_MS_TEAMS_PORT`, 3240
+caller token from `env/calendar-node.token`; the Teams page service's port from `env/ms-teams.env` (`BMO_MS_TEAMS_PORT`, 3240
 where it names none, on the loopback) and the calendar's own caller token from `env/ms-teams-calendar-caller.token`;
 each under the data root, read afresh for every call, and each overridden by the settings where they name one
 (「Settings」). Graph is reached at `[outlook] graph_address`. Every call waits for its answer; no clock cuts
@@ -463,7 +463,7 @@ root, where `settings.local.toml` links to the data root's `env/calendar.toml`);
 | `calendars` | `mine_name`, `organization_name` | the names of the calendar a realm is given when it holds none |
 | `calendars` | `platform_name` | the name the platform's own organization realm is listed by among the companies |
 | `brain`, `receiver`, `accounts`, `agency` | `address`, `token` | a peer's base address and token where the data root's files are not to be read; empty, the files are read |
-| `node`, `teams` | `address`, `token` | the node service's and bmo-ms-teams's base address, and the calendar's own caller token there, where the data root's files are not to be read; empty, the files are read |
+| `node`, `teams` | `address`, `token` | the node service's and the Teams page service's base address, and the calendar's own caller token there, where the data root's files are not to be read; empty, the files are read |
 | `outlook` | `owner_node` | the node the deployment's own account's Outlook day is read on; empty, its agency record is read as any account's |
-| `outlook` | `owner_account` | the account the deployment's own account is known by to the node service and bmo-ms-teams, which the run and the page token for its day name; empty, its own account |
+| `outlook` | `owner_account` | the account the deployment's own account is known by to the node service and the Teams page service, which the run and the page token for its day name; empty, its own account |
 | `outlook` | `graph_address` | Microsoft Graph's base address, `https://graph.microsoft.com/v1.0` |

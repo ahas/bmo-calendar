@@ -47,7 +47,7 @@ token = ""
 address = ""
 token = ""
 
-# The node service and bmo-ms-teams, each with the calendar's own caller token there; empty, the data root's files
+# The node service and the Teams page service, each with the calendar's own caller token there; empty, the data root's files
 # are read (docs/api.md, 「Calls the calendar makes」).
 [node]
 address = ""
@@ -61,7 +61,7 @@ token = ""
 [outlook]
 # The node the deployment's own account's day is read on; empty, its agency record is read as any account's.
 owner_node = ""
-# The account the deployment's own account is known by to the node service and bmo-ms-teams, which the run and the
+# The account the deployment's own account is known by to the node service and the Teams page service, which the run and the
 # page token for its day name; empty, its own account.
 owner_account = ""
 # Microsoft Graph's base address.

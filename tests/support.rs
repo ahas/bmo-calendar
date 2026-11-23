@@ -1,5 +1,5 @@
 //! What the tests share: stand-ins of the brain, the receiver, the account service, agency, the node service,
-//! bmo-ms-teams and Microsoft Graph on one loopback port, the service started over them in this process, and
+//! The Teams page service and Microsoft Graph on one loopback port, the service started over them in this process, and
 //! calls of its routes.
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -46,7 +46,7 @@ pub const COMPANY: &str = "10";
 /// A supervisor agency names member 2 the owner of, and one of no account.
 pub const MEMBER_SUPERVISOR: &str = "supervisor-b";
 pub const NO_ACCOUNT_SUPERVISOR: &str = "supervisor-none";
-/// The calendar's own caller token at the node service and bmo-ms-teams.
+/// The calendar's own caller token at the node service and the Teams page service.
 pub const CALLER_TOKEN: &str = "calendar-caller-token";
 /// The node the settings name for the deployment's own account, and the account that node and the Teams page
 /// know him by.

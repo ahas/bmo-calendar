@@ -881,7 +881,7 @@ pub fn openapi() -> Value {
       "the account service",
       "bmo-agency",
       "bmo-node",
-      "bmo-ms-teams",
+      "Teams page service",
       "Microsoft Graph",
     ],
     "x-events": KINDS,

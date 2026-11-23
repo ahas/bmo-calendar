@@ -148,7 +148,7 @@ fn day(named: Option<String>) -> Answer<Option<String>> {
   Ok(Some(named))
 }
 
-/// Where an account's day is read: its own node, and the account the node service and bmo-ms-teams know it by.
+/// Where an account's day is read: its own node, and the account the node service and the Teams page service know it by.
 struct Place {
   node: String,
   account: String,

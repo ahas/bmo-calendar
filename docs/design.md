@@ -199,8 +199,7 @@ unit beats once a minute and reads the due alarms from its cache; the moment it 
 due while it was down, once each, naming how late. Beside the marks the store keeps the moment of the last
 beat, which is how far back a beat looks; an event written after its alarm's moment and before its start is
 told at the next beat. The telling is the receiver's instruction route: an order for the
-supervisor in the recipient's room, the first of these that stands, as bmo-work's notices are (bmo-work
-`docs/design.md`, 「Notices」):
+supervisor in the recipient's room, the first of these that stands:
 
 1. the owner's private room, for the owner;
 2. for a member, the room numbered as one of the senders the account service links to the member's account,
@@ -259,7 +258,7 @@ flowchart TD
   other node is tried.
 - **Whom the node and the Teams page are asked for.** Every account is asked for by its own account, but the
   deployment's own: agency keeps no node record for the administrator's account, so the owner's node is bound
-  in agency, and his Teams page placed in bmo-ms-teams, under an account of their own. The settings name that
+  in agency, and his Teams page placed in the Teams page service, under an account of their own. The settings name that
   account beside his node, and the run and the page token for the owner's day are asked under it; the account
   his own calendars are kept under stays the account service's.
 - **Only through the node service's runs.** The read is one PowerShell command run on the node as the calendar,
@@ -272,7 +271,7 @@ flowchart TD
   for an Outlook that is not running starts one and so changes the PC. An Outlook that runs but cannot be attached
   to counts as not running.
 - **The second road: Graph with the person's Teams page token.** Where the first road does not stand, the service
-  asks bmo-ms-teams's page token road for the account's token with a scope that reads calendars (its
+  asks the Teams page service's page token road for the account's token with a scope that reads calendars (its
   `docs/api.md`, 「The page token road」), and reads the day's calendar view from Microsoft Graph with it, in the
   PC's own time zone. The token is the person's own session's, held for that one read, written nowhere and sent
   to nothing but Graph. A token the page cannot give leaves the day unread, saying why.

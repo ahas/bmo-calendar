@@ -7460,7 +7460,7 @@
     "the account service",
     "bmo-agency",
     "bmo-node",
-    "bmo-ms-teams",
+    "Teams page service",
     "Microsoft Graph"
   ],
   "x-event-data": {
