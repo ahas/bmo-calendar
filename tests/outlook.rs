@@ -1,5 +1,5 @@
 //! A person's Outlook day (`docs/api.md`, 「A person's Outlook day」): read on the holder's own node, from the
-//! running Outlook or else from Graph with the Teams page token; refused for a node not the account's own; and a
+//! running Outlook or else from Graph with a lent page token; refused for a node not the account's own; and a
 //! title read as the work-code form.
 
 use bmo_calendar::title::parts;

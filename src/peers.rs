@@ -1,5 +1,5 @@
 //! The units the calendar calls (`docs/api.md`, 「Calls the calendar makes」): the brain, the receiver, the
-//! account service, agency, the node service and the Teams page service, each found afresh for every call from the settings
+//! account service, agency, the node service and the optional page-token service, each found afresh for every call from the settings
 //! or the data root's files, and called with no clock on the answer. A call whose connection is refused is asked
 //! again two seconds later.
 
@@ -171,23 +171,11 @@ pub fn node(settings: &Settings) -> Result<Reach, CallFault> {
   found("node service", listen, token_file(&root.join("env/calendar-node.token")))
 }
 
-/// The Teams page service's port the data root's `env/ms-teams.env` stands for where it names none.
-const TEAMS_PORT: &str = "3240";
-
-/// The Teams page service, with the calendar's own page token caller token: the settings', else `BMO_MS_TEAMS_PORT` of
-/// `env/ms-teams.env` on the loopback and the token of `env/ms-teams-calendar-caller.token`.
-pub fn teams(settings: &Settings) -> Result<Reach, CallFault> {
-  if let Some(reach) = named("Teams page service", &settings.teams) {
-    return Ok(reach);
-  }
-  let root = settings.data_root();
-  let file = env_file(&root.join("env/ms-teams.env"));
-  let port = file.get("BMO_MS_TEAMS_PORT").map_or(TEAMS_PORT, String::as_str);
-  found(
-    "Teams page service",
-    Some(format!("http://127.0.0.1:{port}")),
-    token_file(&root.join("env/ms-teams-calendar-caller.token")),
-  )
+/// The optional page-token service, with the calendar's own caller token there: the settings' alone, and none where
+/// they name no address, so the Graph road does not stand.
+pub fn page_tokens(settings: &Settings) -> Result<Reach, CallFault> {
+  named("page-token service", &settings.page_tokens)
+    .ok_or_else(|| CallFault::Broken("no page-token service is named in the settings".into()))
 }
 
 /// The account service: the settings', else `[server] listen` and `token` of `env/web.toml`.
@@ -641,7 +629,7 @@ pub async fn node_run(
   call(http, &node(settings)?, Method::POST, &path, &[], Some(body)).await
 }
 
-/// A Microsoft Graph access token read from the account's own Teams page, holding one of the scopes named.
+/// A Microsoft Graph access token the page-token service lends for the account, holding one of the scopes named.
 pub async fn page_token(
   http: &reqwest::Client,
   settings: &Settings,
@@ -649,15 +637,16 @@ pub async fn page_token(
   scopes: &[&str],
 ) -> Result<String, CallFault> {
   let number: u64 = account.parse().map_err(|_| {
-    CallFault::Broken(format!("account {account} is no number the Teams page service reads"))
+    CallFault::Broken(format!("account {account} is no number the page-token service reads"))
   })?;
   let body = json!({ "account": number, "scopes": scopes });
-  let answer: Value = call(http, &teams(settings)?, Method::POST, "/page-tokens", &[], Some(&body)).await?;
+  let answer: Value =
+    call(http, &page_tokens(settings)?, Method::POST, "/page-tokens", &[], Some(&body)).await?;
   answer["token"]
     .as_str()
     .filter(|token| !token.is_empty())
     .map(str::to_owned)
-    .ok_or_else(|| CallFault::Broken("the Teams page service answered no token".into()))
+    .ok_or_else(|| CallFault::Broken("the page-token service answered no token".into()))
 }
 
 /// A company as the account service names it: its unit id and its name.

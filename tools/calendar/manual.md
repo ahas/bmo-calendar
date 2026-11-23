@@ -28,7 +28,7 @@ datetimes in the shape `YYYY-MM-DDTHH:mm:ss`, on the calendar host's clock.
 - **`calendar_cancel_booking`** cancels a booking by its `bookingId`, or with `occurrence` one occurrence of a
   repeating booking.
 - **`calendar_outlook_day`** answers one day of the person's own Outlook calendar, read on their own PC: the
-  running Outlook where it runs there, else Microsoft Graph with the sign-in of their Teams page. `date` is the
+  running Outlook where it runs there, else Microsoft Graph with a token the deployment's page-token service lends, where it has one. `date` is the
   day on that PC's clock, today there where none is given. Each event is one line: its time, its title, its
   organizer, how many attendees it has and its room; where the title opens on a work code, its levels and its
   group are named and the rest is the task. Its body is never read. A person with no PC of their own, or a PC

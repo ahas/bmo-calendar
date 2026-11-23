@@ -14,7 +14,7 @@
 ## 테스트
 
 `cargo test`(testbed를 통해 실행)는 이 크레이트의 단일 하니스인 `tests/main.rs`를 실행합니다. brain, receiver,
-계정 서비스, agency, 노드 서비스, Teams 페이지 서비스, Microsoft Graph의 대역(stand-in)을 루프백 포트에 띄워 두고
+계정 서비스, agency, 노드 서비스, 페이지 토큰 서비스, Microsoft Graph의 대역(stand-in)을 루프백 포트에 띄워 두고
 다음을 검증합니다. 처음 읽을 때 만들어지고 영역별로 유지되는 캘린더(`calendars.rs`), 관리자가 개인 영역을 읽되 그
 안에서는 아무것도 쓰거나 만들지 않는 것(`administrator.rs`), 각 회사의 영역은 그 회사 사람과 관리자만 읽을 수 있고
 다른 회사 영역에 대한 관리자의 쓰기는 거부되며, 도구 세션의 보유자가 그 소유자의 계정으로 행동하고, 회사로의 단

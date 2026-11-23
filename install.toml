@@ -27,7 +27,7 @@ file = "env/calendar-console.token"
 
 # The release's settings.local.toml. The peers are named here outright, so none of their own files is read:
 # the brain and the receiver by their service tokens, the account service (bmo-web's server) by its token, and
-# the agency by its control token. The node service and the Teams page service stay unnamed, so a person's Outlook day is
+# the agency by its control token. The node service and the optional page-token service stay unnamed, so a person's Outlook day is
 # read only where they stand.
 [[settings]]
 file = "env/calendar.toml"

@@ -15,7 +15,7 @@ receiver を通じて supervisor に一度だけ通知します。会社の会�
 ## テスト
 
 `cargo test`(testbed 経由で実行)は、このクレート唯一のハーネスである `tests/main.rs` を実行します。brain、
-receiver、アカウントサービス、agency、ノードサービス、Teams ページサービス、Microsoft Graph のスタンドインを
+receiver、アカウントサービス、agency、ノードサービス、ページトークンサービス、Microsoft Graph のスタンドインを
 ループバックポート上に立て、次の内容を検証します。初回の読み取りで作成され領域ごとに保持されるカレンダー
 (`calendars.rs`)、管理者が個人の領域を読めるがそこでは何も書かず何も作らないこと(`administrator.rs`)、各会社の
 領域はその会社の人と管理者だけが読め、他社の領域への管理者の書き込みは拒否され、ツールセッションの保持者がその

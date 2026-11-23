@@ -244,7 +244,7 @@ flowchart TD
   N --> R[One read on the node, through the node service's runs]
   R --> O{Classic Outlook running there?}
   O -->|yes| C[Its calendar read over COM, attached to the running Outlook]
-  O -->|no, or out of reach| G[The person's Teams page token, then Microsoft Graph]
+  O -->|no, or out of reach| G[The person's page token, then Microsoft Graph]
   C --> A[The day's events, their titles read]
   G --> A
 ```
@@ -256,9 +256,9 @@ flowchart TD
   the node would read it; the deployment's own account reads on the node the settings name for it, as its record
   may be one the owner shares with accounts of his own. An account with no node of its own is refused, and no
   other node is tried.
-- **Whom the node and the Teams page are asked for.** Every account is asked for by its own account, but the
+- **Whom the node and the page token are asked for.** Every account is asked for by its own account, but the
   deployment's own: agency keeps no node record for the administrator's account, so the owner's node is bound
-  in agency, and his Teams page placed in the Teams page service, under an account of their own. The settings name that
+  in agency, and his page token lent by the page-token service, under an account of their own. The settings name that
   account beside his node, and the run and the page token for the owner's day are asked under it; the account
   his own calendars are kept under stays the account service's.
 - **Only through the node service's runs.** The read is one PowerShell command run on the node as the calendar,
@@ -270,11 +270,12 @@ flowchart TD
   items of the day, their repeats unfolded. Where no Outlook process runs, COM is not touched, since asking COM
   for an Outlook that is not running starts one and so changes the PC. An Outlook that runs but cannot be attached
   to counts as not running.
-- **The second road: Graph with the person's Teams page token.** Where the first road does not stand, the service
-  asks the Teams page service's page token road for the account's token with a scope that reads calendars (its
-  `docs/api.md`, 「The page token road」), and reads the day's calendar view from Microsoft Graph with it, in the
-  PC's own time zone. The token is the person's own session's, held for that one read, written nowhere and sent
-  to nothing but Graph. A token the page cannot give leaves the day unread, saying why.
+- **The second road: Graph with the person's page token.** Where the first road does not stand, the service
+  asks the optional page-token service, where the settings name one, for the account's token with a scope that
+  reads calendars (`POST /page-tokens`, `docs/api.md`, 「Calls the calendar makes」), and reads the day's calendar
+  view from Microsoft Graph with it, in the PC's own time zone. The token is the person's own session's, held for
+  that one read, written nowhere and sent to nothing but Graph. Where no page-token service is named, or it lends
+  no token, the day is left unread, saying why.
 - **The day** is a date of the PC's own wall clock, today there where the call names none; the command answers
   the PC's time zone and the day's bounds in it, so both roads read the same span. An event that meets the day
   stands in it; a cancelled meeting does not.

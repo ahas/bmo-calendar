@@ -1,5 +1,5 @@
 //! What the tests share: stand-ins of the brain, the receiver, the account service, agency, the node service,
-//! The Teams page service and Microsoft Graph on one loopback port, the service started over them in this process, and
+//! The page-token service and Microsoft Graph on one loopback port, the service started over them in this process, and
 //! calls of its routes.
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -46,13 +46,13 @@ pub const COMPANY: &str = "10";
 /// A supervisor agency names member 2 the owner of, and one of no account.
 pub const MEMBER_SUPERVISOR: &str = "supervisor-b";
 pub const NO_ACCOUNT_SUPERVISOR: &str = "supervisor-none";
-/// The calendar's own caller token at the node service and the Teams page service.
+/// The calendar's own caller token at the node service and the page-token service.
 pub const CALLER_TOKEN: &str = "calendar-caller-token";
-/// The node the settings name for the deployment's own account, and the account that node and the Teams page
-/// know him by.
+/// The node the settings name for the deployment's own account, and the account that node and the page-token
+/// service know him by.
 pub const OWNER_NODE: &str = "owner-pc";
 pub const OWNER_NODE_ACCOUNT: &str = "9001";
-/// The Teams page token the stand-in hands out.
+/// The page token the stand-in hands out.
 pub const PAGE_TOKEN: &str = "page-token";
 
 /// What the stand-ins hold and were asked.
@@ -74,7 +74,7 @@ pub struct Peers {
   pub node_day: Option<Value>,
   /// The runs asked: the node, the body and the bearer.
   pub runs: Vec<(String, Value, String)>,
-  /// Whether the Teams page holds a token.
+  /// Whether the page-token service lends a token.
   pub page_token: bool,
   /// The page tokens asked: the body and the bearer.
   pub page_token_asks: Vec<(Value, String)>,
@@ -589,7 +589,7 @@ pub fn settings(stand: &Stand, folder: &std::path::Path) -> Settings {
      [accounts]\naddress = \"{peer}\"\ntoken = \"{PEER_TOKEN}\"\n\
      [agency]\naddress = \"{peer}\"\ntoken = \"{PEER_TOKEN}\"\n\
      [node]\naddress = \"{peer}\"\ntoken = \"{CALLER_TOKEN}\"\n\
-     [teams]\naddress = \"{peer}\"\ntoken = \"{CALLER_TOKEN}\"\n\
+     [page_tokens]\naddress = \"{peer}\"\ntoken = \"{CALLER_TOKEN}\"\n\
      [outlook]\nowner_node = \"{OWNER_NODE}\"\nowner_account = \"{OWNER_NODE_ACCOUNT}\"\n\
      graph_address = \"{peer}\"\n",
     root = folder.join("data").display(),

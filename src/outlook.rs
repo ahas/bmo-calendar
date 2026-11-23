@@ -1,6 +1,6 @@
 //! A person's Outlook day (`docs/design.md` and `docs/api.md`, 「A person's Outlook day」): the account a tool
 //! session's holder acts for, its own node, one PowerShell command run there through the node service, and the
-//! day read from the running Outlook, else from Microsoft Graph with the person's Teams page token. Nothing read
+//! day read from the running Outlook, else from Microsoft Graph with a token the page-token service lends for the person. Nothing read
 //! is kept.
 
 use axum::Router;
@@ -148,7 +148,7 @@ fn day(named: Option<String>) -> Answer<Option<String>> {
   Ok(Some(named))
 }
 
-/// Where an account's day is read: its own node, and the account the node service and the Teams page service know it by.
+/// Where an account's day is read: its own node, and the account the node service and the page-token service know it by.
 struct Place {
   node: String,
   account: String,
@@ -214,7 +214,7 @@ async fn node_day(app: &App, place: &Place, date: Option<&str>) -> Answer<NodeDa
   })
 }
 
-/// The day read from Microsoft Graph with the account's Teams page token, in the PC's own zone.
+/// The day read from Microsoft Graph with the account's page token, in the PC's own zone.
 async fn graph_day(app: &App, account: &str, day: &NodeDay) -> Answer<Vec<Found>> {
   let outlook = if day.outlook == OutlookState::Unreachable {
     format!("Outlook runs on the node but could not be read ({})", day.why)
@@ -223,7 +223,7 @@ async fn graph_day(app: &App, account: &str, day: &NodeDay) -> Answer<Vec<Found>
   };
   let token = peers::page_token(&app.http, &app.settings, account, &SCOPES)
     .await
-    .map_err(|fault| ApiError::no_road(format!("{outlook}, and the Teams page gave no token: {fault}")))?;
+    .map_err(|fault| ApiError::no_road(format!("{outlook}, and no page token was lent: {fault}")))?;
   let refused =
     |why: String| ApiError::no_road(format!("{outlook}, and Microsoft Graph refused the read: {why}"));
   let base = app.settings.outlook.graph_address.trim_end_matches('/');

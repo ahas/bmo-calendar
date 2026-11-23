@@ -14,7 +14,7 @@ tool it places, the calls it makes and its settings. Every other unit is reached
 ## Tests
 
 `cargo test` (through the testbed) runs the crate's one harness, `tests/main.rs`, over stand-ins of the brain,
-the receiver, the account service, agency, the node service, the Teams page service and Microsoft Graph on a loopback port: the calendars made on first read and kept per
+the receiver, the account service, agency, the node service, the page-token service and Microsoft Graph on a loopback port: the calendars made on first read and kept per
 realm (`calendars.rs`), the administrator reading a person's own realm and writing and making nothing there
 (`administrator.rs`), each company's realm read by its own and the administrator alone, his writes in another
 company's refused, a tool session's holder acting for its owner's account, and the one move into companies

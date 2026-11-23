@@ -41,7 +41,7 @@ pub const CODES: [(&str, u16, &str); 23] = [
   (
     "no-road",
     422,
-    "an Outlook day whose node runs no Outlook, where the Teams page gives no token or Graph refuses the read",
+    "an Outlook day whose node runs no Outlook, where no page token is lent or Graph refuses the read",
   ),
   ("failed", 500, "the service failed"),
   (

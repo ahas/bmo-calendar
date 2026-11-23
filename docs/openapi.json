@@ -1101,7 +1101,7 @@
           },
           {
             "const": "graph",
-            "description": "Microsoft Graph, with the person's Teams page token.",
+            "description": "Microsoft Graph, with the person's page token.",
             "type": "string"
           }
         ]
@@ -2444,7 +2444,7 @@
                 }
               }
             },
-            "description": "`no-account`: a mine call names no account, or its holder's account cannot be found\n`no-node`: an Outlook day asked for an account with no node of its own\n`no-road`: an Outlook day whose node runs no Outlook, where the Teams page gives no token or Graph refuses the read"
+            "description": "`no-account`: a mine call names no account, or its holder's account cannot be found\n`no-node`: an Outlook day asked for an account with no node of its own\n`no-road`: an Outlook day whose node runs no Outlook, where no page token is lent or Graph refuses the read"
           },
           "502": {
             "content": {
@@ -2457,7 +2457,7 @@
             "description": "`upstream-failed`: the brain, the receiver, the account service, agency or the node service answered a failure, or a node's command answered nothing that reads"
           }
         },
-        "summary": "One day of the Outlook calendar of the person a tool session serves, read on that person's own node: from the running Outlook, else from Microsoft Graph with the person's Teams page token.",
+        "summary": "One day of the Outlook calendar of the person a tool session serves, read on that person's own node: from the running Outlook, else from Microsoft Graph with the person's page token.",
         "tags": [
           "outlook"
         ],
@@ -7460,7 +7460,7 @@
     "the account service",
     "bmo-agency",
     "bmo-node",
-    "Teams page service",
+    "page-token service",
     "Microsoft Graph"
   ],
   "x-event-data": {

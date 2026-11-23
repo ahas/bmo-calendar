@@ -13,7 +13,7 @@
 ## 测试
 
 `cargo test`(通过 testbed 运行)执行本 crate 唯一的测试入口 `tests/main.rs`,它在回环端口上启动 brain、receiver、
-账号服务、agency、节点服务、Teams 页面服务和 Microsoft Graph 的替身(stand-in),并验证以下内容:首次读取时创建、
+账号服务、agency、节点服务、页面令牌服务和 Microsoft Graph 的替身(stand-in),并验证以下内容:首次读取时创建、
 按领域保存的日历(`calendars.rs`);管理员可以读取个人领域,但不在其中写入或创建任何东西(`administrator.rs`);
 每个公司的领域只有本公司成员和管理员能读,管理员对其他公司领域的写入被拒绝,工具会话的持有者以其所有者的账号行事,
 以及迁入公司的一次性操作(`companies.rs`);资源与预订、重叠预订的拒绝、审批及其通知(`bookings.rs`);两个预订

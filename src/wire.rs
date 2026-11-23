@@ -842,7 +842,7 @@ pub struct OutlookDayQuery {
 pub enum OutlookRoad {
   /// The classic Outlook running on the node, over COM.
   Outlook,
-  /// Microsoft Graph, with the person's Teams page token.
+  /// Microsoft Graph, with the person's page token.
   Graph,
 }
 

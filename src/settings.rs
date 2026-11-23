@@ -32,8 +32,8 @@ pub struct Settings {
   pub agency: Peer,
   /// The node service, reached with the calendar's own caller token.
   pub node: Peer,
-  /// The Teams page service's page token road, reached with the calendar's own caller token.
-  pub teams: Peer,
+  /// The optional page-token service, reached with the calendar's own caller token; none where no address is named.
+  pub page_tokens: Peer,
   pub outlook: Outlook,
 }
 
@@ -42,7 +42,7 @@ pub struct Settings {
 pub struct Outlook {
   /// The node the deployment's own account's day is read on; empty, its agency record is read as any account's.
   pub owner_node: String,
-  /// The account the deployment's own account is known by to the node service and the Teams page service; empty, its own.
+  /// The account the deployment's own account is known by to the node service and the page-token service; empty, its own.
   pub owner_account: String,
   /// Microsoft Graph's base address.
   pub graph_address: String,
