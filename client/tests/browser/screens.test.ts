@@ -25,9 +25,8 @@ import type { Built, Width } from "./harness";
 // on another company: its row marked read-only by a lock named in its tooltip, no calendar offered to add or set, nor a
 // calendar or a source to hide, and an event's form holding every field and offering no save and no delete, standing
 // inside the screen and closed with nothing asked; the lock reads at 3:1 in both modes. At a desktop's width the
-// calendar screen's mini calendar stands at its sidebar's foot, reached by a pointer, while the list above it scrolls
-// on its own to its last row; at a phone's the calendars' sheet holds no mini calendar and its last row is reached by
-// scrolling, nothing standing over it. The screens stand on the harness
+// calendar screen's sidebar holds its list alone, no calendar of days, its last row reached by scrolling; at a phone's
+// the calendars' sheet holds the list alone too, its last row reached by scrolling, nothing standing over it. The screens stand on the harness
 // page, the stand-in answering the service. Skipped where the browser build is not on the machine.
 
 function browserReady(): boolean {
@@ -725,35 +724,21 @@ async function scroller(region: Locator): Promise<Locator> {
   return region.locator("xpath=descendant-or-self::*[@data-test-scroller]").first();
 }
 
-describe("the mini calendar", () => {
+describe("the calendars' sidebar", () => {
   test.skipIf(!ready)(
-    "at a desktop's width stands at the sidebar's foot while the list above it scrolls on its own",
+    "at a desktop's width holds the list alone, no calendar of days, its last row reached by scrolling",
     async () => {
       const { context, page } = await openScreen(browser, built, "desktop", `/calendar/week/${DAY}`);
 
       try {
         await page.getByText("Hanbit company").first().waitFor();
-        // A short window, so the list outruns its region and scrolls.
-        await page.setViewportSize({ width: 1280, height: 560 });
+        // A short window, so the list outruns the sidebar and scrolls.
+        await page.setViewportSize({ width: 1280, height: 300 });
 
         const list = await scroller(page.locator("[data-calendar-side-list]"));
-        const mini = page.locator("[data-calendar-mini]");
-        // The box the mini calendar stands in, the bottom of the sidebar it stands at, and what a pointer at its
-        // centre lands on.
-        const placed = () =>
-          mini.evaluate((node) => {
-            const own = node.getBoundingClientRect();
-            const side = node.parentElement!.getBoundingClientRect();
-            const hit = document.elementFromPoint(own.left + own.width / 2, own.top + own.height / 2);
 
-            return { top: own.top, gap: side.bottom - own.bottom, window: window.innerHeight - own.bottom, reached: hit !== null && node.contains(hit) };
-          });
-
-        const before = await placed();
-
-        expect(before.gap).toBeCloseTo(0, 0);
-        expect(before.window).toBeGreaterThanOrEqual(0);
-        expect(before.reached).toBe(true);
+        expect(await page.locator("[data-calendar-mini]").count()).toBe(0);
+        expect(await list.evaluate((node) => node.querySelector('[role="grid"]'))).toBeNull();
 
         const overflow = await list.evaluate((node) => node.scrollHeight - node.clientHeight);
 
@@ -766,20 +751,15 @@ describe("the mini calendar", () => {
           [await list.elementHandle(), overflow] as const
         );
 
-        // The mini calendar has not moved, and the list's last row is reached above it, clear of it.
-        const after = await placed();
-
-        expect(after).toEqual(before);
-
         const last = await list.evaluate((node) => {
           const rows = [...node.querySelectorAll("label, button, a, [role=checkbox]")].filter((row) => row.getBoundingClientRect().height > 0);
           const row = rows.at(-1)!.getBoundingClientRect();
 
-          return { bottom: row.bottom, foot: node.getBoundingClientRect().bottom };
+          return { bottom: row.bottom, foot: node.getBoundingClientRect().bottom, window: window.innerHeight };
         });
 
         expect(last.bottom).toBeLessThanOrEqual(last.foot + 0.5);
-        expect(last.bottom).toBeLessThanOrEqual(after.top + 0.5);
+        expect(last.bottom).toBeLessThanOrEqual(last.window);
       } finally {
         await context.close();
       }

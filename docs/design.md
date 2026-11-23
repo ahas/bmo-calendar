@@ -293,8 +293,7 @@ flowchart TD
 ## The console
 
 The console screen follows the Nuxt UI calendar template (day, week, month and year views, drag to move
-and resize, a popover to edit, a quick natural-language entry, colour-coded calendars with visibility, a
-mini calendar), stood as a console bundle under the sidebar entry 캘린더 (bmo-ui's console plugin contract;
+and resize, a popover to edit, a quick natural-language entry, colour-coded calendars with visibility), stood as a console bundle under the sidebar entry 캘린더 (bmo-ui's console plugin contract;
 `docs/api.md`, 「Console」). The sidebar lists 내 일정 and 조직 일정 calendars apart; one grid shows both.
 What a month cell shows beside an event's title goes by the cell's own width, not the screen's, so a narrow cell
 keeps its room for the titles wherever the grid stands: there an event's time, its calendar's dot, its realm's
@@ -302,10 +301,9 @@ mark and its received or booking mark give way and its padding narrows, the firs
 number alone, and the count of the events that do not fit is written short (`+3`). The sidebar beside the grid is
 narrow enough that at a desktop's width with the console's navigation and its right panel open a day column still
 holds a title of four syllables. A title too long for its cell gives way at its end, named whole to a reader who
-does not see it. The sidebar's mini calendar stands in a region of its own at the sidebar's foot, parted from the list
-above it by a line: the calendars, the companies and the layers scroll on their own over it, and the mini calendar
-stays where it stands whatever they scroll. On a phone the calendars' sheet holds the list alone, its last row reached
-by scrolling, and the title in the toolbar is the day picker.
+does not see it. The sidebar holds the calendars, the companies and the
+layers alone, its last row reached by scrolling; a day is picked from the title in the toolbar, at every width, so
+no calendar of days stands in the sidebar.
 
 The 조직 일정 are the reader's company's. The administrator chooses among the companies he reads, 조직 목록, every company
 and the platform's own among them, his own named as his. On the calendar screen they stand in the sidebar itself,
