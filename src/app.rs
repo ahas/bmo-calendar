@@ -274,6 +274,10 @@ impl App {
         () = &mut stopped => return,
         () = tokio::time::sleep(AGAIN) => {}
       }
+      // A realm let go of, or held on another brain since, is followed no longer.
+      if self.held(&realm) != Some(brain) {
+        return;
+      }
       let opened = match self.brain() {
         Ok(calls) => calls.stream(brain, last).await,
         Err(fault) => Err(fault),

@@ -39,7 +39,8 @@ The realms are kinds of brain in the brain service, never one, each with `agentK
 account's realm is the brain keyed `accountKey = account:<Owner-Key>`; a company's organization realm the
 brain keyed `accountKey = company:<company id>`, the company's unit id as the account service names it; the
 platform's own the brain keyed `accountKey = organization`. The calendar unit makes a brain the first time a
-realm is written. A screen shows both realms on one grid and tells them apart by colour and a mark; a tool
+realm is written, and lets it go whole when the platform administrator deletes the account or the company for good
+(`docs/api.md`, 「Removing an account or a company」). A screen shows both realms on one grid and tells them apart by colour and a mark; a tool
 call names the realm it reads or writes.
 
 ## The move into companies

@@ -1330,6 +1330,40 @@
         ],
         "type": "object"
       },
+      "RemovalCounts": {
+        "description": "What a removal of an account's or a company's realm would take now, by kind (`docs/api.md`, 「Removing an\naccount or a company」).",
+        "properties": {
+          "counts": {
+            "additionalProperties": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "type": "object"
+          }
+        },
+        "required": [
+          "counts"
+        ],
+        "type": "object"
+      },
+      "Removed": {
+        "description": "What a removal took, by kind.",
+        "properties": {
+          "removed": {
+            "additionalProperties": {
+              "format": "uint64",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "type": "object"
+          }
+        },
+        "required": [
+          "removed"
+        ],
+        "type": "object"
+      },
       "Repeat": {
         "description": "How an event repeats.",
         "enum": [
@@ -2009,6 +2043,162 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/accounts/{account}": {
+      "delete": {
+        "operationId": "removeAccountRealm",
+        "parameters": [
+          {
+            "description": "The account's id, positive decimal digits.",
+            "in": "path",
+            "name": "account",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Removed"
+                }
+              }
+            },
+            "description": "Answered."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`bad-request`: the body or the query is not the shape the route takes"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`unauthorized`: the token is missing or wrong"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`forbidden`: the token is right but the caller may not do this"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`upstream-failed`: the brain, the receiver, the account service, agency or the node service answered a failure, or a node's command answered nothing that reads"
+          }
+        },
+        "summary": "Let the account's own realm go for good: its brain, its told marks and what the calendar holds of it.",
+        "tags": [
+          "removal"
+        ],
+        "x-codes": [
+          "bad-request",
+          "unauthorized",
+          "forbidden",
+          "upstream-failed"
+        ]
+      }
+    },
+    "/accounts/{account}/removal": {
+      "get": {
+        "operationId": "countAccountRemoval",
+        "parameters": [
+          {
+            "description": "The account's id, positive decimal digits.",
+            "in": "path",
+            "name": "account",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemovalCounts"
+                }
+              }
+            },
+            "description": "Answered."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`bad-request`: the body or the query is not the shape the route takes"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`unauthorized`: the token is missing or wrong"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`forbidden`: the token is right but the caller may not do this"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`upstream-failed`: the brain, the receiver, the account service, agency or the node service answered a failure, or a node's command answered nothing that reads"
+          }
+        },
+        "summary": "What removing the account's own realm for good would take now; nothing changes.",
+        "tags": [
+          "removal"
+        ],
+        "x-codes": [
+          "bad-request",
+          "unauthorized",
+          "forbidden",
+          "upstream-failed"
+        ]
+      }
+    },
     "/beats": {
       "post": {
         "operationId": "runBeat",
@@ -2359,6 +2549,184 @@
         "x-codes": [
           "unauthorized",
           "forbidden"
+        ]
+      }
+    },
+    "/org-units/{unit}": {
+      "delete": {
+        "operationId": "removeOrgUnitRealm",
+        "parameters": [
+          {
+            "description": "The unit's id, positive decimal digits.",
+            "in": "path",
+            "name": "unit",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "company",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Removed"
+                }
+              }
+            },
+            "description": "Answered."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`bad-request`: the body or the query is not the shape the route takes"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`unauthorized`: the token is missing or wrong"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`forbidden`: the token is right but the caller may not do this"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`upstream-failed`: the brain, the receiver, the account service, agency or the node service answered a failure, or a node's command answered nothing that reads"
+          }
+        },
+        "summary": "Let a company's organization realm go for good; nothing for a unit below a company.",
+        "tags": [
+          "removal"
+        ],
+        "x-codes": [
+          "bad-request",
+          "unauthorized",
+          "forbidden",
+          "upstream-failed"
+        ]
+      }
+    },
+    "/org-units/{unit}/removal": {
+      "get": {
+        "operationId": "countOrgUnitRemoval",
+        "parameters": [
+          {
+            "description": "The unit's id, positive decimal digits.",
+            "in": "path",
+            "name": "unit",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "company",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RemovalCounts"
+                }
+              }
+            },
+            "description": "Answered."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`bad-request`: the body or the query is not the shape the route takes"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`unauthorized`: the token is missing or wrong"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`forbidden`: the token is right but the caller may not do this"
+          },
+          "502": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WireError"
+                }
+              }
+            },
+            "description": "`upstream-failed`: the brain, the receiver, the account service, agency or the node service answered a failure, or a node's command answered nothing that reads"
+          }
+        },
+        "summary": "What removing a company's organization realm for good would take now; zeros for a unit below a company.",
+        "tags": [
+          "removal"
+        ],
+        "x-codes": [
+          "bad-request",
+          "unauthorized",
+          "forbidden",
+          "upstream-failed"
         ]
       }
     },
@@ -7425,6 +7793,9 @@
   "tags": [
     {
       "name": "health"
+    },
+    {
+      "name": "removal"
     },
     {
       "name": "calendars"

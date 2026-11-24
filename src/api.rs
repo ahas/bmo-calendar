@@ -71,7 +71,8 @@ pub fn router(served: Served) -> Router {
   let mut routes = Router::new()
     .route("/health", get(health))
     .route("/beats", post(beats))
-    .merge(crate::outlook::routes());
+    .merge(crate::outlook::routes())
+    .merge(crate::removal::routes());
   match &served.face {
     Some(face) => routes = routes.merge(face.guard_screens(screens)).merge(face.router()),
     None => routes = routes.merge(screens),

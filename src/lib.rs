@@ -17,6 +17,7 @@ pub mod openapi;
 pub mod outlook;
 pub mod peers;
 pub mod realm;
+pub mod removal;
 pub mod schedules;
 pub mod settings;
 pub mod store;

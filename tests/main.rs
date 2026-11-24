@@ -14,6 +14,7 @@ mod openapi;
 mod outlook;
 mod overlap;
 mod preview;
+mod removal;
 mod repeats;
 mod repository;
 mod schedules;

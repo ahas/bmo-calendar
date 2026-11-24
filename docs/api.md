@@ -71,6 +71,27 @@ event, a `hidden` mark on a calendar or a source, a resource, a booking and a de
 realm not his own makes nothing in it: no brain, no first calendar (「Calendars」) and no mark. The service
 token, the units' own credential, writes in whichever realm its call names.
 
+## Removing an account or a company
+
+The platform administrator deleting an account or an organisation unit for good takes the realm the calendar keeps
+of it (`docs/design.md`, 「Two realms, kept apart」). These routes stand outside the console face's guard: the service
+token reaches them, and the console credential only with `Owner-Role` `administrator`; any other caller is 403
+`forbidden`. An account, a unit and a company are their ids as the account service names them, positive decimal
+digits; any other is 400 `bad-request`.
+
+| Method | Path | Does |
+|---|---|---|
+| GET | `/accounts/{account}/removal` | What the removal below would take now, changing nothing: `{"counts": {"calendars", "events"}}` |
+| DELETE | `/accounts/{account}` | The account's `mine` realm let go of: its brain deleted on the brain whole, its told marks with it; answers `{"removed": {"calendars", "events"}}` |
+| GET | `/org-units/{unit}/removal?company={company}` | For a company (`unit` equal to `company`), what its organization realm holds: `{"counts": {"calendars", "events", "schedules", "resources", "bookings"}}`; zeros for a unit below a company, whose things are its company's |
+| DELETE | `/org-units/{unit}?company={company}` | For a company, its organization realm let go of as an account's is; answers `{"removed": {...}}` |
+
+A realm is counted from what the calendar holds of it, live memories alone, and read from the brain first where
+it is not held yet. A removal is the same again where nothing stands: a second call answers zeros, so a removal
+broken half-way is finished by calling again. A booking a removed account made in its company's realm is the
+company's and stays; the platform's own realm is never removed this way. `upstream-failed` (502) is the brain
+answering a failure.
+
 ## Health
 
 | Method | Path | Does |
@@ -391,6 +412,7 @@ deployment writes before the flip with `bmo-calendar tool-env`.
 | What | Route |
 |---|---|
 | the realm's brain, made on first write | brain `GET /brains?accountKey=&agentKey=`, `POST /brains` |
+| a realm removed for good | brain `DELETE /brains/{brainId}` |
 | calendars, events, sources, schedules, resources, bookings and the move's record read, written, versioned, retired | brain `GET /memories`, `POST /memories`, `POST /memories/{id}/versions`, `PATCH /memories/{id}` |
 | the brain's changes followed | brain `GET /events` (`memory.written`, `memory.moved`, `scope=brain:<id>`) |
 | an alarm told | receiver `POST /instructions`; the owner's sender and room from `GET /owner`; a member's room by `GET /rooms/{roomId}`, else their own BMO's by `GET /accounts/{account}/rooms` |

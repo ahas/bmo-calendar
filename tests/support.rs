@@ -210,6 +210,17 @@ async fn make_brain(State(stand): State<Stand>, Json(body): Json<Value>) -> Resp
   (StatusCode::CREATED, Json(brain)).into_response()
 }
 
+// A brain let go of whole, with every memory it held.
+async fn let_go_brain(State(stand): State<Stand>, Path(brain): Path<i64>) -> Response {
+  let mut peers = stand.peers.lock().unwrap();
+  let Some(at) = peers.brains.iter().position(|one| one["id"] == brain) else {
+    return refused(StatusCode::NOT_FOUND, "not-found");
+  };
+  let gone = peers.brains.remove(at);
+  peers.memories.retain(|memory| memory["brainId"] != brain);
+  (StatusCode::OK, Json(gone)).into_response()
+}
+
 #[derive(serde::Deserialize, Default)]
 struct MemoriesQuery {
   #[serde(rename = "type")]
@@ -532,6 +543,7 @@ pub async fn stand() -> Stand {
   };
   let router = Router::new()
     .route("/brains", get(list_brains).post(make_brain))
+    .route("/brains/{brain}", axum::routing::delete(let_go_brain))
     .route("/brains/{brain}/memories", get(list_memories).post(write_memory))
     .route("/brains/{brain}/memories/{id}", patch(move_memory))
     .route("/brains/{brain}/memories/{id}/versions", post(write_version))

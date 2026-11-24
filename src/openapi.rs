@@ -18,6 +18,7 @@ use crate::wire::{
   ResourcesQuery, Schedule, ScheduleChanged, ScheduleSet, ScheduleWrite, Source, SourceChange,
   SourceChanged, SourceWrite, SpanQuery, StreamEvent, WireError,
 };
+use crate::wire::{RemovalCounts, Removed, UnitRemovalQuery};
 
 const SCHEMAS: &str = "/components/schemas";
 
@@ -249,6 +250,56 @@ fn routes(g: &mut SchemaGenerator) -> Vec<Route> {
       body: None,
       answers: vec![(200, content::<Health>(g))],
       codes: vec![],
+    },
+    Route {
+      method: "get",
+      path: "/accounts/{account}/removal",
+      id: "countAccountRemoval",
+      tag: "removal",
+      summary: "What removing the account's own realm for good would take now; nothing changes.",
+      parameters: vec![path_parameter(g, "account", "The account's id, positive decimal digits.")],
+      body: None,
+      answers: vec![(200, content::<RemovalCounts>(g))],
+      codes: vec!["bad-request", "forbidden", "upstream-failed"],
+    },
+    Route {
+      method: "delete",
+      path: "/accounts/{account}",
+      id: "removeAccountRealm",
+      tag: "removal",
+      summary: "Let the account's own realm go for good: its brain, its told marks and what the calendar holds of it.",
+      parameters: vec![path_parameter(g, "account", "The account's id, positive decimal digits.")],
+      body: None,
+      answers: vec![(200, content::<Removed>(g))],
+      codes: vec!["bad-request", "forbidden", "upstream-failed"],
+    },
+    Route {
+      method: "get",
+      path: "/org-units/{unit}/removal",
+      id: "countOrgUnitRemoval",
+      tag: "removal",
+      summary: "What removing a company's organization realm for good would take now; zeros for a unit below a company.",
+      parameters: with(
+        vec![path_parameter(g, "unit", "The unit's id, positive decimal digits.")],
+        query::<UnitRemovalQuery>(g),
+      ),
+      body: None,
+      answers: vec![(200, content::<RemovalCounts>(g))],
+      codes: vec!["bad-request", "forbidden", "upstream-failed"],
+    },
+    Route {
+      method: "delete",
+      path: "/org-units/{unit}",
+      id: "removeOrgUnitRealm",
+      tag: "removal",
+      summary: "Let a company's organization realm go for good; nothing for a unit below a company.",
+      parameters: with(
+        vec![path_parameter(g, "unit", "The unit's id, positive decimal digits.")],
+        query::<UnitRemovalQuery>(g),
+      ),
+      body: None,
+      answers: vec![(200, content::<Removed>(g))],
+      codes: vec!["bad-request", "forbidden", "upstream-failed"],
     },
     Route {
       method: "get",

@@ -891,3 +891,23 @@ pub struct TitleParts {
   /// The rest of the title: the whole title where it is in no such form.
   pub task: String,
 }
+
+/// What a removal of an account's or a company's realm would take now, by kind (`docs/api.md`, 「Removing an
+/// account or a company」).
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct RemovalCounts {
+  pub counts: std::collections::BTreeMap<String, u64>,
+}
+
+/// What a removal took, by kind.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+pub struct Removed {
+  pub removed: std::collections::BTreeMap<String, u64>,
+}
+
+/// The company a unit's removal names: the unit's own id where the unit is a company.
+#[derive(Clone, Debug, Default, Serialize, Deserialize, JsonSchema)]
+pub struct UnitRemovalQuery {
+  #[serde(default, skip_serializing_if = "Option::is_none")]
+  pub company: Option<String>,
+}

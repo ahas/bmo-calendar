@@ -105,6 +105,13 @@ impl Store {
     })
   }
 
+  /// The told marks of a realm's brain let go of, as the realm is removed for good.
+  pub fn forget_brain(&self, brain: i64) -> Result<(), String> {
+    self.with(|connection| {
+      connection.execute("DELETE FROM told WHERE brain_id = ?1", params![brain]).map(|_| ())
+    })
+  }
+
   /// The moment of the last beat, where one ran.
   pub fn last_beat(&self) -> Result<Option<i64>, String> {
     self.with(|connection| {

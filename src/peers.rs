@@ -346,6 +346,16 @@ impl BrainCalls<'_> {
     }
   }
 
+  /// A brain let go of whole; one that no longer stands is let go of already.
+  pub async fn let_go(&self, brain: i64) -> Result<(), CallFault> {
+    let path = format!("/brains/{brain}");
+    match call::<Value>(self.http, &self.reach, Method::DELETE, &path, &[], None).await {
+      Ok(_) => Ok(()),
+      Err(fault) if fault.status() == Some(404) => Ok(()),
+      Err(fault) => Err(fault),
+    }
+  }
+
   /// Every live memory of a type in a brain, by `validFrom`.
   pub async fn memories(&self, brain: i64, kind: &str) -> Result<Vec<Memory>, CallFault> {
     let path = format!("/brains/{brain}/memories");
