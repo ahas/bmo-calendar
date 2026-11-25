@@ -102,15 +102,22 @@ export interface ScheduleRow {
   assignee: string | null;
   /** Whether it is its assignee's alone, read in the `mine` realm only. */
   private: boolean;
+  /** Whether its assignee is the reader's own account. */
+  own: boolean;
   createdAt: number;
   changedAt: number;
 }
 
-/** Where a row received from another unit came from and opens: never written from the screen. */
+/** Where a row received from another unit came from, whose it is and where it opens: never written from the
+ *  screen. */
 export interface Origin {
   sourceId: string;
   itemId: string;
   link: string;
+  /** The account key of the person it is assigned to, or null where none. */
+  assignee: string | null;
+  /** Whether it is the reader's own: its assignee is the reader's account. */
+  own: boolean;
 }
 
 /** A row as the screen holds it: the key one row is known by on the grid, across both realms, and, for a

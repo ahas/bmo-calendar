@@ -2,20 +2,21 @@
   <!-- What pressing an event opens: its form, beside it, or on a phone as a centred dialog. A right press
        or a held finger (the grid's hold menu) offers the same form and the cancellation as a menu. Where a
        mouse points, neither is made until the event is first pointed at, since the month view puts hundreds
-       of events up at once; on a touch screen they stand from the first. A received schedule opens neither:
-       it is a link to the item it stands for. The reader's own booking opens its booking's form, and its menu
-       offers its cancellation. An event of a realm the reader only reads opens its form read-only, and offers
-       no menu. -->
+       of events up at once; on a touch screen they stand from the first. A received schedule opens its detail
+       to read in the form's place, and offers no menu. The reader's own booking opens its booking's form, and its
+       menu offers its cancellation. An event of a realm the reader only reads opens its form read-only, and
+       offers no menu. -->
   <div ref="root" class="contents" @pointerover="arm" @focusin="arm" @contextmenu="arm">
     <slot v-if="!active" :open="false" />
 
-    <UContextMenu v-else :items="items" :disabled="disabled || !writable(event.realm)">
+    <UContextMenu v-else :items="items" :disabled="disabled || received || !writable(event.realm)">
       <div class="contents">
         <CalendarFormFloat :open="open" :title="event.title || $t('calendar.label.untitled')" :content="{ side: formSide, collisionPadding: 16 }" @update:open="onUpdateOpen">
           <slot :open="open" />
 
           <template #content>
-            <BookingForm v-if="event.booking" v-model:dirty="dirty" :booking="event.booking" :resources="resourcesFor(event.booking.company)" @done="closeEvent(event.key)" @escape="leave" />
+            <CalendarScheduleDetail v-if="received" :event="event" />
+            <BookingForm v-else-if="event.booking" v-model:dirty="dirty" :booking="event.booking" :resources="resourcesFor(event.booking.company)" @done="closeEvent(event.key)" @escape="leave" />
             <CalendarEventForm v-else v-model:dirty="dirty" :event="event" @done="closeEvent(event.key)" @escape="leave" />
           </template>
         </CalendarFormFloat>
@@ -34,6 +35,7 @@ import { useIsland } from "bmo-ui/app/domain/island";
 import BookingForm from "../bookings/BookingForm.vue";
 import CalendarEventForm from "./CalendarEventForm.vue";
 import CalendarFormFloat from "./CalendarFormFloat.vue";
+import CalendarScheduleDetail from "./CalendarScheduleDetail.vue";
 import { refusalText } from "../../domain/store";
 import { useBookingChange } from "../../composables/useBookingChange";
 import { useBookings } from "../../composables/useBookings";
@@ -63,11 +65,11 @@ const armed = ref(false);
 const dirty = ref(false);
 const root = useTemplateRef("root");
 
-// A received schedule is changed by its unit alone, so nothing here offers to change it.
+// A received schedule is changed by its unit alone, so it opens to be read and nothing here offers to change it.
 const received = computed(() => !!props.event.origin);
 
 function arm(event: Event): void {
-  if (armed.value || received.value) return;
+  if (armed.value) return;
 
   armed.value = true;
 
@@ -76,7 +78,7 @@ function arm(event: Event): void {
 }
 
 const open = computed(() => props.anchored && editingKey.value === props.event.key);
-const active = computed(() => !received.value && (armed.value || open.value || coarse.value));
+const active = computed(() => armed.value || open.value || coarse.value);
 
 function onUpdateOpen(value: boolean): void {
   if (props.disabled) return;

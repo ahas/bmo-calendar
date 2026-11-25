@@ -2,16 +2,27 @@ import { describe, expect, test } from "bun:test";
 
 import { originLink } from "../app/domain/origin";
 
-// Where a received schedule opens: a console path in the console itself, an address in a new tab, and a row
-// of the calendar's own as no link at all.
+import type { Origin } from "../shared/types";
+
+// Where a received schedule's detail leads: the reader's own schedule to its item, a console path in the console
+// itself and an address in a new tab; another's, and a row of the calendar's own, nowhere.
+
+function origin(extra: Partial<Origin>): Origin {
+  return { sourceId: "plans", itemId: "a", link: "/plans/items/a", assignee: "7", own: true, ...extra };
+}
 
 describe("a received schedule's link", () => {
-  test("opens a console path in the console", () => {
-    expect(originLink({ sourceId: "plans", itemId: "a", link: "/plans/items/a" })).toEqual({ to: "/plans/items/a", raw: true });
+  test("opens the reader's own item's console path in the console", () => {
+    expect(originLink(origin({}))).toEqual({ to: "/plans/items/a" });
   });
 
-  test("opens an address in a new tab", () => {
-    expect(originLink({ sourceId: "plans", itemId: "a", link: "https://plans.example/a" })).toEqual({ to: "https://plans.example/a", external: true, target: "_blank", raw: true });
+  test("opens the reader's own item's address in a new tab", () => {
+    expect(originLink(origin({ link: "https://plans.example/a" }))).toEqual({ to: "https://plans.example/a", external: true, target: "_blank" });
+  });
+
+  test("is none for another's schedule, whatever its link", () => {
+    expect(originLink(origin({ own: false }))).toBeNull();
+    expect(originLink(origin({ own: false, link: "https://plans.example/a" }))).toBeNull();
   });
 
   test("is none for the calendar's own event", () => {

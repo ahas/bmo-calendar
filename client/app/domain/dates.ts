@@ -1,5 +1,5 @@
 import { CalendarDate, Time, getLocalTimeZone, parseDate, toCalendarDateTime, today } from "@internationalized/date";
-import { addDays, lightFormat, startOfMonth, startOfWeek } from "date-fns";
+import { addDays, isSameDay, lightFormat, startOfMonth, startOfWeek, subMilliseconds } from "date-fns";
 
 import type { CalendarView, DateRange } from "../../shared/types";
 
@@ -198,6 +198,24 @@ export function formatYear(date: Date): string {
 
 export function formatMonthDay(date: Date): string {
   return format().monthDay.format(date);
+}
+
+/** When a row happens, written whole: the days an all-day row covers, else its start and end, a time on the
+ *  start's own day by the time alone. */
+export function formatSpan(row: { start: string; end: string; allDay: boolean }): string {
+  const start = fromLocalISO(row.start);
+  const end = fromLocalISO(row.end);
+
+  if (row.allDay) {
+    // The last day an all-day row covers is a moment before its end, the midnight after it.
+    const last = subMilliseconds(end, 1);
+
+    return last <= start || isSameDay(start, last) ? formatFullDate(start) : `${formatFullDate(start)}~${formatFullDate(last)}`;
+  }
+
+  const ends = isSameDay(start, end) ? formatTime(end) : `${formatFullDate(end)} ${formatTime(end)}`;
+
+  return `${formatFullDate(start)} ${formatTime(start)}~${ends}`;
 }
 
 export interface RangeTitle {

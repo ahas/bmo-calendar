@@ -1,15 +1,14 @@
 <template>
   <!-- An event on the time grid: dragged by a mouse to move it, its foot dragged to stretch it, pressed to
-       open its form. A received schedule is a link to the item it stands for instead, never dragged or
+       open its form. A received schedule opens its detail to read instead, and is never dragged or
        stretched; the reader's own booking is neither, and opens its booking's form, and an event of a realm
        the reader only reads, another company's for the administrator, is neither and opens its form
        read-only. Its calendar's, source's or booking's colour is its fill and stripe, its realm its mark; its
        words keep the page's own text colour. Where it stands narrow it sheds its marks and its end time
        before its title. -->
   <CalendarEventPopover :event="event" :disabled="suppressed" :anchored="anchored">
-    <component
-      :is="opens ? ULink : 'button'"
-      v-bind="opens ?? { type: 'button' }"
+    <button
+      type="button"
       data-event
       class="@container focus-inset absolute flex select-none flex-col items-start overflow-hidden rounded-sm py-1 ps-3 pe-2 text-start text-sm text-highlighted transition-colors"
       :class="[EVENT_FILL[color], dragging ? 'z-20' : 'z-5']"
@@ -29,12 +28,11 @@
       <span v-if="!compact || dragging" class="w-full truncate tabular-nums text-toned">{{ times.start }}<span class="@max-[5.25rem]:hidden">~{{ times.end }}</span></span>
 
       <span v-if="movable(event)" data-resize-handle class="absolute inset-x-0 bottom-0 h-2 cursor-ns-resize" />
-    </component>
+    </button>
   </CalendarEventPopover>
 </template>
 
 <script setup lang="ts">
-import ULink from "@nuxt/ui/components/Link.vue";
 import { addMinutes } from "date-fns";
 import { computed } from "vue";
 import { useI18n } from "vue-i18n";
@@ -44,7 +42,6 @@ import { eventName } from "../../domain/a11y";
 import { CALENDAR_DOT, EVENT_FILL, RECEIVED_ICON, REALM_ICON } from "../../domain/colors";
 import { formatTime, fromLocalISO, toLocalISO } from "../../domain/dates";
 import { COMPACT_MINUTES, MIN_EVENT_MINUTES, SNAP_MINUTES, eventBlockStyle, minutesLength } from "../../domain/layout";
-import { originLink } from "../../domain/origin";
 import { repeating } from "../../domain/store";
 import { BOOKING_ICON } from "../../domain/bookings";
 import { useCalendarEvents } from "../../composables/useCalendarEvents";
@@ -63,7 +60,6 @@ const event = computed(() => props.positioned.event);
 const color = computed(() => layerOf(event.value)?.color ?? "primary");
 const repeats = computed(() => repeating(event.value));
 const name = computed(() => eventName(t, event.value, layerOf(event.value)?.name));
-const opens = computed(() => originLink(event.value.origin));
 const mark = computed(() => (event.value.origin ? RECEIVED_ICON : event.value.booking ? BOOKING_ICON : null));
 
 const { dragging, suppressed, mode, deltaMinutes, deltaX, onPointerdown, onPointermove, onPointerup, onPointercancel } = useEventDrag(event, {

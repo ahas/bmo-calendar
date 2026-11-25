@@ -102,7 +102,7 @@ export function source(id: string, extra: Partial<Source> = {}): Source {
 }
 
 export function scheduleRow(realm: Realm, sourceId: string, itemId: string, start: string, end: string, extra: Partial<ScheduleRow> = {}): ScheduleRow {
-  return { sourceId, itemId, realm, company: COMPANY, title: itemId, start, end, allDay: false, link: `/items/${itemId}`, assignee: null, private: false, createdAt: 1, changedAt: 1, ...extra };
+  return { sourceId, itemId, realm, company: COMPANY, title: itemId, start, end, allDay: false, link: `/items/${itemId}`, assignee: null, private: false, own: false, createdAt: 1, changedAt: 1, ...extra };
 }
 
 function refusal(status: number, code: string, error: string): Response {

@@ -155,11 +155,34 @@ async fn the_organization_reads_every_schedule_and_an_account_its_own() {
       .all(|one| one["realm"] == "organization")
   );
 
+  let owned = |page: &Value| -> Vec<(String, bool)> {
+    page["items"]
+      .as_array()
+      .unwrap()
+      .iter()
+      .map(|one| (one["itemId"].as_str().unwrap().to_owned(), one["own"].as_bool().unwrap()))
+      .collect()
+  };
+  assert_eq!(
+    owned(&organization),
+    [("mine".to_owned(), true), ("nobodys".to_owned(), false), ("theirs".to_owned(), false)],
+    "a reader's own schedule is marked so, another's and one with no assignee not"
+  );
+
   let (_, mine) = service
     .console(Method::GET, &format!("/mine/schedules?{SPAN}"), "2", "member", None)
     .await;
   assert_eq!(pairs(&mine), ["plans:mine"]);
   assert_eq!(mine["items"][0]["realm"], "mine");
+  assert_eq!(mine["items"][0]["own"], true);
+  let (_, read_for) = service
+    .console(Method::GET, &format!("/mine/schedules?{SPAN}&account=2"), "1", "administrator", None)
+    .await;
+  assert_eq!(
+    owned(&read_for),
+    [("mine".to_owned(), false)],
+    "the administrator reading another's own realm is not its assignee"
+  );
   assert_eq!(
     service.stand.peers.lock().unwrap().brains.len(),
     2,

@@ -181,7 +181,9 @@ calendar's code names no unit, and treats every source alike.
   `platform` company, is answered it. A private schedule names both its `assignee` and its `company`.
 - **A schedule read** is `sourceId`, `itemId`, `realm` (the realm it is read in), `company` (`platform`
   where it was sent with none), `title`, `start`, `end`, `allDay`, `link`, `assignee` (null where none),
-  `private`, `createdAt`, `changedAt`.
+  `private`, `own`, `createdAt`, `changedAt`. `own` says the schedule's `assignee` is the reader's account: the
+  account the call acts for in either realm, never one the administrator reads in place of his own, so his read
+  of another account's `mine` realm marks none; a unit's write is answered with `own` false.
 - **The ids.** A `sourceId` and an `itemId` are each 1 to 64 letters, digits, `-` and `_`; a unit writes
   under its own source and keeps its own item ids, so a schedule is known by the pair alone.
 - **Writes are idempotent.** A write that names what already stands keeps it and answers 200; a delete of a

@@ -253,9 +253,19 @@ async fn remove_schedule(
   Ok(())
 }
 
-/// A schedule as a read answers it, read in a realm, kept in a company's brain or the platform's.
-fn schedule_read(memory: &Memory, realm: Realm, kept: &RealmKey) -> Schedule {
-  schedule_of(memory, realm, kept.company().unwrap_or_default())
+/// A schedule as a read answers it, read in a realm, kept in a company's brain or the platform's, by the
+/// reader's account where an account reads it.
+fn schedule_read(memory: &Memory, realm: Realm, kept: &RealmKey, reader: Option<&str>) -> Schedule {
+  schedule_of(memory, realm, kept.company().unwrap_or_default(), reader)
+}
+
+/// The account a read marks its own schedules for: the account the call acts for, never one the administrator
+/// reads in place of his own, whose realm he reads without writing in it.
+fn reader(asked: &Asked) -> Option<&str> {
+  match asked.realm {
+    RealmKey::Mine(_) if !asked.writes => None,
+    _ => asked.account.as_deref(),
+  }
 }
 
 // ---------------------------------------------------------------------------------------------------------
@@ -310,7 +320,7 @@ async fn put_one(
   known_source(app, source).await?;
   let (realm, written, outcome) = write_schedule(app, source, item, &write).await?;
   let status = if outcome == Outcome::Made { StatusCode::CREATED } else { StatusCode::OK };
-  Ok(json_answer(status, schedule_read(&written, Realm::Organization, &realm)))
+  Ok(json_answer(status, schedule_read(&written, Realm::Organization, &realm, None)))
 }
 
 async fn remove_one(
@@ -468,9 +478,10 @@ async fn list_schedules(
     organization => organization.clone(),
   };
   app.realm(&kept, false).await?;
+  let reader = reader(&asked);
   let mut items: Vec<Schedule> = schedules_of(app, &kept)?
     .iter()
-    .map(|memory| schedule_read(memory, asked.realm.realm(), &kept))
+    .map(|memory| schedule_read(memory, asked.realm.realm(), &kept, reader))
     .filter(|schedule| match &asked.realm {
       RealmKey::Mine(account) => schedule.assignee.as_deref() == Some(account.as_str()),
       _ => !schedule.private,

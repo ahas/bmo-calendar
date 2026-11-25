@@ -1550,6 +1550,10 @@
           "link": {
             "type": "string"
           },
+          "own": {
+            "description": "Whether its assignee is the reader's account: the account the call acts for, never one the administrator\nreads in place of his own; false in the answer to a unit's write.",
+            "type": "boolean"
+          },
           "private": {
             "description": "Whether it is its assignee's alone.",
             "type": "boolean"
@@ -1581,6 +1585,7 @@
           "link",
           "assignee",
           "private",
+          "own",
           "createdAt",
           "changedAt"
         ],

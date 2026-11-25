@@ -541,8 +541,9 @@ pub fn schedule_private(memory: &Memory) -> bool {
   memory.label(PRIVATE_LABEL) == "true"
 }
 
-/// A schedule read from its memory, as it is read in a realm, kept in a company's brain or the platform's.
-pub fn schedule_of(memory: &Memory, realm: Realm, company: String) -> Schedule {
+/// A schedule read from its memory, as it is read in a realm, kept in a company's brain or the platform's, by
+/// the reader's account where an account reads it.
+pub fn schedule_of(memory: &Memory, realm: Realm, company: String, reader: Option<&str>) -> Schedule {
   let assignee = memory.label("assignee");
   Schedule {
     source_id: memory.label("source").to_owned(),
@@ -556,6 +557,7 @@ pub fn schedule_of(memory: &Memory, realm: Realm, company: String) -> Schedule {
     link: memory.label("link").to_owned(),
     assignee: (!assignee.is_empty()).then(|| assignee.to_owned()),
     private: schedule_private(memory),
+    own: !assignee.is_empty() && reader == Some(assignee),
     created_at: number(memory, "createdAt"),
     changed_at: memory.created_at,
   }

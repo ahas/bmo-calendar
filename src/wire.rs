@@ -564,6 +564,9 @@ pub struct Schedule {
   pub assignee: Option<String>,
   /// Whether it is its assignee's alone.
   pub private: bool,
+  /// Whether its assignee is the reader's account: the account the call acts for, never one the administrator
+  /// reads in place of his own; false in the answer to a unit's write.
+  pub own: bool,
   pub created_at: i64,
   pub changed_at: i64,
 }

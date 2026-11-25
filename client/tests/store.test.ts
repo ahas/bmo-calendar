@@ -303,9 +303,9 @@ describe("received schedules", () => {
   const RECEIVED = {
     sources: { mine: [source("plans")], organization: [source("plans"), source("work", { color: "success" })] },
     schedules: {
-      mine: [scheduleRow("mine", "plans", "own", "2026-11-05T09:00:00", "2026-11-05T10:00:00", { assignee: "7" })],
+      mine: [scheduleRow("mine", "plans", "own", "2026-11-05T09:00:00", "2026-11-05T10:00:00", { assignee: "7", own: true })],
       organization: [
-        scheduleRow("organization", "plans", "own", "2026-11-05T09:00:00", "2026-11-05T10:00:00", { assignee: "7" }),
+        scheduleRow("organization", "plans", "own", "2026-11-05T09:00:00", "2026-11-05T10:00:00", { assignee: "7", own: true }),
         scheduleRow("organization", "plans", "team", "2026-11-06T09:00:00", "2026-11-06T10:00:00"),
         scheduleRow("organization", "work", "build", "2026-11-07T09:00:00", "2026-11-07T10:00:00")
       ]
@@ -328,7 +328,7 @@ describe("received schedules", () => {
 
     const build = store.events.value.find((row) => row.origin?.itemId === "build")!;
 
-    expect(build.origin).toEqual({ sourceId: "work", itemId: "build", link: "/items/build" });
+    expect(build.origin).toEqual({ sourceId: "work", itemId: "build", link: "/items/build", assignee: null, own: false });
     expect(store.layerOf(build)?.color).toBe("success");
   });
 

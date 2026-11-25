@@ -371,8 +371,14 @@ Received schedules stand on the same grid as layers, one for each source in each
 - **One row each.** Where an item stands in both shown layers, the grid draws it once, as the reader's own.
 - **Drawn as an event, read-only.** A schedule is drawn as an event is, in its source's colour with its
   realm's mark and a mark that it is received; it is never dragged, stretched or opened in a form, and a
-  held finger opens none of the calendar's menus on it. It is a link: a press, or Enter on it, opens the
-  item it stands for, a console path in the console and an address in a new tab.
+  held finger opens none of the calendar's menus on it.
+- **Its detail.** A press, or Enter on it, opens its detail where an event's form would stand, beside it or
+  on a phone as a centred dialog, to read alone: its title, its dates (the days it spans where it is all
+  day, else its start and end), whose it is, by the name the console's people directory gives its assignee
+  and left out where the directory names nobody, and the source it came from, by the source's name. Only a
+  schedule of the reader's own, which the service marks as the one whose assignee is the reader's account,
+  offers the way to the item it stands for there, a console path in the console and an address in a new
+  tab; another's offers none, so no press leads the reader to an item its unit may not open to them.
 
 The screen's own row is its toolbar, directly under the top bar. Nothing but the screen's name and mark
 stands beside the title in the top bar, whether the console draws that bar or, on the unit's own app, the

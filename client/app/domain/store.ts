@@ -133,7 +133,7 @@ export function scheduleRow(row: ScheduleRow): CalendarEvent {
     told: null,
     occurrence: null,
     key: `schedule:${row.realm}:${id}`,
-    origin: { sourceId: row.sourceId, itemId: row.itemId, link: row.link }
+    origin: { sourceId: row.sourceId, itemId: row.itemId, link: row.link, assignee: row.assignee, own: row.own }
   };
 }
 
