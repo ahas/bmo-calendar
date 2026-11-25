@@ -17,6 +17,8 @@ when due. `docs/design.md` states what it is; `docs/api.md` is the boundary cont
 - **English only** in code, documents, tests and commits; other languages in the bundle's language packs
   (`ko`, `ja`, `zh-CN`) and the quick entry's data file alone.
 - **No personal data, no names of agents, owners or hosts** in code, documents or commits.
-- **Versions:** `0.1.0-rev.N` until a release the owner declares; no sibling version pins.
+- **Versions:** the set's, read off the git tag when a build is made and handed to it as `BMO_VERSION`, which
+  the health and `--version` answer (bmo-chat's `docs/conventions.md`, 「Versions」); the manifest's version is a
+  placeholder that never moves; no sibling version pins.
 - Depend only on the base libraries (bmo-chat, bmo-chat-client, bmo-console-face, bmo-ui) and this unit's own
   crates; other units through their documented APIs.

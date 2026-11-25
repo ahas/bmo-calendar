@@ -12,7 +12,7 @@ use bmo_calendar::wire::Health;
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
-#[command(name = "bmo-calendar", version, about = "The calendar service and its command.")]
+#[command(name = "bmo-calendar", version = bmo_calendar::VERSION, about = "The calendar service and its command.")]
 struct Command {
   #[command(subcommand)]
   verb: Verb,
