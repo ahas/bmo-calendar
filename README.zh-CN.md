@@ -51,9 +51,10 @@
 | `client/` | 控制台插件包,一个独立的项目 |
 | `deploy/` | 服务的用户单元 |
 | `docs/` | 关于服务是什么及其边界的权威说明,以及 OpenAPI 文档 |
+| `scripts/` | 与声明一并生成的、把本应用从机器上移除的脚本 |
 | `tests/` | crate 唯一的测试入口及其使用的替身 |
 
-根目录下有 Cargo 清单、`Cargo.lock`、`testbed.toml`、`install.toml`、`rustfmt.toml`、`settings.toml`(编译进二进制的默认值)、
+根目录下有 Cargo 清单、`Cargo.lock`、`bmo-app.toml`(唯一声明;`testbed.toml`、`install.toml`、`deploy/` 单元与 `scripts/remove.sh` 由它生成)、`rustfmt.toml`、`settings.toml`(编译进二进制的默认值)、
 `CLAUDE.md`、`PERSONAL-DATA.md` 和 `LICENSE`。
 
 ## 命令

@@ -61,9 +61,10 @@ stand-in answering the service as it answers the platform administrator.
 | `client/` | The console plugin bundle, a project of its own |
 | `deploy/` | The service's user unit |
 | `docs/` | The canonical statements of what the service is and its boundary, and the OpenAPI document |
+| `scripts/` | The application's removal from a machine, generated like the declarations |
 | `tests/` | The crate's one test harness and the stand-ins it runs over |
 
-At the root stand the Cargo manifest, `Cargo.lock`, `testbed.toml`, `install.toml`, `rustfmt.toml`, `settings.toml` (the
+At the root stand the Cargo manifest, `Cargo.lock`, `bmo-app.toml` (the one manifest, whose generated readings are `testbed.toml`, `install.toml`, the unit under `deploy/` and `scripts/remove.sh`), `rustfmt.toml`, `settings.toml` (the
 defaults built into the binary), `CLAUDE.md`, `PERSONAL-DATA.md` and `LICENSE`.
 
 ## Commands

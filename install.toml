@@ -1,6 +1,7 @@
-# What installing the calendar service on a fresh machine needs, read by the testbed's install verb
-# (bmo-testbed's docs/install.md, 「The install declaration」). The settings are docs/api.md's 「Settings」.
+# Generated from bmo-app.toml by bmo-app-sdk's bmo-app-declare.
+# Change the manifest and run `bmo-app-declare bmo-app.toml` again; do not hand-edit this file.
 
+# What installing this application needs on a machine, read by the testbed's install verb.
 install = 1
 
 restart = "systemctl --user restart bmo-calendar.service"
@@ -25,10 +26,7 @@ file = "env/calendar-service.token"
 name = "calendar.console"
 file = "env/calendar-console.token"
 
-# The release's settings.local.toml. The peers are named here outright, so none of their own files is read:
-# the brain and the receiver by their service tokens, the account service (bmo-web's server) by its token, and
-# the agency by its control token. The node service and the optional page-token service stay unnamed, so a person's Outlook day is
-# read only where they stand.
+# The deployed settings the release links beside its own.
 [[settings]]
 file = "env/calendar.toml"
 text = """

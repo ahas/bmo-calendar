@@ -1,56 +1,48 @@
-# How the testbed tests, checks, builds and deploys this repository, in the testbed's declaration format.
+# Generated from bmo-app.toml by bmo-app-sdk's bmo-app-declare.
+# Change the manifest and run `bmo-app-declare bmo-app.toml` again; do not hand-edit this file.
 
 testbed = 0
 name = "bmo-calendar"
 
+# The shared base whose generator and skeletons this repository stands on.
+upstreams = ["bmo-app-sdk"]
+
 [test]
-# The Cargo workspace's crates, and the console bundle under client/, whose check script installs its locked
-# packages and typechecks it. Its tests wait on round trips to a loopback stand-in, which a machine running
-# several deployment gates at once slows past the runner's 5-second default, so the script gives each 30.
 languages = ["cargo", "bun"]
 
-# The console bundle under client/ is a project of its own: its manifest and lockfile stand in its own folder,
-# outside any package workspace.
 [projects]
+# The console bundle is a project of its own, its manifest and lockfile outside any package workspace.
 paths = ["client"]
 
-# The calendar's tool, checked by the command its tool.toml names.
+# The tool the service places on the tool host.
 [tools]
 dir = "tools"
 
 [check]
-# The sweeps that read the tree before anything runs: the README's folder table, the dependencies the manifests
-# name, the build profiles and the shared versions.
+# The sweeps that read the tree before anything runs.
 quick = ["layout", "dependencies", "cargo-profile", "shared-versions"]
-base_libraries = ["bmo-chat", "bmo-chat-client", "bmo-console-face", "bmo-ui"]
+# The base library the service crate takes by a path beside this checkout.
+base_libraries = ["bmo-app-service", "bmo-chat", "bmo-chat-client", "bmo-console-face", "bmo-ui"]
 
 # The repository whose root holds the shared versions the manifests and the lock hold to.
 [check.shared_versions]
 repository = "bmo-chat"
 
-# No static step is declared for the Cargo workspace. The testbed's own Cargo workspace check formats and lints
-# every member, every target compiled, through its Cargo verb in the shared build directory, wherever a change marks
-# a crate, and the change check compiles every crate a change marks; a change that marks none has no Rust to judge.
-
 [build]
-# The service's binary and the tool host's tool.
 binaries = ["bmo-calendar", "calendar-tool"]
 
-# The service's own deploy tree, and the data root its settings stand under: the data root's env/calendar.toml,
-# which each release links to as settings.local.toml, the file the service reads beside settings.toml
-# (docs/api.md, 「Settings」).
+# The service's deploy tree and its data, kept apart from every release.
 [deploy]
 root = "~/.local/share/bmo-calendar"
 link = "deploy"
 data_root = "~/.local/share/bmo/data"
+# The deployed settings each release links beside its own.
 env_links = [{ link = "settings.local.toml", target = "env/calendar.toml" }]
-# The service's user unit, marked bot: the repository's one service, whose health the deployment waits on.
 units = ["deploy/*.service"]
-# Answers 0 once the service the deployed settings name answers ready (docs/api.md, 「Health」).
 health = "~/.local/share/bmo-calendar/deploy/bin/bmo-calendar health"
 
-# The console bundle the service serves from the release (docs/api.md, 「Console」): its locked packages installed
-# and its folder built inside client/, where the settings' console.folder reads it.
+# The console bundle the service serves from the release: its locked packages laid
+# and its folder built inside the release, where the settings' console folder reads it.
 [[deploy.step]]
 id = "console-bundle"
 phase = "before-flip"
@@ -61,14 +53,14 @@ bun install --frozen-lockfile
 bun run bundle
 '''
 
-# Where the calendar's tool finds the service: the data root's env/calendar.env, written from the settings.
+# The env file the tool and the other units read the service's address and token from.
 [[deploy.step]]
 id = "tool-env"
 phase = "before-flip"
 command = "bin/bmo-calendar tool-env"
 
-# The tool placed in its folder's .placed/, the folder the tool host reads: the executable the release's bin/
-# holds, its manifest, its manual and the schemas beside it.
+# The tool placed in its folder's .placed/, the folder the tool host reads: the executable
+# the release's bin/ holds, its manifest, its manual and the schemas beside it.
 [[deploy.step]]
 id = "place-calendar-tool"
 phase = "before-flip"
@@ -79,12 +71,12 @@ mkdir -p tools/calendar/.placed
 cp bin/calendar-tool tools/calendar/tool.toml tools/calendar/manual.md tools/calendar/*.json tools/calendar/.placed/
 '''
 
-# The placed tool registered with the tool host under this service's name, carrying the room.tools capability its
-# entries ask for; the host's command stands in its own deploy tree.
+# The placed tool registered with the tool host under this service's name, carrying the
+# capability its entries ask for.
 [[deploy.step]]
 id = "register-calendar-tool"
 phase = "after-health"
 command = '''
 set -eu
-"$HOME/.local/share/bmo-pocket/deploy/bin/bmo-pocket" put --service calendar --placed --allow room.tools tools/calendar/.placed
+bmo pocket put tools/calendar/.placed --placed --service calendar --allow room.tools
 '''

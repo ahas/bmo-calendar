@@ -1,0 +1,80 @@
+# The one declaration this application answers to: bmo-app-sdk's docs/manifest.md states every
+# field, and testbed.toml, install.toml, the unit and the removal script are generated from this
+# file by bmo-app-declare. What is bmo-calendar's own — its routes, its store, its bundle and
+# words — stands in src/, client/ and docs/.
+
+app = 1
+name = "bmo-calendar"
+description = "dated events kept in the brain, their alarms told to the supervisor"
+env_prefix = "BMO_CALENDAR"
+deploy_root = "~/.local/share/bmo-calendar"
+data_root = "~/.local/share/bmo/data"
+data_folder = "calendar"
+service_port = 13127
+port_name = "calendar.server"
+checkout = "~/repos/ahas/bmo/services/calendar"
+base_libraries = ["bmo-chat", "bmo-chat-client", "bmo-console-face", "bmo-ui"]
+shared_versions = "bmo-chat"
+
+[console]
+project = "client"
+install = "bun install --frozen-lockfile"
+
+[tool]
+name = "calendar"
+binary = "calendar-tool"
+env = true
+
+[[token]]
+name = "calendar.service"
+file = "env/calendar-service.token"
+
+[[token]]
+name = "calendar.console"
+file = "env/calendar-console.token"
+
+# The peers are named here outright, so none of their own files is read: the brain and the
+# receiver by their service tokens, the account service (bmo-web's server) by its token, and the
+# agency by its control token. The node service and the optional page-token service stay unnamed,
+# so a person's Outlook day is read only where they stand. (The machine has since gained node and
+# page-token values by hand; that drift is in the migration report, not chosen away here.)
+[[settings]]
+file = "env/calendar.toml"
+text = """
+[server]
+listen = "127.0.0.1:{{port.calendar.server}}"
+token = "{{token.calendar.service}}"
+data_root = "{{data_root}}"
+
+[console]
+token = "{{token.calendar.console}}"
+
+[store]
+path = "{{data_root}}/calendar/calendar.db"
+
+[brain]
+address = "http://127.0.0.1:{{port.brain.server}}"
+token = "{{token.brain.service}}"
+
+[receiver]
+address = "http://127.0.0.1:{{port.receiver.server}}"
+token = "{{token.receiver.service}}"
+
+[accounts]
+address = "{{value.web.address}}"
+token = "{{token.web.server}}"
+
+[agency]
+address = "http://127.0.0.1:{{port.agency.control}}"
+token = "{{token.agency.control}}"
+"""
+
+[[line]]
+file = "env/web-console.env"
+key = "CALENDAR_ADDRESS"
+value = "http://127.0.0.1:{{port.calendar.server}}"
+
+[[line]]
+file = "env/web-console.env"
+key = "CALENDAR_TOKEN"
+value = "{{token.calendar.console}}"

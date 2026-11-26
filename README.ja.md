@@ -59,9 +59,10 @@ OpenAPI ドキュメント(`openapi.rs`)、そしてリポジトリ自身のチ�
 | `client/` | コンソールプラグインのバンドル(独立したプロジェクト) |
 | `deploy/` | サービスのユーザーユニット |
 | `docs/` | サービスが何であるかとその境界の正式な記述、および OpenAPI ドキュメント |
+| `scripts/` | 宣言物とともに生成される、このアプリをマシンから除く手順 |
 | `tests/` | クレート唯一のテストハーネスと、それが使うスタンドイン |
 
-ルートには Cargo マニフェスト、`Cargo.lock`、`testbed.toml`、`install.toml`、`rustfmt.toml`、`settings.toml`(バイナリに
+ルートには Cargo マニフェスト、`Cargo.lock`、`bmo-app.toml`(単一のマニフェスト。`testbed.toml`、`install.toml`、`deploy/` のユニットと `scripts/remove.sh` はここから生成される)、`rustfmt.toml`、`settings.toml`(バイナリに
 組み込まれる既定値)、`CLAUDE.md`、`PERSONAL-DATA.md`、`LICENSE` があります。
 
 ## コマンド

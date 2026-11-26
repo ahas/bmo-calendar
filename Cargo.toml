@@ -50,6 +50,8 @@ test = false
 axum.workspace = true
 # The answer a node's PowerShell command writes, its UTF-8 bytes in base64 so no console code page touches them.
 base64.workspace = true
+# The shared service skeleton: the serving loop and its graceful stop.
+bmo-app-service = { path = "../../../bmo-app-sdk/crates/service" }
 # The console face: the manifest, the bundle's files and their guard, by bmo-ui's console plugin contract.
 bmo-console-face = { path = "../../base/chat/console-face" }
 # Local datetimes, the host's time zone, and the repeating events' months and days.
