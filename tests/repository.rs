@@ -15,7 +15,8 @@ use serde_json::Value;
 const ROOT: &str = env!("CARGO_MANIFEST_DIR");
 
 /// The only `bmo-*` packages a package here may depend on: the base libraries.
-const BASE_LIBRARIES: [&str; 4] = ["bmo-chat", "bmo-chat-client", "bmo-console-face", "bmo-ui"];
+const BASE_LIBRARIES: [&str; 5] =
+  ["bmo-app-service", "bmo-chat", "bmo-chat-client", "bmo-console-face", "bmo-ui"];
 
 /// Shared crates of the single repository this one was separated from; their parts live in-tree here.
 const OLD_SHARED_CRATES: [&str; 11] = [
@@ -228,9 +229,12 @@ fn text<'a>(within: &'a toml::Table, key: &str) -> &'a str {
 fn the_testbed_declaration_is_in_the_testbeds_format_and_carries_no_version() {
   let declaration = declaration();
   let tables = ["test", "projects", "tools", "check", "build", "deploy", "runner", "events"];
+  // `upstreams` names the base whose generator and skeletons the repository stands on.
   let strange: Vec<&String> = declaration
     .keys()
-    .filter(|key| !["testbed", "name"].contains(&key.as_str()) && !tables.contains(&key.as_str()))
+    .filter(|key| {
+      !["testbed", "name", "upstreams"].contains(&key.as_str()) && !tables.contains(&key.as_str())
+    })
     .collect();
 
   assert_eq!(declaration.get("testbed").and_then(toml::Value::as_integer), Some(0));
