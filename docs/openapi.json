@@ -2044,7 +2044,7 @@
   "info": {
     "description": "The platform's dated events, kept as memories in the brain service (the brain the master, this unit the subordinate), in two realms kept apart: each account's own (mine) and the organization's, one for each company. Calendars and events are read and written by realm; a repeating event answers one row per occurrence in a span; an alarm is told once to the supervisor through the receiver when it comes due. A company's resources are booked, two bookings of one resource never meeting, some only once a keeper approves. Bodies are JSON with camelCase keys, times are epoch milliseconds unless a field says it is a local ISO datetime, lists are pages of items and more, and every failure is the error shape with its status. The tool's entries, placed on the tool host, are stated under x-tools.",
     "title": "bmo-calendar",
-    "version": "0.1.0-rev.1"
+    "version": "0.0.0"
   },
   "openapi": "3.1.0",
   "paths": {
