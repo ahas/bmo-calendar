@@ -240,14 +240,19 @@ impl Listener {
 async fn tell_alarm(app: &App, one: &Due, occurrence: &str) -> Result<Vec<i64>, String> {
   let accounts = recipients(app, one).await?;
   let kind = format!("calendar:{}:{occurrence}", one.event.id);
-  tell(app, &accounts, &one.event.title, &kind, |listeners| order(one, listeners)).await
+  tell(app, &accounts, one.event.set_by.as_deref(), &one.event.title, &kind, |listeners| {
+    order(one, listeners)
+  })
+  .await
 }
 
 /// A telling for these accounts, the owner as the empty key, in every room it reaches, each room's order made
-/// for the listeners in it: an instruction on the receiver of sort `calendar`. Answers the rooms.
+/// for the listeners in it: an instruction on the receiver of sort `calendar`, in the voice of the supervisor
+/// `voice` names where one does, else of the room's default. Answers the rooms.
 pub async fn tell(
   app: &App,
   accounts: &[String],
+  voice: Option<&str>,
   summary: &str,
   kind: &str,
   order: impl Fn(&[Listener]) -> String,
@@ -293,7 +298,7 @@ pub async fn tell(
   let mut told = Vec::new();
   for (room, listeners) in rooms {
     let body = json!({
-      "agentName": null,
+      "agentName": voice,
       "room": room,
       "said": { "fact": null, "order": order(&listeners) },
       "sort": "calendar",

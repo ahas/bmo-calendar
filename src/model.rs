@@ -282,6 +282,7 @@ pub fn event_of(
     repeat: word(memory.label("repeat")).unwrap_or(Repeat::None),
     occurrence: None,
     creator: memory.label("creator").to_owned(),
+    set_by: Some(memory.label("setBy").to_owned()).filter(|name| !name.is_empty()),
     created_at: number(memory, "createdAt"),
     changed_at: memory.created_at,
     told,
@@ -307,6 +308,9 @@ pub fn event_labels(event: &Event, skip: &[String]) -> Labels {
   labels.insert("alarm".into(), label_word(&event.alarm));
   labels.insert("repeat".into(), label_word(&event.repeat));
   labels.insert("creator".into(), event.creator.clone());
+  if let Some(set_by) = &event.set_by {
+    labels.insert("setBy".into(), set_by.clone());
+  }
   labels.insert("realm".into(), event.realm.word().into());
   labels.insert("createdAt".into(), event.created_at.to_string());
   labels.insert("skip".into(), skip.join(","));

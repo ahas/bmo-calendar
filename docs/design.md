@@ -211,6 +211,11 @@ supervisor in the recipient's room, the first of these that stands:
    no room;
 4. else the owner's private room, naming the member.
 
+The instruction names the supervisor whose tool session set the event, its `setBy`, as its `agentName`, so the
+supervisor that took the request tells it in its own voice; an event set from a screen names none, and the
+room's default supervisor tells it. A supervisor's change of an event makes it that supervisor's; a change from
+a screen keeps the one that set it.
+
 The order opens on the marker `CALENDAR ALARM.` and carries the alarm's data alone — the event, its start,
 its calendar and realm, how late it is and whom it is for — never an instruction; how a quiet instruction is
 answered stands in the receiving session's own rules, so the supervisor says it in its own words

@@ -212,3 +212,33 @@ async fn the_organizations_tell_reaches_everyone_it_names() {
   let instructions = service.stand.instructions();
   assert_eq!(instructions.len(), 2, "one room is told once");
 }
+
+#[tokio::test]
+async fn an_alarm_is_told_in_the_voice_of_the_supervisor_that_set_it() {
+  let service = Service::fresh().await;
+  service.get("/mine/calendars?account=1").await;
+  let body = json!({
+    "calendarId": "mine",
+    "title": "Call the bank",
+    "start": local_in(2),
+    "end": local_in(32),
+    "alarm": "5",
+  });
+  let (status, set) = service.post("/mine/events?account=1&holderName=kakia-chat", body).await;
+  assert_eq!(status, 201, "{set}");
+  assert_eq!(set["setBy"], "kakia-chat");
+  due_event(&service, "1", "Dentist").await;
+
+  service.post("/beats", json!({})).await;
+
+  let instructions = service.stand.instructions();
+  let voice = |title: &str| {
+    instructions
+      .iter()
+      .find(|one| one["summary"] == title)
+      .map(|one| one["agentName"].clone())
+      .unwrap()
+  };
+  assert_eq!(voice("Call the bank"), json!("kakia-chat"));
+  assert_eq!(voice("Dentist"), Value::Null, "one set from a screen is the room's default's to tell");
+}

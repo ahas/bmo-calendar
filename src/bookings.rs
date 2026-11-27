@@ -941,7 +941,7 @@ pub async fn tell_due(app: &Arc<App>) -> Result<Vec<ToldBooking>, ApiError> {
     let kind = format!("booking:{}:{}", one.booking.id, one.mark);
     let booker = booker_name(app, &one.booking.booker).await;
     let order = |listeners: &[alarms::Listener]| order(&one, &booker, listeners);
-    match alarms::tell(app, &one.accounts, &one.booking.title, &kind, order).await {
+    match alarms::tell(app, &one.accounts, None, &one.booking.title, &kind, order).await {
       Ok(rooms) => {
         let now = now_ms();
         app

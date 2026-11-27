@@ -606,6 +606,14 @@
           "repeat": {
             "$ref": "#/components/schemas/Repeat"
           },
+          "setBy": {
+            "default": null,
+            "description": "The supervisor whose tool session set it, whose voice tells its alarm; null for one set from a screen.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "start": {
             "description": "Local ISO datetime, `YYYY-MM-DDTHH:mm:ss`.",
             "type": "string"
@@ -635,6 +643,7 @@
           "repeat",
           "occurrence",
           "creator",
+          "setBy",
           "createdAt",
           "changedAt",
           "told"

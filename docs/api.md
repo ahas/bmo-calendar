@@ -135,7 +135,8 @@ empty), `start`, `end` (local ISO datetimes, `YYYY-MM-DDTHH:mm:ss`, `end` after 
 (`none` or minutes before start: `0`, `5`, `15`, `30`, `60`, `1440`, each a string), `repeat` (`none`,
 `daily`, `weekly`, `monthly`, `yearly`), `occurrence` (in a span's rows, the start of the occurrence a
 repeating event's row stands for, whose `start` and `end` the row carries; null otherwise), `creator`,
-`createdAt`, `changedAt`, `told` (the occurrence last told, or null). A write names `calendarId`, `title`,
+`setBy` (the supervisor whose tool session set it, whose voice tells its alarm, or null for one set from a
+screen; a write takes it from the tool session's holder and never from its body), `createdAt`, `changedAt`, `told` (the occurrence last told, or null). A write names `calendarId`, `title`,
 `start`, `end` and may name the rest and an `id` (1 to 64 letters, digits, `-` and `_`; one is made where none
 is given); a title is one line. A write under a calendar the caller may not write is 403 `not-a-writer`; an
 end not after the start is 422 `end-before-start`; an unknown calendar is 422 `unknown-calendar`; a span over

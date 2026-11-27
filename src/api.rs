@@ -816,6 +816,13 @@ async fn create_event(
       .as_ref()
       .map(|event| event.creator.clone())
       .unwrap_or_else(|| asked.account.clone().unwrap_or_default()),
+    // The supervisor that set it keeps it through a change from a screen; a supervisor's change makes it that
+    // supervisor's.
+    set_by: asked
+      .caller
+      .holder
+      .clone()
+      .or_else(|| standing_event.as_ref().and_then(|event| event.set_by.clone())),
     created_at: standing_event.as_ref().map(|event| event.created_at).unwrap_or(now),
     changed_at: now,
     told: None,

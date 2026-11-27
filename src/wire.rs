@@ -191,6 +191,9 @@ pub struct Event {
   pub occurrence: Option<String>,
   /// The account that made it.
   pub creator: String,
+  /// The supervisor whose tool session set it, whose voice tells its alarm; null for one set from a screen.
+  #[serde(default)]
+  pub set_by: Option<String>,
   pub created_at: i64,
   pub changed_at: i64,
   /// The occurrence last told, or null.
