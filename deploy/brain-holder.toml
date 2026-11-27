@@ -3,7 +3,7 @@
 held_by = "calendar"
 
 [[memory]]
-key = "when"
+key = "calendar.when"
 type = "tip"
 recall_condition = "a reminder, an event or a meeting room booking"
 text = "Use bmo/calendar_*; set an alarm when asked to be reminded, and find a free room before calendar_book."
