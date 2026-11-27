@@ -10,6 +10,7 @@ env_prefix = "BMO_CALENDAR"
 deploy_root = "~/.local/share/bmo-calendar"
 data_root = "~/.local/share/bmo/data"
 data_folder = "calendar"
+holder = "calendar"
 service_port = 13127
 port_name = "calendar.server"
 checkout = "~/repos/ahas/bmo/services/calendar"
